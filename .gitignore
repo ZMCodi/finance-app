@@ -210,4 +210,6 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+tree.txt
+
 # End of https://www.toptal.com/developers/gitignore/api/python,nextjs
