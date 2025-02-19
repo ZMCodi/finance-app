@@ -1,4 +1,7 @@
 from fastapi import FastAPI
-from core.assets import Asset
 
-Asset('AAPL').plot_candlestick(timeframe='5m')
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
