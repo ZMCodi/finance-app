@@ -17,8 +17,18 @@ from datetime import datetime, date
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
-from config import DB_CONFIG
 from typing import Optional
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+DB_CONFIG = {
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'host': os.getenv('DB_HOST'),
+    'port': os.getenv('DB_PORT')
+}
 
 DateLike = str | datetime | date | pd.Timestamp
 

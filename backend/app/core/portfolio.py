@@ -3,13 +3,23 @@ import pandas as pd
 from assets import Asset
 from collections import Counter, defaultdict, namedtuple
 import psycopg as pg
-from config import DB_CONFIG
 import datetime
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 from scipy import stats
 import json
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+DB_CONFIG = {
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'host': os.getenv('DB_HOST'),
+    'port': os.getenv('DB_PORT')
+}
 
 DateLike = str | datetime.datetime | datetime.date | pd.Timestamp
 
