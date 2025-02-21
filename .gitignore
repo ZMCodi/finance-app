@@ -211,5 +211,7 @@ poetry.toml
 pyrightconfig.json
 
 tree.txt
+test.py
+test.ipynb
 
 # End of https://www.toptal.com/developers/gitignore/api/python,nextjs
