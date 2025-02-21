@@ -543,7 +543,7 @@ class Portfolio:
             'calmar_ratio': round_number(self.calmar_ratio),
             'longest_drawdown': self.longest_drawdown_duration,
             'time_to_recovery': round_number(self.time_to_recovery()),
-            'avg_drawdown_duration': round_number(self.average_drawdown_duration()),
+            'average_drawdown_duration': round_number(self.average_drawdown_duration()),
         }
 
         # Position & Exposure Metrics
@@ -566,6 +566,8 @@ class Portfolio:
             'net_deposits': round_number(self.net_deposits, True),
             'number_of_trades': len([t for t in self.transactions if t.type in ['BUY', 'SELL']]),
             'win_rate': round_number(self.win_rate),
+            'profit_factor': round_number(self.profit_factor),
+            'average_win_loss_ratio': round_number(self.average_win_loss_ratio),
         }
 
         return {
@@ -575,6 +577,20 @@ class Portfolio:
             'position': position_metrics,
             'activity': activity_metrics,
         }
+
+    @property
+    def profit_factor(self):
+        sells = [t for t in self.transactions if t.type == 'SELL']
+        profits = sum(t.profit for t in sells if t.profit > 0)
+        losses = sum(t.profit for t in sells if t.profit < 0)
+        return float(profits / abs(losses)) if losses != 0 else 0
+
+    @property
+    def average_win_loss_ratio(self):
+        sells = [t for t in self.transactions if t.type == 'SELL']
+        profits = [t.profit for t in sells if t.profit > 0]
+        losses = [abs(t.profit) for t in sells if t.profit < 0]
+        return float(np.mean(profits) / np.mean(losses)) if losses else 0
 
     @property
     def information_ratio(self):
@@ -1021,12 +1037,14 @@ class Portfolio:
     def drawdown_ratio(self):
         return self.max_drawdown / self.average_drawdown
 
-    def time_to_recovery(self, min_duration: int = 3, min_depth: float = 0.05):
-        df = self.drawdown_df
+    def time_to_recovery(self, min_duration: int = 3, significance: float = 0.05):
+        df = self.drawdown_df.dropna()
+        min_depth = df['depth'].quantile(1-significance)
         return float(df[(df['duration'] >= min_duration) & (-df['depth'] >= np.abs(min_depth))]['time_to_recovery'].mean())
 
-    def average_drawdown_duration(self, min_duration: int = 3, min_depth: float = 0.05):
+    def average_drawdown_duration(self, min_duration: int = 3, significance: float = 0.05):
         df = self.drawdown_df
+        min_depth = df['depth'].quantile(1-significance)
         return float(df[(df['duration'] >= min_duration) & (-df['depth'] >= np.abs(min_depth))]['duration'].mean())
 
     def drawdown_frequency(self, bins: int = 20):
