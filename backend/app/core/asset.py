@@ -444,7 +444,7 @@ class Asset():
             )
         )
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -545,7 +545,7 @@ class Asset():
 
         fig.update_layout(**layout_updates)
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -666,7 +666,7 @@ class Asset():
             hovermode='x unified'
         )
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -748,7 +748,7 @@ class Asset():
                 yaxis_title=f'Count'
             )
 
-        fig.show()
+        # fig.show()
 
         return fig
 

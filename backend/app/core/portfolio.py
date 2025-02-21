@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from assets import Asset
+from app.core.asset import Asset
 from collections import Counter, defaultdict, namedtuple
 import psycopg as pg
 import datetime

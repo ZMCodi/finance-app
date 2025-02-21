@@ -27,7 +27,7 @@ from pandas.core.frame import DataFrame
 import numpy as np
 import signal_gen as sg
 import scipy.optimize as sco
-from assets import Asset
+from app.core.asset import Asset
 from typing import Optional
 from datetime import datetime, date
 import multiprocessing as mp
