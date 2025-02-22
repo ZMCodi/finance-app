@@ -1,6 +1,6 @@
 'use client';
 
-import AssetCard from "./AssetCard";
+import AssetCard from "@/app/assets/components/AssetCard";
 
 interface ChartListProps {
   tickers: string[];

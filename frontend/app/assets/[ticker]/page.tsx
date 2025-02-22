@@ -1,4 +1,4 @@
-import TickerPageClient from '@/components/TickerPageClient';
+import TickerPageClient from '@/app/assets/[ticker]/components/TickerPageClient';
 
 interface TickerPageProps {
   params: {

@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AssetChart from "./AssetChart";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import AssetChart from "@/components/AssetChart";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, LineChart, ChartNoAxesColumn, CandlestickChart } from "lucide-react";
 
 interface AssetCardProps {

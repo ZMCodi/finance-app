@@ -1,4 +1,4 @@
-import ChartContainer from "@/components/ChartContainer";
+import ChartContainer from "@/app/assets/components/ChartContainer";
 
 export default function Home() {
   return (

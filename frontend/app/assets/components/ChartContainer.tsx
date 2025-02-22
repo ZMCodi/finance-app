@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import TickerInput from "./TickerInput";
-import ChartList from "./ChartList";
+import TickerInput from "@/app/assets/components/TickerInput";
+import ChartList from "@/app/assets/components/ChartList";
 
 export default function ChartContainer() {
   const [tickers, setTickers] = useState<string[]>([]);
