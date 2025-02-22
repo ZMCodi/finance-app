@@ -8,6 +8,12 @@ class AssetType(str, Enum):
     etf = 'ETF'
     mutual_fund = 'Mutual Fund'
 
+class PlotType(str, Enum):
+    candlestick = 'candlestick'
+    price_history = 'price history'
+    returns_distribution = 'returns distribution'
+    SMA = 'SMA'
+
 class AssetResponse(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     asset_type: AssetType = Field(..., title='Asset Type', description='The type of asset')
@@ -16,5 +22,5 @@ class AssetResponse(BaseModel):
 
 class AssetPlot(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
-    plot_type: str = Field(..., title='Plot Type', description='The type of plot')
-    json: str = Field(..., title='JSON', description='The JSON representation of the plot')
+    plot_type: PlotType = Field(..., title='Plot Type', description='The type of plot')
+    json_data: dict = Field(..., title='JSON', description='The JSON representation of the plot')
