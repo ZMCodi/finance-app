@@ -1,7 +1,5 @@
 'use client';
 /* eslint-disable  @typescript-eslint/no-explicit-any */
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartArea } from "lucide-react";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 
@@ -42,33 +40,25 @@ export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
 
     return (
     <div>
-        <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-            <ChartArea />
-            <p>This is a card</p>
-            </CardTitle>
-        </CardHeader>
-        <CardContent>
             {loading ? (
             <div>Loading...</div>
             ) : (
             plotData && (
+                <div>
                 <Plot 
                 data={plotData.data}
                 layout={{
                     ...plotData.layout,
                     autosize: true,
-                    margin: { t: 20, r: 20, b: 30, l: 40 },
+                    margin: { t: 40, r: 30, b: 30, l: 40 },
                     height: 400,
                 }}
                 config={{ responsive: true }}
                 className="w-full h-full"
                 />
+                </div>
             )
             )}
-        </CardContent>
-        </Card>
     </div>
     );
 };
