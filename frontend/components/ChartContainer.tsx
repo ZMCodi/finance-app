@@ -13,10 +13,17 @@ export default function ChartContainer() {
     }
   };
 
+  const handleDeleteTicker = (tickerToDelete: string) => {
+    setTickers(prev => prev.filter(ticker => ticker !== tickerToDelete));
+  };
+
   return (
     <>
       <TickerInput onAddTicker={handleAddTicker} />
-      <ChartList tickers={tickers} />
+      <ChartList 
+        tickers={tickers} 
+        onDeleteTicker={handleDeleteTicker}
+      />
     </>
   );
 }

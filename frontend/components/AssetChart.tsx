@@ -10,7 +10,7 @@ interface PlotlyData {
 
 interface AssetChartProps {
     ticker: string;
-    plot_type: 'price_history' | 'candlestick' | 'returns_distribution' | 'SMA';
+    plot_type: 'price_history' | 'candlestick' | 'returns_distribution';
 }
 
 const Plot = dynamic(() => import("react-plotly.js"), {
@@ -28,7 +28,6 @@ export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
         const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}`);
         const data = await response.json();
         setPlotData(data.json_data);
-        console.log(data.json_data);
         } catch (error) {
         console.error("Error fetching data:", error);
         } finally {
@@ -53,7 +52,11 @@ export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
                     margin: { t: 40, r: 30, b: 30, l: 40 },
                     height: 400,
                 }}
-                config={{ responsive: true }}
+                config={{ 
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ['zoom2d', 'resetScale2d', 'toImage', 'zoomIn2d', 'autoScale2d', 'select2d', 'lasso2d'],
+                 }}
                 className="w-full h-full"
                 />
                 </div>
