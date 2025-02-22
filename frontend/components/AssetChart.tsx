@@ -11,6 +11,7 @@ interface PlotlyData {
 interface AssetChartProps {
     ticker: string;
     plot_type: 'price_history' | 'candlestick' | 'returns_distribution';
+    queryString: string;
 }
 
 const Plot = dynamic(() => import("react-plotly.js"), {
@@ -18,14 +19,14 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     loading: () => <div>Loading...</div>, 
 });
 
-export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
+export default function AssetChart({ ticker, plot_type, queryString }: AssetChartProps) {
     const [plotData, setPlotData] = useState<PlotlyData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
     const fetchData = async () => {
         try {
-        const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}`);
+        const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}?${queryString}`);
         const data = await response.json();
         setPlotData(data.json_data);
         } catch (error) {
@@ -35,7 +36,7 @@ export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
         }
     };
     fetchData();
-    }, [ticker, plot_type]);
+    }, [ticker, plot_type, queryString]);
 
     return (
     <div>
@@ -50,7 +51,6 @@ export default function AssetChart({ ticker, plot_type }: AssetChartProps) {
                     ...plotData.layout,
                     autosize: true,
                     margin: { t: 40, r: 30, b: 30, l: 40 },
-                    height: 400,
                 }}
                 config={{ 
                     responsive: true,

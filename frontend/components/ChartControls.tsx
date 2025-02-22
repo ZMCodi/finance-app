@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 interface ChartControlsProps {
   chartType: string;
-  onApply: (settings: any) => void;
+  onApply: (queryString: string) => void;
 }
 
 export default function ChartControls({ chartType, onApply }: ChartControlsProps) {
@@ -32,25 +32,51 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
   const [useLogReturns, setUseLogReturns] = useState(false);
   const [numBins, setNumBins] = useState('100');
 
+  const buildQueryString = (settings: any) => {
+    const params = new URLSearchParams();
+
+    // Filter out undefined/null values and convert to query params
+    Object.entries(settings).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        // Handle date objects
+        if (value instanceof Date) {
+          params.append(key, format(value, "yyyy-MM-dd"));
+        } 
+        // Handle booleans
+        else if (typeof value === 'boolean') {
+          params.append(key, value.toString());
+        }
+        // Handle everything else
+        else {
+          params.append(key, value.toString());
+        }
+      }
+    });
+
+    return params.toString();
+  };
+
   const handleApply = () => {
+    let settings;
+
     if (chartType === 'returns_distribution') {
-      onApply({
-        log_returns: useLogReturns,
+      settings = {
+        log_rets: useLogReturns,
         bins: parseInt(numBins),
-      });
-      return;
+      };
+    } else {
+      settings = {
+        timeframe,
+        start_date: startDate,
+        end_date: endDate,
+        resample: resample === 'none' ? undefined : resample,
+        ...(chartType === 'candlestick' && { volume: showVolume }),
+      };
     }
 
-    // For price_history and candlestick
-    const settings = {
-      timeframe,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      resample: resample || undefined,
-      ...(chartType === 'candlestick' && { volume: showVolume }),
-    };
-
-    onApply(settings);
+    const queryString = buildQueryString(settings);
+    console.log(queryString);
+    onApply(queryString); // Now passing the query string instead of settings object
   };
 
   if (chartType === 'returns_distribution') {
@@ -159,7 +185,7 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">None</SelectItem>
-              <SelectItem value="WE">Weekly</SelectItem>
+              <SelectItem value="W">Weekly</SelectItem>
               <SelectItem value="ME">Monthly</SelectItem>
               <SelectItem value="QE">Quarterly</SelectItem>
             </SelectContent>

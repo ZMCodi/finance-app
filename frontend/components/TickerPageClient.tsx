@@ -1,8 +1,8 @@
 'use client';
-/* eslint-disable  @typescript-eslint/no-explicit-any */
 import { useState } from 'react';
 import ChartTypeSelector from '@/components/ChartTypeSelector';
 import ChartDisplay from '@/components/ChartDisplay';
+import AssetInfo from './AssetInfo';
 
 interface TickerPageClientProps {
   ticker: string;
@@ -10,10 +10,10 @@ interface TickerPageClientProps {
 
 export default function TickerPageClient({ ticker }: TickerPageClientProps) {
   const [chartType, setChartType] = useState('price_history');
-  const [chartSettings, setChartSettings] = useState({});
+  const [queryString, setQueryString] = useState('');
 
-  const handleSettingsApply = (newSettings: any) => {
-    setChartSettings(newSettings);
+  const handleSettingsApply = (newQueryString: string) => {
+    setQueryString(newQueryString);
   };
 
   return (
@@ -29,9 +29,10 @@ export default function TickerPageClient({ ticker }: TickerPageClientProps) {
         <ChartDisplay 
           ticker={ticker}
           chartType={chartType}
-          chartSettings={chartSettings}
+          queryString={queryString}
         />
       </div>
+      <AssetInfo ticker={ticker} />
     </div>
   );
 }

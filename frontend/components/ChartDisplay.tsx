@@ -6,13 +6,13 @@ import AssetChart from '@/components/AssetChart';
 interface ChartDisplayProps {
   ticker: string;
   chartType: string;
-  chartSettings: any;
+  queryString: string;
 }
 
 export default function ChartDisplay({ 
   ticker, 
   chartType, 
-  chartSettings 
+  queryString 
 }: ChartDisplayProps) {
   return (
     <Card className="lg:col-span-3">
@@ -20,7 +20,7 @@ export default function ChartDisplay({
         <AssetChart 
           ticker={ticker}
           plot_type={chartType as any}
-          {...chartSettings}
+          queryString={queryString}
         />
       </CardContent>
     </Card>
