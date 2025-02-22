@@ -450,6 +450,7 @@ class Asset():
             font=dict(color='white'),
             hovermode='x unified',
             hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
+            height=400,
         )
 
         # fig.show()
@@ -542,9 +543,12 @@ class Asset():
             gridcolor='rgba(128,128,128,0.2)',
         )
 
+        layout_updates['height'] = 400
+
         if volume:
             layout_updates[f'xaxis2_rangeslider_visible'] = False
             layout_updates['xaxis2'] = layout_updates['xaxis1']
+            layout_updates['height'] = 500
 
         layout_updates['title'] = title
 
@@ -653,6 +657,7 @@ class Asset():
                 paper_bgcolor='rgba(0, 0, 0, 0)',
                 plot_bgcolor='rgba(0, 0, 0, 0)',
                 font=dict(color='white'),
+                height=400,
         )
 
         # fig.show()
