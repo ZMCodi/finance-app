@@ -48,8 +48,8 @@ def read_asset_returns_distribution(asset: Asset = Depends(get_asset)):
     }
 
 @router.get("/{asset_ticker}/SMA", response_model=AssetPlot)
-def read_asset_SMA(asset: Asset = Depends(get_asset)):
-    fig = asset.plot_SMA()
+def read_asset_SMA(asset: Asset = Depends(get_asset), window: int = 20):
+    fig = asset.plot_SMA(window=window)
     return {
         'ticker': asset.ticker,
         'plot_type': 'SMA',

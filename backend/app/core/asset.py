@@ -422,7 +422,7 @@ class Asset():
                 x=data.index.strftime(format),
                 y=data,
                 name=f'{self.ticker} Price',
-                connectgaps=True
+                connectgaps=True,
             )
         )
 
@@ -435,13 +435,22 @@ class Asset():
 
         fig.update_layout(
             title=f'{self.ticker} Price History',
-            xaxis_title='Date',
-            yaxis_title=f'Price ({self.currency})',
+            yaxis=dict(
+                title=f'Price ({self.currency})',
+                gridcolor='rgba(128,128,128,0.2)',
+            ),
             xaxis=dict(
+                title='Date',
                 type='category',
                 categoryorder='category ascending',
-                nticks=5
-            )
+                nticks=5,
+                gridcolor='rgba(128,128,128,0.2)',
+            ),
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            hovermode='x unified',
+            hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
         )
 
         # fig.show()
@@ -495,7 +504,7 @@ class Asset():
             high=data['high'],
             low=data['low'],
             close=data['close'],
-            name='OHLC'
+            name='OHLC',
         )
 
         if volume:
@@ -509,7 +518,7 @@ class Asset():
                 marker=dict(
                     color=colors,
                     line=dict(color=colors)
-                )
+                ),
             )
 
             fig.add_trace(candlestick, row=1, col=1)
@@ -530,7 +539,8 @@ class Asset():
         layout_updates['xaxis1'] = dict(
             type='category',
             categoryorder='category ascending',
-            nticks=5
+            nticks=5,
+            gridcolor='rgba(128,128,128,0.2)',
         )
 
         if volume:
@@ -539,11 +549,23 @@ class Asset():
 
         layout_updates['title'] = title
 
-        layout_updates['yaxis_title'] = f'Price ({self.currency})'
-
+        layout_updates['yaxis'] = dict(
+            title=f'Price ({self.currency})',
+            gridcolor='rgba(128,128,128,0.2)',
+        )
         
+        layout_updates['yaxis2'] = dict(
+            gridcolor='rgba(128,128,128,0.2)',
+        )
 
-        fig.update_layout(**layout_updates)
+        fig.update_layout(**layout_updates,
+                          hovermode='x unified',
+                          hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
+                          paper_bgcolor='rgba(0, 0, 0, 0)',
+                          plot_bgcolor='rgba(0, 0, 0, 0)',
+                          font=dict(color='white'),
+                          showlegend=False,
+        )
 
         # fig.show()
 
@@ -639,8 +661,6 @@ class Asset():
                 x=0.5,  # Center the title
                 y=0.95
             ),
-            paper_bgcolor='white',
-            plot_bgcolor='rgba(240,240,240,0.95)',
             xaxis=dict(
                 showgrid=True,
                 gridwidth=1,
@@ -663,7 +683,11 @@ class Asset():
                 x=0.01,
                 bgcolor='rgba(255,255,255,0.8)'
             ),
-            hovermode='x unified'
+            hovermode='x unified',
+            hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
         )
 
         # fig.show()
@@ -709,7 +733,8 @@ class Asset():
                     end=bins[-1],
                     size=(bins[1] - bins[0])  # Forces exact bin width
                 ),
-                name=f'{self.ticker} Returns Distribution'
+                name=f'{self.ticker} Returns Distribution',
+            hovertemplate='%{x:.3f}, %{y}<extra></extra>',
             )
         )
 
@@ -720,16 +745,17 @@ class Asset():
         if show_stats:
             fig.add_annotation(
                 x=0.95,
-                y=0.95,
+                y=1,
                 xref=xref,
                 yref=yref,
                 text=stats_text,
                 showarrow=False,
                 font=dict(size=10),
                 align='left',
-                bgcolor='white',
-                bordercolor='black',
+                bgcolor='rgb(3, 9, 24)',
+                bordercolor='white',
                 borderwidth=1,
+                borderpad=4,
                 xanchor='right',
                 yanchor='top'
             )
@@ -737,16 +763,20 @@ class Asset():
         fig.update_layout(
             yaxis=dict(
                 range=[0, None],
-                rangemode='nonnegative'
+                rangemode='nonnegative',
+                gridcolor='rgba(128,128,128,0.2)',
             ),
-            bargap=0.05
+            bargap=0.05,
         )
 
         fig.update_layout(
                 title=f'{self.ticker} {"Log" if log_rets else ""} Returns Distribution',
                 xaxis_title='Returns',
-                yaxis_title=f'Count'
-            )
+                yaxis_title=f'Count',
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                font=dict(color='white'),
+        )
 
         # fig.show()
 
