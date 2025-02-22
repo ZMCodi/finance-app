@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Dict
 from enum import Enum
 
 class AssetType(str, Enum):
@@ -12,7 +12,6 @@ class PlotType(str, Enum):
     candlestick = 'candlestick'
     price_history = 'price history'
     returns_distribution = 'returns distribution'
-    SMA = 'SMA'
 
 class AssetResponse(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
@@ -24,3 +23,6 @@ class AssetPlot(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     plot_type: PlotType = Field(..., title='Plot Type', description='The type of plot')
     json_data: dict = Field(..., title='JSON', description='The JSON representation of the plot')
+
+class AssetStats(BaseModel):
+    stats: Dict[str, Dict[str, float]] = Field(..., title='Stats', description='The statistics of the asset')

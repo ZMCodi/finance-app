@@ -440,7 +440,6 @@ class Asset():
                 gridcolor='rgba(128,128,128,0.2)',
             ),
             xaxis=dict(
-                title='Date',
                 type='category',
                 categoryorder='category ascending',
                 nticks=5,
@@ -556,6 +555,7 @@ class Asset():
         
         layout_updates['yaxis2'] = dict(
             gridcolor='rgba(128,128,128,0.2)',
+            nticks=3,
         )
 
         fig.update_layout(**layout_updates,
@@ -565,129 +565,6 @@ class Asset():
                           plot_bgcolor='rgba(0, 0, 0, 0)',
                           font=dict(color='white'),
                           showlegend=False,
-        )
-
-        # fig.show()
-
-        return fig
-
-    def plot_SMA(self, *, window: int = 20, timeframe: str = '1d', start_date: Optional[DateLike] = None, end_date: Optional[DateLike] = None,
-                 r: float = 0., ewm: bool = False, 
-                 alpha: Optional[float] = None, halflife: Optional[float] = None, bollinger_bands: bool = False, num_std: float = 2.) -> go.Figure:
-        """Plots the moving average price of the underlying asset.
-
-        Args:
-            window (int): Rolling window. Defaults to 20
-            timeframe (str, optional): Determines which dataframe to use ('1d' for daily or '5m' for five minute data). 
-                Defaults to '1d'.
-            start_date (DateLike, optional): Start date for plotting range. Defaults to None.
-            end_date (DateLike, optional): End date for plotting range. Defaults to None.
-            r (float): risk-free rate. Defaults to 0.
-            ewm (bool): Whether to use ewm (True) or rolling (False). Defaults to False
-            alpha (float, optional): Alpha parameter for ewm. Defaults to None
-            halflife (float, optional): Halflife parameter for ewm. Defaults to None
-            bollinger_bands (bool): Whether to calculate bollinger bands or not. Defaults to False
-            num_std (float): Number of standard deviations for bollinger bands. Defaults to 2.
-
-        Returns:
-            (plotly.graph_objects.Figure): Moving average price of underlying asset.
-        """
-        # get MA data
-        data = self.rolling_stats(window=window, five_min=True if timeframe != '1d' else False,
-                                r=r, ewm=ewm, alpha=alpha, halflife=halflife, 
-                                bollinger_bands=bollinger_bands, num_std=num_std)
-        
-        if start_date is not None:
-            data = data[data.index >= start_date]
-        if end_date is not None:
-            data = data[data.index <= end_date]
-
-        data = data.dropna()
-
-        # configure parameter text
-        if alpha is not None:
-            param = f'{alpha=}'
-        elif halflife is not None:
-            param = f'{halflife=}'
-        else:
-            param = f'{window=}'
-
-        fig = go.Figure()
-        format = '%Y-%m-%d' if timeframe == '1d' else '%Y-%m-%d<br>%H:%M:%S'
-
-        # Add main price line
-        fig.add_trace(
-            go.Scatter(
-                x=data.index.strftime(format),
-                y=data['close_mean'],
-                line=dict(
-                    color='#2962FF',
-                    width=2,
-                    dash='solid'
-                ),
-                name=f'{self.ticker} MA {param}'
-            )
-        )
-
-        if bollinger_bands:
-            # Add lower band
-            fig.add_trace(go.Scatter(
-                x=data.index.strftime(format),
-                y=data['bol_low'],
-                name='Lower Band',
-                line=dict(color='#FF4081', width=1, dash='dash'),
-                mode='lines',
-                showlegend=True
-                )
-            )
-
-            # Add upper band with fill
-            fig.add_trace(go.Scatter(
-                x=data.index.strftime(format),
-                y=data['bol_up'],
-                name='Upper Band',
-                line=dict(color='#FF4081', width=1, dash='dash'),
-                mode='lines',
-                fill='tonexty',
-                fillcolor='rgba(68, 68, 255, 0.1)',
-                showlegend=True
-                )
-            )
-
-        # update layout
-        fig.update_layout(
-            title=dict(
-                text=f'{self.ticker} Moving Average ({param}) {f"with Bollinger Bands ({num_std=})" if bollinger_bands else ""}',
-                x=0.5,  # Center the title
-                y=0.95
-            ),
-            xaxis=dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)',
-                title=None,
-                type='category',
-                categoryorder='category ascending',
-                nticks=5
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)',
-                title=f'Price ({self.currency})',
-            ),
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01,
-                bgcolor='rgba(255,255,255,0.8)'
-            ),
-            hovermode='x unified',
-            hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
-            paper_bgcolor='rgba(0, 0, 0, 0)',
-            plot_bgcolor='rgba(0, 0, 0, 0)',
-            font=dict(color='white'),
         )
 
         # fig.show()
@@ -899,10 +776,11 @@ class Asset():
             'daily_mean': self.daily['rets'].mean(),
             'daily_std': self.daily['rets'].std(),
             'daily_median': self.daily['rets'].median(),
-            'annualized_vol': self.daily['rets'].std() * np.sqrt(252)
+            'annualized_vol': self.daily['rets'].std() * np.sqrt(252 if self.asset_type != 'Cryptocurrency' else 365),
+            'annualized_ret': (1 + self.daily['rets'].mean()) ** 252 - 1,
         }
 
-        stats['returns'] = {k: float(v) for k, v in stats['returns'].items()}
+        stats['returns'] = {k: round(float(v), 5) for k, v in stats['returns'].items()}
 
         # price statistics
         stats['price'] = {
@@ -913,15 +791,17 @@ class Asset():
             'current': self.daily['close'].iloc[-1]
         }
 
-        stats['price'] = {k: float(v) for k, v in stats['price'].items()}
+        stats['price'] = {k: round(float(v), 2) for k, v in stats['price'].items()}
 
         # distribution statistics
         stats['distribution'] = {
+            'mean': self.daily['rets'].mean(),
+            'std': self.daily['rets'].std(),
             'skewness': self.daily['rets'].skew(),
             'kurtosis': self.daily['rets'].kurtosis()
         }
 
-        stats['distribution'] = {k: float(v) for k, v in stats['distribution'].items()}
+        stats['distribution'] = {k: round(float(v), 5) for k, v in stats['distribution'].items()}
 
         # TODO:
         # add risk statistics: var95, cvar95, max_drawdown, drawdown_period, downside volatility
