@@ -11,7 +11,10 @@ interface PlotlyData {
 interface AssetChartProps {
     ticker: string;
     plot_type: 'price_history' | 'candlestick' | 'returns_distribution';
-    queryString: string;
+    queryString?: string;
+    height?: number;
+    width?: number;
+    nticks?: number;
 }
 
 const Plot = dynamic(() => import("react-plotly.js"), {
@@ -19,7 +22,7 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     loading: () => <div>Loading...</div>, 
 });
 
-export default function AssetChart({ ticker, plot_type, queryString }: AssetChartProps) {
+export default function AssetChart({ ticker, plot_type, queryString, height, width, nticks }: AssetChartProps) {
     const [plotData, setPlotData] = useState<PlotlyData | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -51,6 +54,12 @@ export default function AssetChart({ ticker, plot_type, queryString }: AssetChar
                     ...plotData.layout,
                     autosize: true,
                     margin: { t: 40, r: 30, b: 30, l: 40 },
+                    height: height,
+                    width: width,
+                    xaxis: { nticks: nticks || 5,
+                        rangeslider: {visible: false},
+                        gridcolor: 'rgba(128, 128, 128, 0.2)',
+                     },
                 }}
                 config={{ 
                     responsive: true,

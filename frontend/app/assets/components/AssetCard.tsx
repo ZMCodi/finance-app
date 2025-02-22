@@ -61,7 +61,7 @@ export default function AssetCard({ ticker, onDelete }: AssetCardProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <AssetChart ticker={ticker} plot_type={selectedPlot} queryString='' />
+        <AssetChart ticker={ticker} plot_type={selectedPlot} />
       </CardContent>
     </Card>
   );

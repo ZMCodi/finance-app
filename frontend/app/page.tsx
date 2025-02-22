@@ -1,9 +1,17 @@
+import AssetHome from "@/components/AssetHome";
+import PortfolioHome from "@/components/PortfolioHome";
+import StrategyHome from "@/components/StrategyHome";
 
 export default function Home() {
+
   return (
-    <div className="dark p-4">
-      <h1 className="text-xl text-center pt-5">Finance App</h1>
-      <h5 className="text-sm text-center pt-2">I&apos;ll have to workshop the name.</h5>
-    </div>
+    <>
+      <h1 className="font-extrabold tracking-tight lg:text-4xl text-center pt-3">Finance App</h1>
+      <div className="dark flex">
+       <AssetHome />
+       <StrategyHome />
+      </div>
+      <PortfolioHome />
+    </>
   );
 }
