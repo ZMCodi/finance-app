@@ -503,6 +503,24 @@ class Strategy(ABC):
             int: Number of times the trading signal changes from -1 to 1 or vice versa
         """
         return np.sum(np.where(self.five_min['signal'].shift(1) != self.five_min['signal'], 1, 0))
+    
+    def add_signal_type(self, signal_type: str, weight: float = 1.) -> None:
+        """Add a new signal type to the strategy.
+
+        Args:
+            signal_type (str): New signal type to add
+        """
+        self.signal_type.append(signal_type)
+        self.weights = np.append(self.weights, weight)
+
+    def remove_signal_type(self, signal_type: str) -> None:
+        """Remove a signal type from the strategy.
+
+        Args:
+            signal_type (str): Signal type to remove
+        """
+        self.signal_type.remove(signal_type)
+        self.weights = np.delete(self.weights, self.signal_type.index(signal_type))
 
 
 class MA_Crossover(Strategy):
@@ -635,10 +653,24 @@ class MA_Crossover(Strategy):
         self.ewm = ewm if ewm is not None else self.ewm
         self.__get_data()
 
+    def add_signal_type(self, signal_type, weight = 1):
+        raise NotImplementedError('MA Crossover strategy does not support multiple signals.')
+    
+    def remove_signal_type(self, signal_type):
+        raise NotImplementedError('MA Crossover strategy does not support multiple signals.')
+
+    @property
+    def parameters(self) -> dict:
+        """Dictionary of strategy parameters.
+
+        Returns:
+            dict: Dictionary with parameter names and values
+        """
+        return {'short': self.short, 'long': self.long, 'ptype': self.ptype, 'ewm': self.ewm}
+
     def plot(self, timeframe: str = '1d', 
             start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None, 
-            show_signal: bool = True) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> go.Figure:
         """Create interactive plot of moving averages and signals.
 
         Args:
@@ -661,9 +693,6 @@ class MA_Crossover(Strategy):
 
         long_data = df['long']
         short_data = df['short']
-
-        if show_signal:
-            signal = df['signal']
 
         short_param = f'{self.ptype}={self.short}'
         long_param = f'{self.ptype}={self.long}'
@@ -695,24 +724,12 @@ class MA_Crossover(Strategy):
             yaxis='y'
         )
 
-        if show_signal:
-            signal = go.Scatter(
-                x=signal.index.strftime(format),
-                y=signal,
-                line=dict(color='green', width=0.8, dash='solid'),
-                name='Buy/Sell signal',
-                yaxis='y2'
-            )
-
         # Add traces based on whether it's a subplot or not
         fig = go.Figure()
 
         fig.add_trace(short_MA)
 
         fig.add_trace(long_MA)
-
-        if show_signal:
-            fig.add_trace(signal)
 
         # Update layout with secondary y-axis
         layout = {}
@@ -740,33 +757,13 @@ class MA_Crossover(Strategy):
                 title=f'Price ({self.asset.currency})',
             )
 
-        if show_signal:
-            layout['yaxis2'] = dict(
-                    title='Signal',
-                    overlaying='y',
-                    side='right',
-                    range=[-1.1, 1.1],  # Give some padding to the 0/1 signal
-                    tickmode='array',
-                    tickvals=[-1, 1],
-                    ticktext=['Sell', 'Buy']
-                )
-
-        layout['legend'] = dict(
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                orientation="h",  # horizontal layout
-                bgcolor='rgba(255,255,255,0.8)'
-            )
-
         fig.update_layout(**layout,
                             paper_bgcolor='white',
                             plot_bgcolor='rgba(240,240,240,0.95)',
                             hovermode='x unified')
 
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -1081,14 +1078,26 @@ class RSI(Strategy):
         self.__exit = exit if exit is not None else self.exit
         self.__m_rev = m_rev if m_rev is not None else self.m_rev
         self.__m_rev_bound = m_rev_bound if m_rev_bound is not None else self.m_rev_bound
+        self.__combine = combine if combine is not None else self.combine
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
         self.__get_data()
 
+    @property
+    def parameters(self) -> dict:
+        """Dictionary of strategy parameters.
+
+        Returns:
+            dict: Dictionary with parameter names and values
+        """
+        return {'ub': self.ub, 'lb': self.lb, 'window': self.window, 'exit': self.exit,
+                'm_rev': self.m_rev, 'm_rev_bound': self.m_rev_bound, 'combine': self.combine,
+                'weights': list(self.weights), 'vote_threshold': self.vote_threshold,
+                'signal_type': self.signal_type}
+
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None, candlestick: bool = True,
-            show_signal: bool = True) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> go.Figure:
         """Create interactive plot of RSI and price with signals.
 
         Creates a two-panel plot with:
@@ -1115,33 +1124,7 @@ class RSI(Strategy):
         df.dropna(inplace=True)
         format = '%Y-%m-%d' if timeframe == '1d' else '%Y-%m-%d<br>%H:%M:%S'
 
-        fig = make_subplots(rows=2, cols=1, 
-                        shared_xaxes=True, 
-                        vertical_spacing=0.03, 
-                        row_heights=[0.7, 0.3],
-                        specs=[[{"secondary_y": True}],
-                        [{"secondary_y": False}]])
-
-        if candlestick:
-            price = go.Candlestick(
-                        x=df.index.strftime(format),
-                        open=df['open'],
-                        high=df['high'],
-                        low=df['low'],
-                        close=df['close'],
-                        name=f'{self.asset.ticker} OHLC',
-            )
-        else:
-            price = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['adj_close'],
-                        line=dict(
-                            color='#2962FF',
-                            width=2,
-                            dash='solid'
-                        ),
-                        name=f'{self.asset.ticker} Price',
-            )
+        fig = go.Figure()
 
         RSI = go.Scatter(
                 x=df.index.strftime(format),
@@ -1150,28 +1133,15 @@ class RSI(Strategy):
                 name='RSI'
         )
 
-        if show_signal:
-            signal = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['signal'],
-                        line=dict(color='green', width=0.8, dash='solid'),
-                        name='Buy/Sell signal',
-                        yaxis='y2'
-            )
+        fig.add_trace(RSI)
+        fig.add_hline(y=self.ub)
+        fig.add_hline(y=self.lb)
 
-        fig.add_trace(price)
-
-        fig.add_trace(RSI, row=2, col=1)
-        fig.add_hline(y=self.ub, row=2, col=1)
-        fig.add_hline(y=self.lb, row=2, col=1)
-
-        if show_signal:
-            fig.add_trace(signal)
 
         layout = {}
 
         layout['title'] = dict(
-                text=f'{self.asset.ticker} RSI Strategy {self.params}',
+                text=f'{self.asset.ticker} RSI {self.params}',
                 x=0.5,
                 y=0.95
             )
@@ -1186,54 +1156,21 @@ class RSI(Strategy):
                 nticks=5
             )
 
-        layout['xaxis2'] = dict(
-            type='category',
-            categoryorder='category ascending',
-            nticks=5
-        )
-
         layout['yaxis'] = dict(
                 showgrid=True,
                 gridwidth=1,
                 gridcolor='rgba(128,128,128,0.2)',
-                title=f'Price ({self.asset.currency})',
+                title=f'RSI',
             )
 
         layout[f'xaxis1_rangeslider_visible'] = False
-
-        layout['height'] = 800
-
-        if show_signal:
-            layout['yaxis2'] = dict(
-                    title='Signal',
-                    overlaying='y',
-                    side='right',
-                    range=[-1.1, 1.1],  # Give some padding to the 0/1 signal
-                    tickmode='array',
-                    tickvals=[-1, 1],
-                    ticktext=['Sell', 'Buy']
-                )
-
-        layout['yaxis3'] = dict(
-                title='RSI',
-                side='right'
-            )
-
-        layout['legend'] = dict(
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                orientation="h",  # horizontal layout
-                bgcolor='rgba(255,255,255,0.8)'
-            )
 
         fig.update_layout(**layout,
                             paper_bgcolor='white',
                             plot_bgcolor='rgba(240,240,240,0.95)',
                             hovermode='x unified')
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -1543,9 +1480,19 @@ class MACD(Strategy):
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
         self.__get_data()
 
+    @property
+    def parameters(self) -> dict:
+        """Dictionary of strategy parameters.
+
+        Returns:
+            dict: Dictionary with parameter names and values
+        """
+        return {'fast': self.fast, 'slow': self.slow, 'signal': self.signal,
+                'combine': self.combine, 'weights': list(self.weights), 'vote_threshold': self.vote_threshold,
+                'signal_type': self.signal_type}
+
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None, candlestick: bool = True,
-            show_signal: bool = True) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> go.Figure:
         """Create interactive plot of MACD components and price with signals.
 
         Creates a two-panel plot with:
@@ -1572,33 +1519,8 @@ class MACD(Strategy):
         df.dropna(inplace=True)
         format = '%Y-%m-%d' if timeframe == '1d' else '%Y-%m-%d<br>%H:%M:%S'
 
-        fig = make_subplots(rows=2, cols=1, 
-                        shared_xaxes=True, 
-                        vertical_spacing=0.03, 
-                        row_heights=[0.7, 0.3],
-                        specs=[[{"secondary_y": True}],
-                        [{"secondary_y": False}]])
+        fig = go.Figure()
 
-        if candlestick:
-            price = go.Candlestick(
-                        x=df.index.strftime(format),
-                        open=df['open'],
-                        high=df['high'],
-                        low=df['low'],
-                        close=df['close'],
-                        name=f'{self.asset.ticker} OHLC',
-            )
-        else:
-            price = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['adj_close'],
-                        line=dict(
-                            color='#2962FF',
-                            width=2,
-                            dash='solid'
-                        ),
-                        name=f'{self.asset.ticker} Price',
-            )
 
         MACD = go.Scatter(
                 x=df.index.strftime(format),
@@ -1622,25 +1544,11 @@ class MACD(Strategy):
                 name='MACD Histogram'
         )
 
-        if show_signal:
-            signal = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['signal'],
-                        line=dict(color='green', width=0.8, dash='solid'),
-                        name='Buy/Sell signal',
-                        yaxis='y2'
-            )
-
-        fig.add_trace(price)
-
-        fig.add_trace(MACD, row=2, col=1)
-        fig.add_trace(signal_line, row=2, col=1)
-        fig.add_trace(macd_hist, row=2, col=1)
+        fig.add_trace(MACD)
+        fig.add_trace(signal_line)
+        fig.add_trace(macd_hist)
 
 
-
-        if show_signal:
-            fig.add_trace(signal)
 
         layout = {}
 
@@ -1660,52 +1568,20 @@ class MACD(Strategy):
                 nticks=5
             )
 
-        layout['xaxis2'] = dict(
-            type='category',
-            categoryorder='category ascending',
-            nticks=5
-        )
-
         layout['yaxis'] = dict(
                 showgrid=True,
                 gridwidth=1,
                 gridcolor='rgba(128,128,128,0.2)',
-                title=f'Price ({self.asset.currency})',
+                title=f'MACD',
             )
 
         layout[f'xaxis1_rangeslider_visible'] = False
 
-        layout['height'] = 800
-
-        if show_signal:
-            layout['yaxis2'] = dict(
-                    title='Signal',
-                    overlaying='y',
-                    side='right',
-                    range=[-1.1, 1.1],  # Give some padding to the 0/1 signal
-                    tickmode='array',
-                    tickvals=[-1, 1],
-                    ticktext=['Sell', 'Buy']
-                )
-
-        layout['yaxis3'] = dict(
-                title='MACD',
-                side='right'
-            )
-
-        layout['legend'] = dict(
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                orientation="h",  # horizontal layout
-                bgcolor='rgba(255,255,255,0.8)'
-            )
-
         fig.update_layout(**layout,
                             paper_bgcolor='white',
                             plot_bgcolor='rgba(240,240,240,0.95)',
-                            hovermode='x unified')
+                            hovermode='x unified',
+                            showlegend=False)
 
         fig.show()
 
@@ -1979,9 +1855,18 @@ class BB(Strategy):
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
         self.__get_data()
 
+    @property
+    def parameters(self) -> dict:
+        """Dictionary of strategy parameters.
+
+        Returns:
+            dict: Dictionary with parameter names and values
+        """
+        return {'window': self.window, 'num_std': self.num_std,
+                'combine': self.combine, 'weights': list(self.weights), 'vote_threshold': self.vote_threshold}
+
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None, candlestick: bool = True,
-            show_signal: bool = True) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> go.Figure:
         """Create interactive plot of Bollinger Bands and signals.
 
         Creates a plot showing:
@@ -2014,41 +1899,6 @@ class BB(Strategy):
 
         traces = []
 
-        if candlestick:
-            price = go.Candlestick(
-                        x=df.index.strftime(format),
-                        open=df['open'],
-                        high=df['high'],
-                        low=df['low'],
-                        close=df['close'],
-                        name=f'{self.asset.ticker} OHLC',
-            )
-
-            sma = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['sma'],
-                        line=dict(
-                            color='#2962FF',
-                            width=2,
-                            dash='solid'
-                        ),
-                        name=f'{self.asset.ticker} SMA',
-            )
-
-            traces.extend([price, sma])
-        else:
-            price = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['adj_close'],
-                        line=dict(
-                            color='#2962FF',
-                            width=2,
-                            dash='solid'
-                        ),
-                        name=f'{self.asset.ticker} Price',
-            )
-
-            traces.append(price)
 
         bol_down = go.Scatter(
             x=df.index.strftime(format),
@@ -2070,16 +1920,6 @@ class BB(Strategy):
 
         traces.extend([bol_down, bol_up])
 
-        if show_signal:
-            signal = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['signal'],
-                        line=dict(color='green', width=0.8, dash='solid'),
-                        name='Buy/Sell signal',
-                        yaxis='y2'
-            )
-
-            traces.append(signal)
 
         fig.add_traces(traces)
 
@@ -2112,32 +1952,13 @@ class BB(Strategy):
 
         layout['height'] = 800
 
-        if show_signal:
-            layout['yaxis2'] = dict(
-                    title='Signal',
-                    overlaying='y',
-                    side='right',
-                    range=[-1.1, 1.1],
-                    tickmode='array',
-                    tickvals=[-1, 1],
-                    ticktext=['Sell', 'Buy']
-                )
-
-        layout['legend'] = dict(
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                orientation="h",  # horizontal layout
-                bgcolor='rgba(255,255,255,0.8)'
-            )
 
         fig.update_layout(**layout,
                             paper_bgcolor='white',
                             plot_bgcolor='rgba(240,240,240,0.95)',
-                            hovermode='x unified')
+                            hovermode='x unified',
+                            showlegend=False)
 
-        fig.show()
 
         return fig
 
@@ -2342,125 +2163,14 @@ class CombinedStrategy(Strategy):
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
         self.__get_data()
 
-    def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None, candlestick: bool = True) -> go.Figure:
-        """Create interactive plot of combined strategy signals.
+    def add_signal_type(self, signal_type, weight = 1):
+        raise NotImplementedError
+    
+    def remove_signal_type(self, signal_type):
+        raise NotImplementedError
 
-        Creates a plot showing:
-        - Price (candlestick or line)
-        - Combined trading signals
-        
-        Note: Individual strategy indicators are not shown to avoid clutter.
-        Use the plot() method of individual strategies to see their indicators.
-
-        Args:
-            timeframe (str, optional): Data frequency to plot ('1d' or '5m'). Defaults to '1d'.
-            start_date (DateLike, optional): Start date to plot from. Defaults to None.
-            end_date (DateLike, optional): End date to plot to. Defaults to None.
-            candlestick (bool, optional): Use candlestick chart. Defaults to True.
-
-        Returns:
-            go.Figure: Plotly figure with price and combined signals
-        """
-        df = self.daily.copy() if timeframe == '1d' else self.five_min.copy()
-
-        if start_date is not None:
-            df = df[df.index >= start_date]
-        if end_date is not None:
-            df = df[df.index <= end_date]
-
-        df.dropna(inplace=True)
-        format = '%Y-%m-%d' if timeframe == '1d' else '%Y-%m-%d<br>%H:%M:%S'
-
-        fig = go.Figure()
-
-        if candlestick:
-            price = go.Candlestick(
-                        x=df.index.strftime(format),
-                        open=df['open'],
-                        high=df['high'],
-                        low=df['low'],
-                        close=df['close'],
-                        name=f'{self.asset.ticker} OHLC',
-            )
-        else:
-            price = go.Scatter(
-                        x=df.index.strftime(format),
-                        y=df['adj_close'],
-                        line=dict(
-                            color='#2962FF',
-                            width=2,
-                            dash='solid'
-                        ),
-                        name=f'{self.asset.ticker} Price',
-            )
-
-        signal = go.Scatter(
-                    x=df.index.strftime(format),
-                    y=df['signal'],
-                    line=dict(color='green', width=0.8, dash='solid'),
-                    name='Buy/Sell signal',
-                    yaxis='y2'
-        )
-
-        fig.add_traces([price, signal])
-
-        layout = {}
-
-        layout['title'] = dict(
-                text=f'{self.asset.ticker} Combined Strategy {self.params}',
-                x=0.5,
-                y=0.95
-            )
-
-        layout['xaxis'] = dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)',
-                title=None,
-                type='category',
-                categoryorder='category ascending',
-                nticks=5
-            )
-
-        layout['yaxis'] = dict(
-                showgrid=True,
-                gridwidth=1,
-                gridcolor='rgba(128,128,128,0.2)',
-                title=f'Price ({self.asset.currency})',
-            )
-
-        layout[f'xaxis1_rangeslider_visible'] = False
-
-        layout['height'] = 800
-
-        layout['yaxis2'] = dict(
-                title='Signal',
-                overlaying='y',
-                side='right',
-                range=[-1.1, 1.1],
-                tickmode='array',
-                tickvals=[-1, 1],
-                ticktext=['Sell', 'Buy']
-            )
-
-        layout['legend'] = dict(
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                orientation="h",  # horizontal layout
-                bgcolor='rgba(255,255,255,0.8)'
-            )
-
-        fig.update_layout(**layout,
-                            paper_bgcolor='white',
-                            plot_bgcolor='rgba(240,240,240,0.95)',
-                            hovermode='x unified')
-
-        fig.show()
-
-        return fig
+    def plot():
+        pass
 
     def optimize(self, inplace: bool = False, timeframe: str = '1d',
                 start_date: Optional[DateLike] = None,
