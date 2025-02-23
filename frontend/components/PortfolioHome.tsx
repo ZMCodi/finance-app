@@ -22,7 +22,7 @@ export default function PortfolioHome() {
           <CardDescription>track your investment performance</CardDescription>
         </CardHeader>
         <CardContent>
-          <AssetChart ticker='AAPL' plot_type="returns_distribution" width={1100} height={300}/>
+          <AssetChart ticker='AAPL' plot_type="returns_distribution" height={300}/>
         </CardContent>
       </Card>
     </div>

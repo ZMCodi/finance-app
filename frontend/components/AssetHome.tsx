@@ -11,8 +11,8 @@ export default function AssetHome() {
   };
 
   return (
-    <div className="dark pl-3 pr-3">
-      <Card className="w-auto mt-5">
+    <div className="dark m-auto w-[48.5%]">
+      <Card className="w-full mt-5">
         <CardHeader>
           <CardTitle>
             <button onClick={handleTitleClick} className="hover:text-blue-500 transition-colors">
@@ -22,7 +22,7 @@ export default function AssetHome() {
           <CardDescription>do some analysis and shit</CardDescription>
         </CardHeader>
         <CardContent>
-          <AssetChart ticker='AAPL' plot_type="price_history" width={500} height={300}/>
+          <AssetChart ticker='AAPL' plot_type="price_history" height={300}/>
         </CardContent>
       </Card>
     </div>
