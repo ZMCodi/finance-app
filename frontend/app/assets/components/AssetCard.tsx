@@ -35,7 +35,7 @@ export default function AssetCard({ ticker, onDelete }: AssetCardProps) {
               onClick={handleTickerClick}
               className="hover:text-blue-500 transition-colors"
             >
-              <span>{ticker} Charts</span>
+              <span className="underline">{ticker} Charts</span>
             </button>
             <Button 
               variant="ghost" 

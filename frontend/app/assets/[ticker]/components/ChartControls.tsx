@@ -188,6 +188,7 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
               <SelectItem value="W">Weekly</SelectItem>
               <SelectItem value="ME">Monthly</SelectItem>
               <SelectItem value="QE">Quarterly</SelectItem>
+              <SelectItem value="6ME">Semi-Annually</SelectItem>
             </SelectContent>
           </Select>
         </div>

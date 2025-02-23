@@ -450,7 +450,7 @@ class Asset():
             font=dict(color='white'),
             hovermode='x unified',
             hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
-            height=400,
+            # height=400,
         )
 
         # fig.show()
@@ -533,7 +533,7 @@ class Asset():
 
         layout_updates = {
             'xaxis1_rangeslider_visible': False,
-            'height': 800 if volume else 600
+            # 'height': 800 if volume else 600
         }
 
         layout_updates['xaxis1'] = dict(
@@ -543,12 +543,12 @@ class Asset():
             gridcolor='rgba(128,128,128,0.2)',
         )
 
-        layout_updates['height'] = 400
+        # layout_updates['height'] = 400
 
         if volume:
             layout_updates[f'xaxis2_rangeslider_visible'] = False
             layout_updates['xaxis2'] = layout_updates['xaxis1']
-            layout_updates['height'] = 500
+            # layout_updates['height'] = 500
 
         layout_updates['title'] = title
 
@@ -657,7 +657,7 @@ class Asset():
                 paper_bgcolor='rgba(0, 0, 0, 0)',
                 plot_bgcolor='rgba(0, 0, 0, 0)',
                 font=dict(color='white'),
-                height=400,
+                # height=400,
         )
 
         # fig.show()
@@ -792,7 +792,7 @@ class Asset():
             'high': self.daily['high'].max(),
             'low': self.daily['low'].min(),
             '52w_high': self.daily[self.daily.index >= datetime.now() - pd.Timedelta(weeks=52)]['high'].max(),
-            '52w_low': self.daily[self.daily.index >= datetime.now() - pd.Timedelta(weeks=52)]['low'].max(),
+            '52w_low': self.daily[self.daily.index >= datetime.now() - pd.Timedelta(weeks=52)]['low'].min(),
             'current': self.daily['close'].iloc[-1]
         }
 

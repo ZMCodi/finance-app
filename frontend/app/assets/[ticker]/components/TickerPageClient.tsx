@@ -17,10 +17,10 @@ export default function TickerPageClient({ ticker }: TickerPageClientProps) {
   };
 
   return (
-    <div className="p-4 max-w-7xl mx-auto">
+    <div className="p-4 w-full mx-auto">
       <h1 className="text-2xl font-bold mb-4">{ticker} Analysis</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <ChartTypeSelector 
           chartType={chartType}
           setChartType={setChartType}

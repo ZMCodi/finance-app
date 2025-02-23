@@ -11,20 +11,20 @@ export default function PortfolioHome() {
   };
 
   return (
-    <div className="dark pl-3 pr-3">
-      <Card className="w-auto mt-5">
-        <CardHeader>
-          <CardTitle>
-            <button onClick={handleTitleClick} className="hover:text-blue-500 transition-colors">
-              <span>Build or upload your portfolio</span>
-            </button>
-          </CardTitle>
-          <CardDescription>track your investment performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AssetChart ticker='AAPL' plot_type="returns_distribution" height={300}/>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>
+          <button onClick={handleTitleClick} className="hover:text-blue-500 transition-colors">
+            <span className="underline">Build or upload your portfolio</span>
+          </button>
+        </CardTitle>
+        <CardDescription>track your investment performance</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1">
+        <div className="h-full">
+          <AssetChart ticker='AAPL' plot_type="returns_distribution"/>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

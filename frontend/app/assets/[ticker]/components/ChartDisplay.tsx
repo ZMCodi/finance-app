@@ -15,8 +15,8 @@ export default function ChartDisplay({
   queryString 
 }: ChartDisplayProps) {
   return (
-    <Card className="lg:col-span-3">
-      <CardContent className="pt-6">
+    <Card className="lg:col-span-4 h-[70vh]">
+      <CardContent className="pt-6 h-full">
         <AssetChart 
           ticker={ticker}
           plot_type={chartType as any}

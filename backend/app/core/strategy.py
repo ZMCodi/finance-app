@@ -25,7 +25,7 @@ from plotly.subplots import make_subplots
 import pandas as pd
 from pandas.core.frame import DataFrame
 import numpy as np
-import signal_gen as sg
+import app.core.signal_gen as sg
 import scipy.optimize as sco
 from app.core.asset import Asset
 from typing import Optional
@@ -1614,10 +1614,11 @@ class MACD(Strategy):
                 name='Signal Line'
         )
 
+        colors = ['#26A69A' if x >= 0 else '#EF5350' for x in df['macd_hist']]
         macd_hist = go.Bar(
                 x=df.index.strftime(format),
                 y=df['macd_hist'],
-                marker_color='black',
+                marker_color=colors,
                 name='MACD Histogram'
         )
 

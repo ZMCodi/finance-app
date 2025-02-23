@@ -112,7 +112,7 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
               <dd>{formatPercent(stats.distribution.mean)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt>Std Dev</dt>
+              <dt>Standard Deviation</dt>
               <dd>{formatPercent(stats.distribution.std)}</dd>
             </div>
             <div className="flex justify-between">

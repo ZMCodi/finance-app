@@ -11,18 +11,20 @@ export default function AssetHome() {
   };
 
   return (
-    <div className="dark m-auto w-[48.5%]">
-      <Card className="w-full mt-5">
+    <div className="flex-1">
+      <Card className="h-full">
         <CardHeader>
           <CardTitle>
             <button onClick={handleTitleClick} className="hover:text-blue-500 transition-colors">
-              <span>Look up assets</span>
+              <span className="underline">Look up assets</span>
             </button>
           </CardTitle>
           <CardDescription>do some analysis and shit</CardDescription>
         </CardHeader>
-        <CardContent>
-          <AssetChart ticker='AAPL' plot_type="price_history" height={300}/>
+        <CardContent className="flex-1">
+          <div className="h-full">
+            <AssetChart ticker='AAPL' plot_type="price_history"/>
+          </div>
         </CardContent>
       </Card>
     </div>
