@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import TickerInput from '@/app/assets/components/TickerInput';
 import AssetChart from '@/components/AssetChart';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,10 +12,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function StrategyPage() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
-  const [isDaily, setIsDaily] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('5m');
   const [showVolume, setShowVolume] = useState(true);
   
   // Default start date for 5min data (15 days ago)
@@ -29,68 +29,94 @@ export default function StrategyPage() {
   const [dailyStartDate, setDailyStartDate] = useState<Date | undefined>(undefined);
   const [dailyEndDate, setDailyEndDate] = useState<Date | undefined>(undefined);
   
-  // Active dates based on current timeframe
-  const [activeStartDate, setActiveStartDate] = useState<Date | undefined>(defaultFiveMinStart);
-  const [activeEndDate, setActiveEndDate] = useState<Date | undefined>(undefined);
+  // Query strings for both timeframes
+  const [fiveMinQueryString, setFiveMinQueryString] = useState('');
+  const [dailyQueryString, setDailyQueryString] = useState('');
   
-  const [queryString, setQueryString] = useState('');
+  // Flags to track if we need to refresh data
+  const [fiveMinNeedsRefresh, setFiveMinNeedsRefresh] = useState(true);
+  const [dailyNeedsRefresh, setDailyNeedsRefresh] = useState(true);
   
-  // Update active dates when timeframe changes
+  // Update query strings when settings change for 5min
   useEffect(() => {
-    if (isDaily) {
-      setActiveStartDate(dailyStartDate);
-      setActiveEndDate(dailyEndDate);
-    } else {
-      setActiveStartDate(fiveMinStartDate);
-      setActiveEndDate(fiveMinEndDate);
+    const params = new URLSearchParams();
+    params.append('timeframe', '5m');
+    
+    if (fiveMinStartDate) {
+      params.append('start_date', format(fiveMinStartDate, 'yyyy-MM-dd'));
     }
-  }, [isDaily, dailyStartDate, dailyEndDate, fiveMinStartDate, fiveMinEndDate]);
+    
+    if (fiveMinEndDate) {
+      params.append('end_date', format(fiveMinEndDate, 'yyyy-MM-dd'));
+    }
+    
+    params.append('volume', showVolume.toString());
+    
+    setFiveMinQueryString(params.toString());
+    setFiveMinNeedsRefresh(true);
+  }, [fiveMinStartDate, fiveMinEndDate, showVolume]);
   
-  // Handle date changes based on timeframe
+  // Update query strings when settings change for daily
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.append('timeframe', '1d');
+    
+    if (dailyStartDate) {
+      params.append('start_date', format(dailyStartDate, 'yyyy-MM-dd'));
+    }
+    
+    if (dailyEndDate) {
+      params.append('end_date', format(dailyEndDate, 'yyyy-MM-dd'));
+    }
+    
+    params.append('volume', showVolume.toString());
+    
+    setDailyQueryString(params.toString());
+    setDailyNeedsRefresh(true);
+  }, [dailyStartDate, dailyEndDate, showVolume]);
+  
+  const handleAddTicker = (ticker: string) => {
+    setSelectedAsset(ticker);
+    setFiveMinNeedsRefresh(true);
+    setDailyNeedsRefresh(true);
+  };
+  
+  // Handle start date change based on active tab
   const handleStartDateChange = (date: Date | undefined) => {
-    if (isDaily) {
+    if (activeTab === '1d') {
       setDailyStartDate(date);
     } else {
       setFiveMinStartDate(date);
     }
-    setActiveStartDate(date);
   };
   
+  // Handle end date change based on active tab
   const handleEndDateChange = (date: Date | undefined) => {
-    if (isDaily) {
+    if (activeTab === '1d') {
       setDailyEndDate(date);
     } else {
       setFiveMinEndDate(date);
     }
-    setActiveEndDate(date);
   };
   
-  // Update query string when settings change
-  useEffect(() => {
-    const params = new URLSearchParams();
-    
-    // Set timeframe based on switch
-    params.append('timeframe', isDaily ? '1d' : '5m');
-    
-    // Add dates if defined
-    if (activeStartDate) {
-      params.append('start_date', format(activeStartDate, 'yyyy-MM-dd'));
-    }
-    
-    if (activeEndDate) {
-      params.append('end_date', format(activeEndDate, 'yyyy-MM-dd'));
-    }
-    
-    // Add volume setting
-    params.append('volume', showVolume.toString());
-    
-    setQueryString(params.toString());
-  }, [isDaily, activeStartDate, activeEndDate, showVolume]);
-  
-  const handleAddTicker = (ticker: string) => {
-    setSelectedAsset(ticker);
+  // Get the active dates based on the current tab
+  const getActiveStartDate = () => {
+    return activeTab === '1d' ? dailyStartDate : fiveMinStartDate;
   };
   
+  const getActiveEndDate = () => {
+    return activeTab === '1d' ? dailyEndDate : fiveMinEndDate;
+  };
+  
+  // After chart is loaded, reset the refresh flag
+  const handleFiveMinLoad = () => {
+    setFiveMinNeedsRefresh(false);
+  };
+  
+  const handleDailyLoad = () => {
+    setDailyNeedsRefresh(false);
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl text-center font-bold mb-6">Strategy Builder</h1>
@@ -105,21 +131,19 @@ export default function StrategyPage() {
             {/* First Column: Asset Title */}
             <h2 className="text-lg font-semibold">{selectedAsset}</h2>
             
-            {/* Second Column: Timeframe Toggle & Volume */}
+            {/* Second Column: Tabs & Volume */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="timeframe-switch" className={isDaily ? "opacity-50" : "font-medium"}>
-                  5-Min
-                </Label>
-                <Switch
-                  id="timeframe-switch"
-                  checked={isDaily}
-                  onCheckedChange={setIsDaily}
-                />
-                <Label htmlFor="timeframe-switch" className={!isDaily ? "opacity-50" : "font-medium"}>
-                  Daily
-                </Label>
-              </div>
+              <Tabs 
+                defaultValue="5m" 
+                value={activeTab} 
+                onValueChange={(value) => setActiveTab(value)}
+                className="w-[200px]"
+              >
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="5m">5-Min</TabsTrigger>
+                  <TabsTrigger value="1d">Daily</TabsTrigger>
+                </TabsList>
+              </Tabs>
               
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -139,18 +163,18 @@ export default function StrategyPage() {
                     variant="outline"
                     className={cn(
                       "justify-start text-left font-normal",
-                      !activeStartDate && "text-muted-foreground"
+                      !getActiveStartDate() && "text-muted-foreground"
                     )}
                     size="sm"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {activeStartDate ? format(activeStartDate, "dd-MM-yyyy") : <span>Start</span>}
+                    {getActiveStartDate() ? format(getActiveStartDate()!, "dd-MM-yyyy") : <span>Start</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={activeStartDate}
+                    selected={getActiveStartDate()}
                     onSelect={handleStartDateChange}
                     initialFocus
                   />
@@ -165,18 +189,18 @@ export default function StrategyPage() {
                     variant="outline"
                     className={cn(
                       "justify-start text-left font-normal",
-                      !activeEndDate && "text-muted-foreground"
+                      !getActiveEndDate() && "text-muted-foreground"
                     )}
                     size="sm"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {activeEndDate ? format(activeEndDate, "dd-MM-yyyy") : <span>End</span>}
+                    {getActiveEndDate() ? format(getActiveEndDate()!, "dd-MM-yyyy") : <span>End</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={activeEndDate}
+                    selected={getActiveEndDate()}
                     onSelect={handleEndDateChange}
                     initialFocus
                   />
@@ -185,13 +209,30 @@ export default function StrategyPage() {
             </div>
           </div>
           
-          {/* Chart */}
+          {/* Chart Content */}
           <div className="h-[70vh]">
-            <AssetChart 
-              ticker={selectedAsset} 
-              plot_type="candlestick"
-              queryString={queryString}
-            />
+            <Tabs value={activeTab} className="h-full">
+              <TabsContent value="5m" className="h-full">
+                <AssetChart 
+                  key={selectedAsset}
+                  ticker={selectedAsset} 
+                  plot_type="candlestick"
+                  queryString={fiveMinQueryString}
+                  skipFetch={!fiveMinNeedsRefresh}
+                  onLoad={handleFiveMinLoad}
+                />
+              </TabsContent>
+              <TabsContent value="1d" className="h-full">
+                <AssetChart 
+                  key={selectedAsset}
+                  ticker={selectedAsset} 
+                  plot_type="candlestick"
+                  queryString={dailyQueryString}
+                  skipFetch={!dailyNeedsRefresh}
+                  onLoad={handleDailyLoad}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       )}

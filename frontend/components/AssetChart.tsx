@@ -5,6 +5,8 @@ import dynamic from "next/dynamic";
 import { useResizeObserver } from "usehooks-ts";
 import { AssetPlot, PlotJSON } from "@/src/api/index";
 
+// Cache for storing chart data
+const chartDataCache: Record<string, PlotJSON> = {};
 
 interface AssetChartProps {
     ticker: string;
@@ -13,6 +15,8 @@ interface AssetChartProps {
     height?: number;
     width?: number;
     nticks?: number;
+    skipFetch?: boolean;
+    onLoad?: () => void;
 }
 
 const Plot = dynamic(() => import("react-plotly.js"), {
@@ -20,11 +24,23 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     loading: () => <div>Loading...</div>, 
 });
 
-export default function AssetChart({ ticker, plot_type, queryString, height, width, nticks }: AssetChartProps) {
+export default function AssetChart({ 
+    ticker, 
+    plot_type, 
+    queryString = "", 
+    height, 
+    width, 
+    nticks,
+    skipFetch = false,
+    onLoad
+}: AssetChartProps) {
     const [plotData, setPlotData] = useState<PlotJSON | null>(null);
     const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null!);
     const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+    
+    // Create a cache key based on ticker, plot type, and query parameters
+    const cacheKey = `${ticker}-${plot_type}-${queryString}`;
     
     // Use resize observer to track container size changes
     useResizeObserver({
@@ -40,17 +56,34 @@ export default function AssetChart({ ticker, plot_type, queryString, height, wid
     useEffect(() => {
         const fetchData = async () => {
             try {
+                // If skipFetch is true and we have cached data, use it
+                if (skipFetch && chartDataCache[cacheKey]) {
+                    setPlotData(chartDataCache[cacheKey]);
+                    setLoading(false);
+                    return;
+                }
+                
+                // Otherwise fetch new data
                 const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}?${queryString}`);
                 const data: AssetPlot = await response.json();
+                
+                // Save to cache
+                chartDataCache[cacheKey] = data.json_data;
                 setPlotData(data.json_data);
+                
+                // Call onLoad callback if provided
+                if (onLoad) {
+                    onLoad();
+                }
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
                 setLoading(false);
             }
         };
+        
         fetchData();
-    }, [ticker, plot_type, queryString]);
+    }, [ticker, plot_type, queryString, skipFetch, cacheKey, onLoad]);
 
     // Initialize container dimensions after mount
     useEffect(() => {
