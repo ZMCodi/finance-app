@@ -1,6 +1,6 @@
 import ChartContainer from "@/app/assets/components/ChartContainer";
 
-export default function Home() {
+export default function AnalysisPage() {
   return (
     <div className="dark p-4">
       <h1 className="text-xl text-center pt-5">Search a ticker</h1>

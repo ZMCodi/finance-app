@@ -36,7 +36,7 @@ export default function AssetCard({ ticker, onDelete }: AssetCardProps) {
       ...prev,
       [selectedPlot]: true
     }));
-  }, []);
+  }, [selectedPlot]);
 
   const handleTickerClick = () => {
     router.push(`/assets/${ticker}`);
