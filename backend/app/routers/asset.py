@@ -39,8 +39,8 @@ def read_asset_price_history(asset: Asset = Depends(get_asset), timeframe: str =
     }
 
 @router.get("/{asset_ticker}/returns_distribution", response_model=AssetPlot)
-def read_asset_returns_distribution(asset: Asset = Depends(get_asset), log_rets: bool = False, bins: int = 100):
-    fig = asset.plot_returns_dist(log_rets=log_rets, bins=bins)
+def read_asset_returns_distribution(asset: Asset = Depends(get_asset), timeframe: str = '1d', log_rets: bool = False, bins: int = 100):
+    fig = asset.plot_returns_dist(timeframe=timeframe, log_rets=log_rets, bins=bins)
     return {
         'ticker': asset.ticker,
         'plot_type': 'returns distribution',

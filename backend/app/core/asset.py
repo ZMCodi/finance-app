@@ -575,7 +575,7 @@ class Asset():
 
         return fig
 
-    def plot_returns_dist(self, *, log_rets: bool = False, bins: int = 100,
+    def plot_returns_dist(self, *, timeframe: str = '1d', log_rets: bool = False, bins: int = 100,
                         show_stats: bool = True) -> go.Figure:
         """Plots the returns distribution histogram of the underlying asset.
 
@@ -590,7 +590,8 @@ class Asset():
             (plotly.graph_objects.Figure): Returns distribution histogram of underlying asset.
         """
 
-        data = self.daily['log_rets'] if log_rets else self.daily['rets']
+        df = self.daily if timeframe == '1d' else self.five_minute
+        data = df['log_rets'] if log_rets else df['rets']
         data = data.dropna()
 
         # Calculate statistics

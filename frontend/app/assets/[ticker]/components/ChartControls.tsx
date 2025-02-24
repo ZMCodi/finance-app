@@ -61,6 +61,7 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
 
     if (chartType === 'returns_distribution') {
       settings = {
+        timeframe,
         log_rets: useLogReturns,
         bins: parseInt(numBins),
       };
@@ -83,6 +84,18 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
     return (
       <Card>
         <CardContent className="space-y-4 pt-6">
+        <div className="space-y-2">
+          <Label>Timeframe</Label>
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1d">Since 2020</SelectItem>
+              <SelectItem value="5m">Past 60 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
           <div className="flex items-center space-x-2">
             <Checkbox
               id="logReturns"
