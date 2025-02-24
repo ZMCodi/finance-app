@@ -30,7 +30,7 @@ export default function TickerInput({ onAddTicker }: TickerInputProps) {
       <Input
         placeholder="Enter ticker symbol (e.g. AAPL)"
         value={newTicker}
-        onChange={(e) => setNewTicker(e.target.value)}
+        onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
         onKeyDown={handleKeyPress}
       />
       <Button onClick={handleAddTicker}>

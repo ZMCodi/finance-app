@@ -434,7 +434,7 @@ class Asset():
             )
 
         fig.update_layout(
-            title=f'{self.ticker} Price History',
+            # title=f'{self.ticker} Price History',
             yaxis=dict(
                 title=f'Price ({self.currency})',
                 gridcolor='rgba(128,128,128,0.2)',
@@ -526,10 +526,10 @@ class Asset():
         else:
             fig.add_trace(candlestick)
 
-        # Update layout
-        title = f'{self.ticker} Candlestick Chart'
-        if volume:
-            title += ' with Volume Bars'
+        # # Update layout
+        # title = f'{self.ticker} Candlestick Chart'
+        # if volume:
+        #     title += ' with Volume Bars'
 
         layout_updates = {
             'xaxis1_rangeslider_visible': False,
@@ -550,7 +550,7 @@ class Asset():
             layout_updates['xaxis2'] = layout_updates['xaxis1']
             # layout_updates['height'] = 500
 
-        layout_updates['title'] = title
+        # layout_updates['title'] = title
 
         layout_updates['yaxis'] = dict(
             title=f'Price ({self.currency})',
@@ -652,7 +652,7 @@ class Asset():
         )
 
         fig.update_layout(
-                title=f'{self.ticker} {"Log" if log_rets else ""} Returns Distribution',
+                # title=f'{self.ticker} {"Log" if log_rets else ""} Returns Distribution',
                 xaxis_title='Returns',
                 yaxis_title=f'Count',
                 paper_bgcolor='rgba(0, 0, 0, 0)',
