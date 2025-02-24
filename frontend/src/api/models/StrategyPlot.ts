@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { PlotJSON } from './PlotJSON';
 import type { StrategyType } from './StrategyType';
 export type StrategyPlot = {
     /**
@@ -19,6 +20,6 @@ export type StrategyPlot = {
     /**
      * The JSON representation of the plot
      */
-    json_data: Record<string, any>;
+    json_data: PlotJSON;
 };
 

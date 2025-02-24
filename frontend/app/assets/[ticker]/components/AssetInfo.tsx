@@ -1,29 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface AssetStats {
-  returns: {
-    total_return: number;
-    daily_mean: number;
-    daily_std: number;
-    daily_median: number;
-    annualized_vol: number;
-    annualized_ret: number;
-  };
-  price: {
-    high: number;
-    low: number;
-    '52w_high': number;
-    '52w_low': number;
-    current: number;
-  };
-  distribution: {
-    mean: number;
-    std: number;
-    skewness: number;
-    kurtosis: number;
-  };
-}
+import { AssetStats } from '@/src/api/index'
 
 interface AssetInfoProps {
   ticker: string;
@@ -37,8 +14,8 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
     const fetchStats = async () => {
       try {
         const response = await fetch(`http://localhost:8000/api/assets/${ticker}/stats`);
-        const data = await response.json();
-        setStats(data.stats);
+        const data: AssetStats = await response.json();
+        setStats(data);
       } catch (error) {
         console.error('Error fetching stats:', error);
       } finally {
@@ -87,7 +64,7 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt>Total Return</dt>
-              <dd>{formatPercent(stats.returns.total_return)}</dd>
+              <dd>{formatPercent(stats.returns.total_returns)}</dd>
             </div>
             <div className="flex justify-between">
               <dt>Annualized Return</dt>

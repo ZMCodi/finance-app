@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { PlotJSON } from './PlotJSON';
 import type { PlotType } from './PlotType';
 export type AssetPlot = {
     /**
@@ -15,6 +16,6 @@ export type AssetPlot = {
     /**
      * The JSON representation of the plot
      */
-    json_data: Record<string, any>;
+    json_data: PlotJSON;
 };
 

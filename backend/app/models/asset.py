@@ -17,7 +17,7 @@ class AssetResponse(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     asset_type: AssetType = Field(..., title='Asset Type', description='The type of asset')
     currency: str = Field(..., title='Currency', min_length=3, max_length=3, description='The currency the asset is traded in')
-    sector: str = Field(..., title='Sector', description='The sector the asset belongs to')
+    sector: str | None = Field(..., title='Sector', description='The sector the asset belongs to')
 
 class AssetPlot(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')

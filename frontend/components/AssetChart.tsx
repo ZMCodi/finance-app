@@ -3,11 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useResizeObserver } from "usehooks-ts";
+import { AssetPlot, PlotJSON } from "@/src/api/index";
 
-interface PlotlyData {
-    data: any[];
-    layout: any;
-}
 
 interface AssetChartProps {
     ticker: string;
@@ -24,7 +21,7 @@ const Plot = dynamic(() => import("react-plotly.js"), {
 });
 
 export default function AssetChart({ ticker, plot_type, queryString, height, width, nticks }: AssetChartProps) {
-    const [plotData, setPlotData] = useState<PlotlyData | null>(null);
+    const [plotData, setPlotData] = useState<PlotJSON | null>(null);
     const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null!);
     const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
@@ -44,7 +41,7 @@ export default function AssetChart({ ticker, plot_type, queryString, height, wid
         const fetchData = async () => {
             try {
                 const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}?${queryString}`);
-                const data = await response.json();
+                const data: AssetPlot = await response.json();
                 setPlotData(data.json_data);
             } catch (error) {
                 console.error("Error fetching data:", error);
