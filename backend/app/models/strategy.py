@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Dict, List, Optional
 from enum import Enum
+from app.models.common import PlotJSON
 
 class StrategyType(str, Enum):
     MA_CROSSOVER = 'MA_Crossover'
@@ -64,7 +65,7 @@ class StrategyCreate(StrategyBase):
 
 class StrategyPlot(StrategyBase):
     results: Optional[Dict[str, float]] = Field(None, title='Results', description='The results of the backtest')
-    json_data: dict = Field(..., title='JSON', description='The JSON representation of the plot')
+    json_data: PlotJSON = Field(..., title='JSON', description='The JSON representation of the plot')
 
 class StrategyParams(StrategyBase):
     params: Dict[str, float | str | List] = Field(..., title='Parameters', description='The parameters of the strategy')
@@ -74,18 +75,18 @@ class StrategySignal(StrategyBase):
 
 class StrategyUpdateParams(BaseModel):
     # MA Crossover
-    short: Optional[int] = Field(None, title='Short', description='The short moving average period')
-    long: Optional[int] = Field(None, title='Long', description='The long moving average period')
+    short: Optional[int | float] = Field(None, title='Short', description='The short moving average period')
+    long: Optional[int | float] = Field(None, title='Long', description='The long moving average period')
     param_type: Optional[MA_ParamType] = Field(None, title='Param Type', description='The type of parameter to update')
     ewm: Optional[bool] = Field(None, title='Exponential Weighted Moving Average', description='Whether to use exponential weighted moving average')
 
     # RSI
-    ub: Optional[float] = Field(None, title='Upper Bound', description='The upper bound for the RSI')
-    lb: Optional[float] = Field(None, title='Lower Bound', description='The lower bound for the RSI')
+    ub: Optional[int | float] = Field(None, title='Upper Bound', description='The upper bound for the RSI')
+    lb: Optional[int | float] = Field(None, title='Lower Bound', description='The lower bound for the RSI')
     window: Optional[int] = Field(None, title='Window', description='The window period for the RSI or MA window for BB')
     exit: Optional[RSI_Exit] = Field(None, title='Exit', description='The type of exit signal')
     m_rev: Optional[bool] = Field(None, title='Mean Reversion', description='Whether to use mean reversion')
-    m_rev_bound: Optional[float] = Field(None, title='Mean Reversion Bound', description='The mean reversion bound')
+    m_rev_bound: Optional[int | float] = Field(None, title='Mean Reversion Bound', description='The mean reversion bound')
 
     # MACD
     fast: Optional[int] = Field(None, title='Fast', description='The fast moving average period')
@@ -93,7 +94,7 @@ class StrategyUpdateParams(BaseModel):
     signal: Optional[int] = Field(None, title='Signal', description='The signal line period')
 
     # BB
-    num_std: Optional[int] = Field(None, title='Number of Standard Deviations', description='The number of standard deviations for the Bollinger Bands')
+    num_std: Optional[int | float] = Field(None, title='Number of Standard Deviations', description='The number of standard deviations for the Bollinger Bands')
 
     # Common
     method: Optional[VoteMethod] = Field(None, title='Vote Method', description='The voting method for multiple signals')

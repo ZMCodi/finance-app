@@ -31,7 +31,7 @@ export default function TickerInput({ onAddTicker }: TickerInputProps) {
         placeholder="Enter ticker symbol (e.g. AAPL)"
         value={newTicker}
         onChange={(e) => setNewTicker(e.target.value)}
-        onKeyPress={handleKeyPress}
+        onKeyDown={handleKeyPress}
       />
       <Button onClick={handleAddTicker}>
         <PlusCircle className="h-4 w-4 mr-2" />

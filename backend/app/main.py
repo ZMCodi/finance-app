@@ -1,7 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.asset import Asset
-from app.core.portfolio import Portfolio
 
 from app.routers.asset import router as asset_router
 from app.routers.strategy import router as strategy_router

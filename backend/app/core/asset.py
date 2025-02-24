@@ -777,13 +777,13 @@ class Asset():
 
         # return statistics
         stats['returns'] = {
-            'total_return': (self.daily['adj_close'].iloc[-1] / 
+            'total_returns': (self.daily['adj_close'].iloc[-1] / 
                             self.daily['adj_close'].iloc[0]) - 1,
             'daily_mean': self.daily['rets'].mean(),
             'daily_std': self.daily['rets'].std(),
             'daily_median': self.daily['rets'].median(),
-            'annualized_vol': self.daily['rets'].std() * np.sqrt(252 if self.asset_type != 'Cryptocurrency' else 365),
             'annualized_ret': (1 + self.daily['rets'].mean()) ** 252 - 1,
+            'annualized_vol': self.daily['rets'].std() * np.sqrt(252 if self.asset_type != 'Cryptocurrency' else 365),
         }
 
         stats['returns'] = {k: round(float(v), 5) for k, v in stats['returns'].items()}
