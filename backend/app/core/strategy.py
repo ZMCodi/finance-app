@@ -1093,7 +1093,7 @@ class RSI(Strategy):
         """
         return {'ub': self.ub, 'lb': self.lb, 'window': self.window, 'exit': self.exit,
                 'm_rev': self.m_rev, 'm_rev_bound': self.m_rev_bound, 'combine': self.combine,
-                'weights': list(self.weights), 'vote_threshold': self.vote_threshold,
+                'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
@@ -1488,7 +1488,7 @@ class MACD(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'fast': self.fast, 'slow': self.slow, 'signal': self.signal,
-                'combine': self.combine, 'weights': list(self.weights), 'vote_threshold': self.vote_threshold,
+                'combine': self.combine, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
@@ -1863,7 +1863,7 @@ class BB(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'window': self.window, 'num_std': self.num_std,
-                'combine': self.combine, 'weights': list(self.weights), 'vote_threshold': self.vote_threshold}
+                'combine': self.combine, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
             end_date: Optional[DateLike] = None) -> go.Figure:
