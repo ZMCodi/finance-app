@@ -2,9 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { CombineType } from './CombineType';
 import type { MA_ParamType } from './MA_ParamType';
 import type { RSI_Exit } from './RSI_Exit';
+import type { VoteMethod } from './VoteMethod';
 export type StrategyUpdateParams = {
     /**
      * The short moving average period
@@ -63,9 +63,9 @@ export type StrategyUpdateParams = {
      */
     num_std?: (number | null);
     /**
-     * The type of signal combination
+     * The voting method for multiple signals
      */
-    combine?: (CombineType | null);
+    method?: (VoteMethod | null);
     /**
      * The weights for the signals
      */

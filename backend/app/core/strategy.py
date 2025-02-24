@@ -386,9 +386,12 @@ class Strategy(ABC):
                                 plot_bgcolor='rgba(240,240,240,0.95)',
                                 hovermode='x unified')
 
-            fig.show()
+            # fig.show()
+            return np.exp(df[['returns', 'strategy']].sum()) - 1, fig
+            
 
-        return np.exp(df[['returns', 'strategy']].sum())
+
+        return np.exp(df[['returns', 'strategy']].sum()) - 1
     
     @staticmethod
     def _single_optimization(args):
@@ -462,6 +465,9 @@ class Strategy(ABC):
         if threshold_range is None:
             threshold_range = np.arange(0.2, 0.9, 0.1)
 
+        if self.method in ['unanimous', 'majority']:
+            return old_params
+
         t_min, t_max = threshold_range[0], threshold_range[-1]
 
         # Prepare arguments for parallel processing
@@ -479,12 +485,23 @@ class Strategy(ABC):
         opt_weights = best_params[:-1] / np.sum(best_params[:-1])
         opt_threshold = best_params[-1]
 
-        if inplace:
-            self.change_params(weights=opt_weights, vote_threshold=opt_threshold)
-        else:
+        # if inplace:
+        #     self.change_params(weights=opt_weights, vote_threshold=opt_threshold)
+        # else:
+        #     self.change_params(**old_params)
+        self.change_params(weights=opt_weights, vote_threshold=opt_threshold)
+        res = self.backtest(plot=False, timeframe=timeframe, start_date=start_date, end_date=end_date)
+        res.rename({'strategy': 'strategy_returns', 'returns': 'hold_returns'}, inplace=True)
+        res['net'] = res['strategy_returns'] - res['hold_returns']
+
+        if not inplace:
             self.change_params(**old_params)
 
-        return opt_weights, float(opt_threshold)
+        return {
+            'weights': [float(w) for w in opt_weights],
+            'vote_threshold': float(opt_threshold),
+            'results': res.to_dict(),
+        }
 
     @property 
     def num_signals_daily(self) -> int:
@@ -843,7 +860,11 @@ class MA_Crossover(Strategy):
         else:
             self.change_params(**old_params)
 
-        return results
+        opt_results = results.iloc[0]
+        return {
+            'params': opt_results[:-3].to_dict(),
+            'results': opt_results[-3:].to_dict()
+        }
 
     def optimize_weights(self):
         """Not implemented for MA Crossover strategy.
@@ -874,7 +895,7 @@ class RSI(Strategy):
         m_rev (bool): Whether to use mean reversion signals
         m_rev_bound (float): Mean reversion boundary level
         signal_type (list[str]): List of signal types to use
-        combine (str): Signal combination method ('weighted' or 'consensus')
+        method (str): Signal combination method ('weighted' or 'consensus')
         weights (np.ndarray): Weights for combining different signal types
         vote_threshold (float): Threshold for signal voting
         engine (TAEngine): Technical analysis calculation engine
@@ -885,8 +906,8 @@ class RSI(Strategy):
 
     def __init__(self, asset: Asset, ub: float = 70, lb: float = 30, window: int = 14,
                  exit: str = 're', m_rev: bool = True, m_rev_bound: float = 50,
-                 signal_type: Optional[list[str]] = None, combine: str = 'weighted',
-                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.5):
+                 signal_type: Optional[list[str]] = None, method: str = 'weighted',
+                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.):
         """Initialize the RSI strategy.
 
         Args:
@@ -899,7 +920,7 @@ class RSI(Strategy):
             m_rev_bound (float, optional): Mean reversion level. Defaults to 50.
             signal_type (list[str], optional): Signal types to use. Defaults to
                 ['crossover', 'divergence', 'hidden divergence'].
-            combine (str, optional): Signal combination method. Defaults to 'weighted'.
+            method (str, optional): Signal combination method. Defaults to 'weighted'.
             weights (np.ndarray, optional): Signal weights. Defaults to equal weights.
             vote_threshold (float, optional): Voting threshold. Defaults to 0.5.
         """
@@ -916,7 +937,7 @@ class RSI(Strategy):
         else:
             self.signal_type = ['crossover', 'divergence', 'hidden divergence']
 
-        self.__combine = str(combine)
+        self.__method = str(method)
 
         if weights is not None:
             self.__weights = np.array(weights)
@@ -957,7 +978,7 @@ class RSI(Strategy):
             df.dropna(inplace=True)
 
             df['signal'] = sg.rsi(df['rsi'], df['adj_close'], self.ub, self.lb, 
-                                self.exit, self.signal_type, self.combine, 
+                                self.exit, self.signal_type, self.method, 
                                 self.vote_threshold, self.weights, 
                                 self.m_rev_bound if self.m_rev else None)
 
@@ -1027,12 +1048,12 @@ class RSI(Strategy):
         self.__get_data()
 
     @property
-    def combine(self):
-        return self.__combine
+    def method(self):
+        return self.__method
 
-    @combine.setter
-    def combine(self, value):
-        self.__combine = value
+    @method.setter
+    def method(self, value):
+        self.__method = value
         self.__get_data()
 
     @property
@@ -1057,7 +1078,7 @@ class RSI(Strategy):
     def change_params(self, ub: Optional[float] = None, lb: Optional[float] = None,
                      window: Optional[int] = None, exit: Optional[str] = None,
                      m_rev: Optional[bool] = None, m_rev_bound: Optional[float] = None,
-                     combine: Optional[str] = None, weights: Optional[np.ndarray] = None,
+                     method: Optional[str] = None, weights: Optional[np.ndarray] = None,
                      vote_threshold: Optional[float] = None) -> None:
         """Update multiple strategy parameters at once.
 
@@ -1068,7 +1089,7 @@ class RSI(Strategy):
             exit (str, optional): New exit type. Defaults to None.
             m_rev (bool, optional): Use mean reversion. Defaults to None.
             m_rev_bound (float, optional): New mean reversion level. Defaults to None.
-            combine (str, optional): New combination method. Defaults to None.
+            method (str, optional): New combination method. Defaults to None.
             weights (np.ndarray, optional): New signal weights. Defaults to None.
             vote_threshold (float, optional): New voting threshold. Defaults to None.
         """
@@ -1078,7 +1099,7 @@ class RSI(Strategy):
         self.__exit = exit if exit is not None else self.exit
         self.__m_rev = m_rev if m_rev is not None else self.m_rev
         self.__m_rev_bound = m_rev_bound if m_rev_bound is not None else self.m_rev_bound
-        self.__combine = combine if combine is not None else self.combine
+        self.__method = method if method is not None else self.method
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
@@ -1092,7 +1113,7 @@ class RSI(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'ub': self.ub, 'lb': self.lb, 'window': self.window, 'exit': self.exit,
-                'm_rev': self.m_rev, 'm_rev_bound': self.m_rev_bound, 'combine': self.combine,
+                'm_rev': self.m_rev, 'm_rev_bound': self.m_rev_bound, 'method': self.method,
                 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
                 'signal_type': self.signal_type}
 
@@ -1284,7 +1305,11 @@ class RSI(Strategy):
         else:
             self.change_params(**old_params)
 
-        return results
+        opt_results = results.iloc[0]
+        return {
+            'params': opt_results[:-3].to_dict(),
+            'results': opt_results[-3:].to_dict()
+        }
 
     def _get_init_params(self) -> dict:
         """Return the parameters needed to initialize a new instance of the strategy.
@@ -1297,7 +1322,7 @@ class RSI(Strategy):
             'exit': self.exit,
             'm_rev': self.m_rev,
             'signal_type': self.signal_type,
-            'combine': self.combine,
+            'method': self.method,
             'weights': self.weights,
             'vote_threshold': self.vote_threshold
         }
@@ -1321,7 +1346,7 @@ class MACD(Strategy):
         slow (int): Slow EMA period for MACD line
         signal (int): Signal line EMA period
         signal_type (list[str]): Active signal generation methods
-        combine (str): Signal combination method ('weighted' or 'consensus')
+        method (str): Signal combination method ('weighted' or 'consensus')
         weights (np.ndarray): Weights for each signal type
         vote_threshold (float): Threshold for signal voting
         engine (TAEngine): Technical analysis calculation engine
@@ -1329,8 +1354,8 @@ class MACD(Strategy):
     """
 
     def __init__(self, asset: Asset, fast: int = 12, slow: int = 26, signal: int = 9,
-                 signal_type: Optional[list[str]] = None, combine: str = 'weighted',
-                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.5):
+                 signal_type: Optional[list[str]] = None, method: str = 'weighted',
+                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.):
         """Initialize the MACD strategy.
 
         Args:
@@ -1340,7 +1365,7 @@ class MACD(Strategy):
             signal (int, optional): Signal line EMA period. Defaults to 9.
             signal_type (list[str], optional): Signal types to use. Defaults to
                 ['crossover', 'divergence', 'hidden divergence', 'momentum', 'double peak/trough'].
-            combine (str, optional): Signal combination method. Defaults to 'weighted'.
+            method (str, optional): Signal combination method. Defaults to 'weighted'.
             weights (np.ndarray, optional): Signal weights. Defaults to equal weights.
             vote_threshold (float, optional): Voting threshold. Defaults to 0.5.
         """
@@ -1355,7 +1380,7 @@ class MACD(Strategy):
             self.signal_type = ['crossover', 'divergence', 'hidden divergence', 
                               'momentum', 'double peak/trough']
 
-        self.__combine = str(combine)
+        self.__method = str(method)
 
         if weights is not None:
             self.__weights = np.array(weights)
@@ -1391,7 +1416,7 @@ class MACD(Strategy):
             df.dropna(inplace=True)
 
             df['signal'] = sg.macd(df['macd_hist'], df['macd'], df['adj_close'],
-                                 self.signal_type, self.combine, self.vote_threshold, 
+                                 self.signal_type, self.method, self.vote_threshold, 
                                  self.weights)
 
             df.rename(columns=dict(log_rets='returns'), inplace=True)
@@ -1430,12 +1455,12 @@ class MACD(Strategy):
         self.__get_data()
 
     @property
-    def combine(self):
-        return self.__combine
+    def method(self):
+        return self.__method
 
-    @combine.setter
-    def combine(self, value):
-        self.__combine = value
+    @method.setter
+    def method(self, value):
+        self.__method = value
         self.__get_data()
 
     @property
@@ -1458,7 +1483,7 @@ class MACD(Strategy):
         self.__get_data()
 
     def change_params(self, fast: Optional[int] = None, slow: Optional[int] = None,
-                     signal: Optional[int] = None, combine: Optional[str] = None,
+                     signal: Optional[int] = None, method: Optional[str] = None,
                      weights: Optional[np.ndarray] = None, 
                      vote_threshold: Optional[float] = None) -> None:
         """Update multiple strategy parameters at once.
@@ -1467,14 +1492,14 @@ class MACD(Strategy):
             fast (int, optional): New fast period. Defaults to None.
             slow (int, optional): New slow period. Defaults to None.
             signal (int, optional): New signal period. Defaults to None.
-            combine (str, optional): New combination method. Defaults to None.
+            method (str, optional): New combination method. Defaults to None.
             weights (np.ndarray, optional): New signal weights. Defaults to None.
             vote_threshold (float, optional): New voting threshold. Defaults to None.
         """
         self.__fast = fast if fast is not None else self.fast
         self.__slow = slow if slow is not None else self.slow
         self.__signal = signal if signal is not None else self.signal
-        self.__combine = combine if combine is not None else self.combine
+        self.__method = method if method is not None else self.method
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
@@ -1488,7 +1513,7 @@ class MACD(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'fast': self.fast, 'slow': self.slow, 'signal': self.signal,
-                'combine': self.combine, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
+                'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
@@ -1648,11 +1673,11 @@ class MACD(Strategy):
                 - net: Net returns (strategy - hold)
         """
         if fast_range is None:
-            fast_range = np.arange(8, 21, 2)
+            fast_range = np.arange(8, 21, 1)
         if slow_range is None:
-            slow_range = np.arange(21, 35, 2)
+            slow_range = np.arange(21, 35, 1)
         if signal_range is None:
-            signal_range = np.arange(5, 15, 2)
+            signal_range = np.arange(5, 15, 1)
 
         old_params = {'fast': self.fast, 'slow': self.slow, 'signal': self.signal}
         strategy_params = self._get_init_params()
@@ -1679,7 +1704,13 @@ class MACD(Strategy):
         else:
             self.change_params(**old_params)
 
-        return results
+        # return results
+
+        opt_results = results.iloc[0]
+        return {
+            'params': opt_results[:-3].to_dict(),
+            'results': opt_results[-3:].to_dict()
+        }
 
     def _get_init_params(self) -> dict:
         """Return the parameters needed to initialize a new instance of the strategy.
@@ -1690,7 +1721,7 @@ class MACD(Strategy):
         return {
             'asset': self.asset,
             'signal_type': self.signal_type,
-            'combine': self.combine,
+            'method': self.method,
             'weights': self.weights,
             'vote_threshold': self.vote_threshold
         }
@@ -1714,7 +1745,7 @@ class BB(Strategy):
         window (int): Period for moving average and standard deviation
         num_std (float): Number of standard deviations for band width
         signal_type (list[str]): Active signal generation methods
-        combine (str): Signal combination method ('weighted' or 'consensus')
+        method (str): Signal combination method ('weighted' or 'consensus')
         weights (np.ndarray): Weights for each signal type
         vote_threshold (float): Threshold for signal voting
         engine (TAEngine): Technical analysis calculation engine
@@ -1722,8 +1753,8 @@ class BB(Strategy):
     """
 
     def __init__(self, asset: Asset, window: int = 20, num_std: float = 2,
-                 signal_type: Optional[list[str]] = None, combine: str = 'weighted',
-                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.5):
+                 signal_type: Optional[list[str]] = None, method: str = 'weighted',
+                 weights: Optional[np.ndarray] = None, vote_threshold: float = 0.):
         """Initialize the Bollinger Bands strategy.
 
         Args:
@@ -1732,7 +1763,7 @@ class BB(Strategy):
             num_std (float, optional): Band width in standard deviations. Defaults to 2.
             signal_type (list[str], optional): Signal types to use. Defaults to
                 ['bounce', 'double', 'walks', 'squeeze', 'breakout', '%B'].
-            combine (str, optional): Signal combination method. Defaults to 'weighted'.
+            method (str, optional): Signal combination method. Defaults to 'weighted'.
             weights (np.ndarray, optional): Signal weights. Defaults to equal weights.
             vote_threshold (float, optional): Voting threshold. Defaults to 0.5.
         """
@@ -1745,7 +1776,7 @@ class BB(Strategy):
         else:
             self.signal_type = ['bounce', 'double', 'walks', 'squeeze', 'breakout', '%B']
 
-        self.__combine = str(combine)
+        self.__method = str(method)
 
         if weights is not None:
             self.__weights = np.array(weights)
@@ -1779,7 +1810,7 @@ class BB(Strategy):
             df.dropna(inplace=True)
 
             df['signal'] = sg.bb(df['adj_close'], df['bol_up'], df['bol_down'],
-                               self.signal_type, self.combine, self.vote_threshold, 
+                               self.signal_type, self.method, self.vote_threshold, 
                                self.weights)
             df.rename(columns=dict(log_rets='returns'), inplace=True)
             df['strategy'] = df['returns'] * df['signal']
@@ -1808,12 +1839,12 @@ class BB(Strategy):
         self.__get_data()
 
     @property
-    def combine(self):
-        return self.__combine
+    def method(self):
+        return self.__method
 
-    @combine.setter
-    def combine(self, value):
-        self.__combine = value
+    @method.setter
+    def method(self, value):
+        self.__method = value
         self.__get_data()
 
     @property
@@ -1836,20 +1867,20 @@ class BB(Strategy):
         self.__get_data()
 
     def change_params(self, window: Optional[int] = None, num_std: Optional[float] = None,
-                     combine: Optional[str] = None, weights: Optional[np.ndarray] = None,
+                     method: Optional[str] = None, weights: Optional[np.ndarray] = None,
                      vote_threshold: Optional[float] = None) -> None:
         """Update multiple strategy parameters at once.
 
         Args:
             window (int, optional): New window period. Defaults to None.
             num_std (float, optional): New std dev multiplier. Defaults to None.
-            combine (str, optional): New combination method. Defaults to None.
+            method (str, optional): New combination method. Defaults to None.
             weights (np.ndarray, optional): New signal weights. Defaults to None.
             vote_threshold (float, optional): New voting threshold. Defaults to None.
         """
         self.__window = window if window is not None else self.window
         self.__num_std = num_std if num_std is not None else self.num_std
-        self.__combine = combine if combine is not None else self.combine
+        self.__method = method if method is not None else self.method
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
@@ -1863,7 +1894,7 @@ class BB(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'window': self.window, 'num_std': self.num_std,
-                'combine': self.combine, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold}
+                'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
             end_date: Optional[DateLike] = None) -> go.Figure:
@@ -2018,7 +2049,11 @@ class BB(Strategy):
         else:
             self.change_params(**old_params)
 
-        return results
+        opt_results = results.iloc[0]
+        return {
+            'params': opt_results[:-3].to_dict(),
+            'results': opt_results[-3:].to_dict()
+        }
 
 
 class CombinedStrategy(Strategy):
@@ -2037,22 +2072,22 @@ class CombinedStrategy(Strategy):
     Attributes:
         asset (Asset): Asset to apply the strategy to
         strategies (list[Strategy]): List of component strategies
-        combine (str): Signal combination method ('weighted' or 'consensus')
+        method (str): Signal combination method ('weighted' or 'consensus')
         weights (np.ndarray): Weights for each component strategy
         vote_threshold (float): Threshold for signal voting
         params (str): String representation of strategy parameters (empty for combined)
     """
 
     def __init__(self, asset: Asset, strategies: Optional[list[Strategy]] = None,
-                 combine: str = 'weighted', weights: Optional[np.ndarray] = None,
-                 vote_threshold: float = 0.5):
+                 method: str = 'weighted', weights: Optional[np.ndarray] = None,
+                 vote_threshold: float = 0.):
         """Initialize the Combined strategy.
 
         Args:
             asset (Asset): Asset to apply the strategy to
             strategies (list[Strategy], optional): Component strategies. Defaults to
                 [MA_Crossover, RSI, MACD, BB] with default parameters.
-            combine (str, optional): Signal combination method. Defaults to 'weighted'.
+            method (str, optional): Signal combination method. Defaults to 'weighted'.
             weights (np.ndarray, optional): Strategy weights. Defaults to equal weights.
             vote_threshold (float, optional): Voting threshold. Defaults to 0.5.
         """
@@ -2072,13 +2107,13 @@ class CombinedStrategy(Strategy):
             self.__weights = np.array([1 / len(self.__strategies)] * len(self.__strategies))
         self.__weights /= np.sum(self.__weights)
 
-        self.__combine = str(combine)
+        self.__method = str(method)
         self.__vote_threshold = vote_threshold
 
         self.__get_data()
 
     def __get_data(self) -> None:
-        """Collect signals from all strategies and combine them.
+        """Collect signals from all strategies and method them.
         
         Updates both daily and 5-minute dataframes with:
         - Individual strategy signals
@@ -2093,8 +2128,8 @@ class CombinedStrategy(Strategy):
             name = 'daily' if i == 0 else 'five_min'
             signals = pd.DataFrame(index=df.index)
 
-            for i, strat in enumerate(self.strategies):
-                signals[f'{strat.__class__.__name__}_signal_{i}'] = eval(f"strat.{name}['signal']")
+            for j, strat in enumerate(self.strategies):
+                signals[f'{strat.__class__.__name__}_signal_{j}'] = eval(f"strat.{name}['signal']")
 
             signals.dropna(inplace=True)
             df['signal'] = sg.vote(signals, self.vote_threshold, self.weights)
@@ -2117,12 +2152,12 @@ class CombinedStrategy(Strategy):
         self.__get_data()
 
     @property
-    def combine(self):
-        return self.__combine
+    def method(self):
+        return self.__method
 
-    @combine.setter
-    def combine(self, value):
-        self.__combine = value
+    @method.setter
+    def method(self, value):
+        self.__method = value
         self.__get_data()
 
     @property
@@ -2144,29 +2179,49 @@ class CombinedStrategy(Strategy):
         self.__vote_threshold = value
         self.__get_data()
 
-    def change_params(self, strategies: Optional[list[Strategy]] = None,
-                     combine: Optional[str] = None,
+    def add_strategy(self, strategy: Strategy, weight: float = 1.):
+        self.__strategies.append(strategy)
+        self.weights = np.append(self.weights, weight)
+        self.__get_data()
+
+    def remove_strategy(self, strategy: Strategy):
+        idx = self.__strategies.index(strategy)
+        self.__strategies.pop(idx)
+        self.weights = np.delete(self.weights, idx)
+        self.__get_data()
+
+    @property
+    def parameters(self) -> dict:
+        """Dictionary of strategy parameters.
+
+        Returns:
+            dict: Dictionary with parameter names and values
+        """
+        return {'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold
+                }
+
+    def change_params(self,
+                     method: Optional[str] = None,
                      weights: Optional[np.ndarray] = None,
                      vote_threshold: Optional[float] = None) -> None:
         """Update multiple strategy parameters at once.
 
         Args:
             strategies (list[Strategy], optional): New component strategies. Defaults to None.
-            combine (str, optional): New combination method. Defaults to None.
+            method (str, optional): New combination method. Defaults to None.
             weights (np.ndarray, optional): New strategy weights. Defaults to None.
             vote_threshold (float, optional): New voting threshold. Defaults to None.
         """
-        self.__strategies = list(strategies) if strategies is not None else self.strategies
-        self.__combine = combine if combine is not None else self.combine
+        self.__method = method if method is not None else self.method
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
         self.__get_data()
 
-    def add_signal_type(self, signal_type, weight = 1):
+    def add_signal_type(self):
         raise NotImplementedError
     
-    def remove_signal_type(self, signal_type):
+    def remove_signal_type(self):
         raise NotImplementedError
 
     def plot():

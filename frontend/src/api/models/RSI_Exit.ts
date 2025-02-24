@@ -3,6 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export enum RSI_Exit {
-    RE_ENTRY = 'Re-entry',
-    EXIT = 'Exit',
+    RE = 're',
+    EX = 'ex',
 }

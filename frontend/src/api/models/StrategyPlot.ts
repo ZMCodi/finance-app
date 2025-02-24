@@ -13,6 +13,10 @@ export type StrategyPlot = {
      */
     strategy: StrategyType;
     /**
+     * The results of the backtest
+     */
+    results?: (Record<string, number> | null);
+    /**
      * The JSON representation of the plot
      */
     json_data: Record<string, any>;

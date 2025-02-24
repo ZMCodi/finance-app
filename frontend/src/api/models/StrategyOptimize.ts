@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { OptimizeParamsResults } from './OptimizeParamsResults';
+import type { OptimizeWeightResults } from './OptimizeWeightResults';
 import type { StrategyType } from './StrategyType';
-export type StrategySignal = {
+export type StrategyOptimize = {
     /**
      * The asset ticker according to Yahoo Finance
      */
@@ -13,8 +15,8 @@ export type StrategySignal = {
      */
     strategy: StrategyType;
     /**
-     * The buy/sell signals of the strategy
+     * The results of the optimization
      */
-    signals: Record<string, number>;
+    results: (OptimizeParamsResults | OptimizeWeightResults);
 };
 

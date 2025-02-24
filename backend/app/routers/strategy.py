@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
 from app.models.strategy import (StrategyCreate, StrategyPlot, StrategyParams, 
                                  StrategySignal, StrategyUpdateParams,
-                                 StrategyAddSignalType, StrategyRemoveSignalType)
+                                 StrategyAddSignalType, StrategyRemoveSignalType,
+                                 StrategyOptimize)
 import json
 from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
@@ -99,7 +100,6 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
         'params': strategy.parameters,
     }
 
-# implement optimize, backtest, add and delete strategies and combined strategy
 @router.patch('/{strategy_key}/add_signal_type', response_model=StrategyParams)
 def add_signal_type(strategy_key: str, signal: StrategyAddSignalType):
     strategy: Strategy = strategy_cache.get(strategy_key)
@@ -118,4 +118,72 @@ def remove_signal_type(strategy_key: str, signal: StrategyRemoveSignalType):
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
         'params': strategy.parameters,
+    }
+
+# strategies will be added one at a time
+@router.post('/combined/create/{strategy_key}', response_model=StrategyCreate)
+def create_combined_strategy(strategy_key: str):
+    global _id
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    combined = CombinedStrategy(strategy.asset, strategies=[strategy])
+    key = f'combined_{strategy.asset.ticker}_{_id}'
+    _id += 1
+    strategy_cache[key] = combined
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': combined.__class__.__name__,
+        'strategy_id': key,
+    }
+
+@router.patch('/combined/{combined_key}/{strategy_key}/add_strategy', response_model=StrategyParams)
+def add_strategy_to_combined(combined_key: str, strategy_key: str, weight: float = 1.):
+    combined: CombinedStrategy = strategy_cache.get(combined_key)
+    strategy = strategy_cache.get(strategy_key)
+    combined.add_strategy(strategy, weight)
+    return {
+        'ticker': combined.asset.ticker,
+        'strategy': combined.__class__.__name__,
+        'params': combined.parameters,
+    }
+
+@router.patch('/combined/{combined_key}/{strategy_key}/remove_strategy', response_model=StrategyParams)
+def remove_strategy_from_combined(combined_key: str, strategy_key: str):
+    combined: CombinedStrategy = strategy_cache.get(combined_key)
+    strategy = strategy_cache.get(strategy_key)
+    combined.remove_strategy(strategy)
+    return {
+        'ticker': combined.asset.ticker,
+        'strategy': combined.__class__.__name__,
+        'params': combined.parameters,
+    }
+
+@router.get('/{strategy_key}/backtest', response_model=StrategyPlot)
+def backtest(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    res, fig = strategy.backtest(plot=True, timeframe=timeframe, start_date=start_date, end_date=end_date)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
+        'results': res.to_dict(),
+        'json_data': json.loads(json.dumps(fig, cls=PlotlyJSONEncoder)),
+    }
+
+@router.get('/{strategy_key}/optimize/params', response_model=StrategyOptimize)
+def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    res = strategy.optimize(timeframe=timeframe, start_date=start_date, end_date=end_date)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
+        'results': res,
+    }
+
+@router.get('/{strategy_key}/optimize/weights', response_model=StrategyOptimize)
+def optimize_weights(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None, runs: int = 20):
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    res = strategy.optimize_weights(timeframe=timeframe, start_date=start_date, end_date=end_date, runs=runs)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
+        'results': res,
     }

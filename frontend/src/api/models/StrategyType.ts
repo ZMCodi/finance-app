@@ -7,5 +7,5 @@ export enum StrategyType {
     RSI = 'RSI',
     MACD = 'MACD',
     BB = 'BB',
-    COMBINED = 'Combined',
+    COMBINED_STRATEGY = 'CombinedStrategy',
 }

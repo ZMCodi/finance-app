@@ -2,8 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export enum CombineType {
-    UNANIMOUS = 'Unanimous',
-    MAJORITY = 'Majority',
-    WEIGHTED = 'Weighted',
+export enum VoteMethod {
+    UNANIMOUS = 'unanimous',
+    MAJORITY = 'majority',
+    WEIGHTED = 'weighted',
 }

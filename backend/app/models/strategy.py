@@ -7,7 +7,7 @@ class StrategyType(str, Enum):
     RSI = 'RSI'
     MACD = 'MACD'
     BOLLINGER_BANDS = 'BB'
-    COMBINED = 'Combined'
+    COMBINED = 'CombinedStrategy'
 
 class MA_ParamType(str, Enum):
     WINDOW = 'window'
@@ -18,7 +18,7 @@ class RSI_Exit(str, Enum):
     RE_ENTRY = 're'
     EXIT = 'ex'
 
-class CombineType(str, Enum):
+class VoteMethod(str, Enum):
     UNANIMOUS = 'unanimous'
     MAJORITY = 'majority'
     WEIGHTED = 'weighted'
@@ -41,16 +41,29 @@ class SignalType(str, Enum):
     BREAKOUT = 'breakout'
     PCT_B = '%B'
 
+class OptimizeResults(BaseModel):
+    hold_returns: float = Field(..., title='Hold Returns', description='The returns of holding the asset')
+    strategy_returns: float = Field(..., title='Strategy Returns', description='The returns of the strategy')
+    net: float = Field(..., title='Net Returns', description='The net returns of the strategy')
+
+class OptimizeWeightResults(BaseModel):
+    weights: List[float] = Field(..., title='Weights', description='The optimized weights')
+    vote_threshold: float = Field(..., title='Results', description='The voting threshold for the optimized weights')
+    results: OptimizeResults = Field(..., title='Results', description='The results of the optimization')
+
+class OptimizeParamsResults(BaseModel):
+    params: Dict[str, float] = Field(..., title='Parameters', description='The optimized parameters')
+    results: OptimizeResults = Field(..., title='Results', description='The results of the optimization')
 
 class StrategyBase(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     strategy: StrategyType = Field(..., title='Strategy', description='The strategy name')
 
-
 class StrategyCreate(StrategyBase):
     strategy_id: str = Field(..., title='Strategy ID', description='The unique identifier for the strategy')
 
 class StrategyPlot(StrategyBase):
+    results: Optional[Dict[str, float]] = Field(None, title='Results', description='The results of the backtest')
     json_data: dict = Field(..., title='JSON', description='The JSON representation of the plot')
 
 class StrategyParams(StrategyBase):
@@ -83,7 +96,7 @@ class StrategyUpdateParams(BaseModel):
     num_std: Optional[int] = Field(None, title='Number of Standard Deviations', description='The number of standard deviations for the Bollinger Bands')
 
     # Common
-    combine: Optional[CombineType] = Field(None, title='Combine', description='The type of signal combination')
+    method: Optional[VoteMethod] = Field(None, title='Vote Method', description='The voting method for multiple signals')
     weights: Optional[List[float]] = Field(None, title='Weights', description='The weights for the signals')
     vote_threshold: Optional[float] = Field(None, title='Vote Threshold', description='The threshold for the vote')
 
@@ -93,3 +106,6 @@ class StrategyAddSignalType(BaseModel):
 
 class StrategyRemoveSignalType(BaseModel):
     signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be removed')
+
+class StrategyOptimize(StrategyBase):
+    results: OptimizeParamsResults | OptimizeWeightResults = Field(..., title='Results', description='The results of the optimization')

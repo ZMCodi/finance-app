@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export enum MA_ParamType {
-    WINDOW = 'Window',
-    ALPHA = 'Alpha',
-    HALF_LIFE = 'Half-life',
+    WINDOW = 'window',
+    ALPHA = 'alpha',
+    HALFLIFE = 'halflife',
 }

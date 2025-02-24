@@ -72,7 +72,7 @@ def ma_crossover(short: pd.Series, long: pd.Series) -> np.ndarray:
 
 
 def rsi(RSI: pd.Series, price: pd.Series, ub: float, lb: float, 
-        exit: str, signal_type: list[str], combine: str, 
+        exit: str, signal_type: list[str], method: str, 
         threshold: float, weights: Optional[list[float]] = None, 
         m_rev_bound: float = 50) -> pd.Series:
     """Generate trading signals from RSI using multiple methods.
@@ -89,7 +89,7 @@ def rsi(RSI: pd.Series, price: pd.Series, ub: float, lb: float,
         lb (float): Lower bound for oversold condition
         exit (str): Exit signal type ('re' for mean reversion)
         signal_type (list[str]): List of signal types to use
-        combine (str): Signal combination method ('weighted', 'unanimous', 'majority')
+        method (str): Signal combination method ('weighted', 'unanimous', 'majority')
         threshold (float): Voting threshold for signal generation
         weights (list[float], optional): Weights for each signal type. Defaults to equal weights.
         m_rev_bound (float, optional): Mean reversion level. Defaults to 50.
@@ -108,10 +108,11 @@ def rsi(RSI: pd.Series, price: pd.Series, ub: float, lb: float,
     if 'hidden divergence' in signal_type:
         signals['hidden_div'] = rsi_divergence(RSI, price, True)
 
-    if combine == 'unanimous':
-        threshold = 1
+    if method == 'unanimous':
+        threshold = .99
         weights = [1 / len(signals.columns)] * len(signals.columns)
-    elif combine == 'majority':
+    elif method == 'majority':
+        threshold = 0
         weights = [1 / len(signals.columns)] * len(signals.columns)
 
     return vote(signals, threshold, weights)
@@ -181,7 +182,7 @@ def rsi_crossover(RSI: pd.Series, ub: float, lb: float,
 
 
 def macd(macd_hist: pd.Series, macd: pd.Series, price: pd.Series, 
-         signal_type: list[str], combine: str, threshold: float, 
+         signal_type: list[str], method: str, threshold: float, 
          weights: Optional[list[float]] = None) -> pd.Series:
     """Generate trading signals from MACD using multiple methods.
 
@@ -197,7 +198,7 @@ def macd(macd_hist: pd.Series, macd: pd.Series, price: pd.Series,
         macd (pd.Series): MACD line values
         price (pd.Series): Price series for divergence detection
         signal_type (list[str]): List of signal types to use
-        combine (str): Signal combination method ('weighted', 'unanimous', 'majority')
+        method (str): Signal combination method ('weighted', 'unanimous', 'majority')
         threshold (float): Voting threshold for signal generation
         weights (list[float], optional): Weights for each signal type. Defaults to equal weights.
 
@@ -221,10 +222,11 @@ def macd(macd_hist: pd.Series, macd: pd.Series, price: pd.Series,
     if 'double peak/trough' in signal_type:
         signals['double'] = macd_double(macd_hist)
 
-    if combine == 'unanimous':
-        threshold = 1
+    if method == 'unanimous':
+        threshold = .99
         weights = [1 / len(signals.columns)] * len(signals.columns)
-    elif combine == 'majority':
+    elif method == 'majority':
+        threshold = 0
         weights = [1 / len(signals.columns)] * len(signals.columns)
 
     return vote(signals, threshold, weights)
@@ -289,7 +291,7 @@ def macd_double(macd_hist: pd.Series) -> pd.Series:
 
 
 def bb(price: pd.Series, bb_up: pd.Series, bb_down: pd.Series,
-      signal_type: list[str], combine: str, threshold: float,
+      signal_type: list[str], method: str, threshold: float,
       weights: Optional[list[float]] = None) -> pd.Series:
     """Generate trading signals from Bollinger Bands using multiple methods.
 
@@ -306,7 +308,7 @@ def bb(price: pd.Series, bb_up: pd.Series, bb_down: pd.Series,
         bb_up (pd.Series): Upper Bollinger Band
         bb_down (pd.Series): Lower Bollinger Band
         signal_type (list[str]): List of signal types to use
-        combine (str): Signal combination method ('weighted', 'unanimous', 'majority')
+        method (str): Signal combination method ('weighted', 'unanimous', 'majority')
         threshold (float): Voting threshold for signal generation
         weights (list[float], optional): Weights for each signal type. Defaults to equal weights.
 
@@ -333,10 +335,11 @@ def bb(price: pd.Series, bb_up: pd.Series, bb_down: pd.Series,
     if '%B' in signal_type:
         signals['%B'] = bb_pctB(price, bb_up, bb_down)
 
-    if combine == 'unanimous':
-        threshold = 1
+    if method == 'unanimous':
+        threshold = .99
         weights = [1 / len(signals.columns)] * len(signals.columns)
-    elif combine == 'majority':
+    elif method == 'majority':
+        threshold = 0
         weights = [1 / len(signals.columns)] * len(signals.columns)
 
     return vote(signals, threshold, weights)

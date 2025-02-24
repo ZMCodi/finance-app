@@ -777,8 +777,8 @@ class Asset():
 
         # return statistics
         stats['returns'] = {
-            'total_return': (self.daily['close'].iloc[-1] / 
-                            self.daily['close'].iloc[0]) - 1,
+            'total_return': (self.daily['adj_close'].iloc[-1] / 
+                            self.daily['adj_close'].iloc[0]) - 1,
             'daily_mean': self.daily['rets'].mean(),
             'daily_std': self.daily['rets'].std(),
             'daily_median': self.daily['rets'].median(),
