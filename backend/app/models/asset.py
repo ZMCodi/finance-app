@@ -3,15 +3,15 @@ from typing import Dict
 from enum import Enum
 
 class AssetType(str, Enum):
-    equity = 'Equity'
-    crypto = 'Cryptocurrency'
-    etf = 'ETF'
-    mutual_fund = 'Mutual Fund'
+    EQUITY = 'Equity'
+    CRYPTO = 'Cryptocurrency'
+    ETF = 'ETF'
+    MUTUAL_FUND = 'Mutual Fund'
 
 class PlotType(str, Enum):
-    candlestick = 'candlestick'
-    price_history = 'price history'
-    returns_distribution = 'returns distribution'
+    CANDLESTICK = 'candlestick'
+    PRICE_HISTORY = 'price history'
+    RETURNS_DISTRIBUTION = 'returns distribution'
 
 class AssetResponse(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')

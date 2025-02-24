@@ -3,30 +3,49 @@ from typing import Dict, List, Optional
 from enum import Enum
 
 class StrategyType(str, Enum):
-    ma_crossover = 'MA_Crossover'
-    rsi = 'RSI'
-    macd = 'MACD'
-    bb = 'BB'
-    combined = 'Combined'
+    MA_CROSSOVER = 'MA_Crossover'
+    RSI = 'RSI'
+    MACD = 'MACD'
+    BOLLINGER_BANDS = 'BB'
+    COMBINED = 'Combined'
 
 class MA_ParamType(str, Enum):
-    window = 'Window'
-    alpha = 'Alpha'
-    halflife = 'Half-life'
+    WINDOW = 'window'
+    ALPHA = 'alpha'
+    HALF_LIFE = 'halflife'
 
 class RSI_Exit(str, Enum):
-    re = 'Re-entry'
-    ex = 'Exit'
+    RE_ENTRY = 're'
+    EXIT = 'ex'
 
 class CombineType(str, Enum):
-    unanimous = 'Unanimous'
-    majority = 'Majority'
-    weighted = 'Weighted'
+    UNANIMOUS = 'unanimous'
+    MAJORITY = 'majority'
+    WEIGHTED = 'weighted'
+
+class SignalType(str, Enum):
+    # RSI
+    CROSSOVER = 'crossover'
+    DIVERGENCE = 'divergence'
+    HIDDEN_DIVERGENCE = 'hidden divergence'
+
+    # MACD
+    MOMENTUM = 'momentum'
+    DOUBLE_PEAKS_TROUGHS = 'double peak/trough'
+
+    # BB
+    BOUNCE = 'bounce'
+    DOUBLE = 'double'
+    WALKS = 'walks'
+    SQUEEZE = 'squeeze'
+    BREAKOUT = 'breakout'
+    PCT_B = '%B'
 
 
 class StrategyBase(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     strategy: StrategyType = Field(..., title='Strategy', description='The strategy name')
+
 
 class StrategyCreate(StrategyBase):
     strategy_id: str = Field(..., title='Strategy ID', description='The unique identifier for the strategy')
@@ -38,7 +57,7 @@ class StrategyParams(StrategyBase):
     params: Dict[str, float | str | List] = Field(..., title='Parameters', description='The parameters of the strategy')
 
 class StrategySignal(StrategyBase):
-    signals: Dict[str, float] = Field(..., title='Signals', description='The signals of the strategy')
+    signals: Dict[str, float] = Field(..., title='Signals', description='The buy/sell signals of the strategy')
 
 class StrategyUpdateParams(BaseModel):
     # MA Crossover
@@ -67,3 +86,10 @@ class StrategyUpdateParams(BaseModel):
     combine: Optional[CombineType] = Field(None, title='Combine', description='The type of signal combination')
     weights: Optional[List[float]] = Field(None, title='Weights', description='The weights for the signals')
     vote_threshold: Optional[float] = Field(None, title='Vote Threshold', description='The threshold for the vote')
+
+class StrategyAddSignalType(BaseModel):
+    signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be added')
+    weight: float = Field(..., title='Signal type weight', description='Weight for the added signal type')
+
+class StrategyRemoveSignalType(BaseModel):
+    signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be removed')

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
-from app.models.strategy import StrategyCreate, StrategyPlot, StrategyParams, StrategySignal, StrategyUpdateParams
+from app.models.strategy import (StrategyCreate, StrategyPlot, StrategyParams, 
+                                 StrategySignal, StrategyUpdateParams,
+                                 StrategyAddSignalType, StrategyRemoveSignalType)
 import json
 from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
@@ -13,7 +15,7 @@ def get_asset(asset_ticker: str):
     return Asset(asset_ticker)
 
 _id = 0
-strategy_cache = {}
+strategy_cache = {'rsi_AAPL_-1': RSI(Asset('AAPL'))}
 
 @router.post('/{asset_ticker}/{strategy_name}', response_model=StrategyCreate)
 def create_strategy(strategy_name: str, asset: Asset = Depends(get_asset)):
@@ -97,4 +99,23 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
         'params': strategy.parameters,
     }
 
-# implement optimize, backtest, add and delete signal type and strategies and combined strategy
+# implement optimize, backtest, add and delete strategies and combined strategy
+@router.patch('/{strategy_key}/add_signal_type', response_model=StrategyParams)
+def add_signal_type(strategy_key: str, signal: StrategyAddSignalType):
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy.add_signal_type(signal.signal_type.value, signal.weight)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
+        'params': strategy.parameters,
+    }
+
+@router.patch('/{strategy_key}/remove_signal_type', response_model=StrategyParams)
+def remove_signal_type(strategy_key: str, signal: StrategyRemoveSignalType):
+    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy.remove_signal_type(signal.signal_type.value)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
+        'params': strategy.parameters,
+    }

@@ -519,9 +519,9 @@ class Strategy(ABC):
         Args:
             signal_type (str): Signal type to remove
         """
+        idx = self.signal_type.index(signal_type)
         self.signal_type.remove(signal_type)
-        self.weights = np.delete(self.weights, self.signal_type.index(signal_type))
-
+        self.weights = np.delete(self.weights, idx)
 
 class MA_Crossover(Strategy):
     """Moving Average Crossover trading strategy implementation.
