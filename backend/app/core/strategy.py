@@ -1182,6 +1182,7 @@ class RSI(Strategy):
                 gridwidth=1,
                 gridcolor='rgba(128,128,128,0.2)',
                 title=f'RSI',
+                showticklabels=False,
             )
 
         layout[f'xaxis1_rangeslider_visible'] = False
@@ -1605,6 +1606,7 @@ class MACD(Strategy):
                 gridwidth=1,
                 gridcolor='rgba(128,128,128,0.2)',
                 title=f'MACD',
+                showticklabels=False,
             )
 
         layout[f'xaxis1_rangeslider_visible'] = False

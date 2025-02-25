@@ -98,7 +98,9 @@ export default function ChartDisplay({
       xaxis: {
         ...mainChartData.layout.xaxis,
         gridcolor: 'rgba(50, 50, 50, 0.2)',
-        zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+        zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+        // Hide x-axis labels for the main chart
+        showticklabels: false
       },
       paper_bgcolor: mainChartData.layout.paper_bgcolor || 'rgba(0,0,0,0)',
       plot_bgcolor: mainChartData.layout.plot_bgcolor || 'rgba(0,0,0,0)',
@@ -112,13 +114,12 @@ export default function ChartDisplay({
     // Set main chart yaxis domain - place at the top
     layout.yaxis = {
       ...layout.yaxis,
-      // gridcolor: 'rgba(50, 50, 50, 0.2)',
-      // zerolinecolor: 'rgba(50, 50, 50, 0.5)',
       domain: [1 - mainChartHeight, 1] // Main chart at the top
     };
     
-    // Track current position
+    // Track current position and the active subplots
     let currentPosition = 1 - mainChartHeight;
+    const activeSubplots = [];
     
     // If volume is present, position it below the main chart
     if (hasVolume) {
@@ -127,7 +128,8 @@ export default function ChartDisplay({
         // Remove volume from main data and update its y-axis
         const volumeTrace = { 
           ...mainChartData.data[volumeTraceIndex],
-          yaxis: 'y2' // First subplot
+          yaxis: 'y2', // First subplot
+          xaxis: 'x2'  // Make sure it uses its own x-axis
         };
         combinedData.splice(volumeTraceIndex, 1); // Remove from original position
         combinedData.push(volumeTrace); // Add with updated axis
@@ -140,8 +142,18 @@ export default function ChartDisplay({
           title: 'Volume',
           domain: [currentPosition, volumeDomainTop],
           gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          showticklabels: false,  // Hide labels by default
+        };
+        
+        layout.xaxis2 = {
+          showticklabels: false,  // Hide labels by default
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)'
         };
+        
+        // Track that volume is an active subplot
+        activeSubplots.push(2);
       }
     }
     
@@ -156,6 +168,9 @@ export default function ChartDisplay({
       if (plotData) {
         const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume
         
+        // Track that RSI is an active subplot
+        activeSubplots.push(subplotNumber);
+        
         // Calculate domain for RSI
         const rsiDomainTop = currentPosition;
         currentPosition -= subplotHeight;
@@ -167,6 +182,14 @@ export default function ChartDisplay({
           domain: [currentPosition, rsiDomainTop],
           range: [0, 100],  // Fixed range for RSI
           gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          showticklabels: false,  // Hide
+        };
+        
+        // Create RSI x-axis
+        layout[`xaxis${subplotNumber}`] = {
+          showticklabels: false,  // Hide labels by default
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)'
         };
         
@@ -174,7 +197,8 @@ export default function ChartDisplay({
         plotData.data.forEach(trace => {
           combinedData.push({
             ...trace,
-            yaxis: `y${subplotNumber}`
+            yaxis: `y${subplotNumber}`,
+            xaxis: `x${subplotNumber}`  // Make sure it uses its own x-axis
           });
         });
         
@@ -236,6 +260,9 @@ export default function ChartDisplay({
       if (plotData) {
         const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume or RSI
         
+        // Track that MACD is an active subplot
+        activeSubplots.push(subplotNumber);
+        
         // Calculate domain for MACD
         const macdDomainTop = currentPosition;
         currentPosition -= subplotHeight;
@@ -246,6 +273,14 @@ export default function ChartDisplay({
           title: 'MACD',
           domain: [currentPosition, macdDomainTop],
           gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          showticklabels: false,  // Hide
+        };
+        
+        // Create MACD x-axis
+        layout[`xaxis${subplotNumber}`] = {
+          showticklabels: false,  // Hide labels by default
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)'
         };
         
@@ -253,7 +288,8 @@ export default function ChartDisplay({
         plotData.data.forEach(trace => {
           combinedData.push({
             ...trace,
-            yaxis: `y${subplotNumber}`
+            yaxis: `y${subplotNumber}`,
+            xaxis: `x${subplotNumber}`  // Make sure it uses its own x-axis
           });
         });
         
@@ -309,6 +345,36 @@ export default function ChartDisplay({
           t: 10, // Decrease top margin to make more space
         }
       };
+      
+      // Find the bottom subplot and show its x-axis labels
+      if (activeSubplots.length > 0) {
+        // Sort subplots by number, highest is the last subplot added (which is at the bottom)
+        activeSubplots.sort((a, b) => a - b);
+        const bottomSubplotNumber = activeSubplots[activeSubplots.length - 1];
+        
+        
+        // Show tick labels for ONLY the bottom subplot
+        if (bottomSubplotNumber === 1) {
+          layout.xaxis.showticklabels = true;
+        } else {
+          // Make sure the x-axis object exists for the bottom subplot
+          if (!layout[`xaxis${bottomSubplotNumber}`]) {
+            layout[`xaxis${bottomSubplotNumber}`] = {};
+          }
+          
+          // Set explicit x-axis properties for the bottom subplot
+          layout[`xaxis${bottomSubplotNumber}`] = {
+            ...layout[`xaxis${bottomSubplotNumber}`],
+            showticklabels: true,
+            // Use these same properties from the main chart
+            nticks: 5,
+            type: layout.xaxis.type,
+            tickformat: layout.xaxis.tickformat,
+            gridcolor: 'rgba(50, 50, 50, 0.2)',
+            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+          };
+        }
+      }
     }
     
     return (
