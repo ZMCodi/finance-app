@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IndicatorPanel, { IndicatorType } from './IndicatorPanel';
+import IndicatorButton from './IndicatorButton';
 
 type ChartControlsProps = {
   activeTab: string;
@@ -21,8 +22,13 @@ type ChartControlsProps = {
   onTabChange: (value: string) => void;
   onVolumeChange: (show: boolean) => void;
   onSelectIndicator: (indicator: IndicatorType) => void;
+  onRemoveIndicator?: (indicator: IndicatorType) => void;
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
+  onConfigureIndicator?: (indicator: IndicatorType) => void;
+  onOptimizeIndicator?: (indicator: IndicatorType) => void;
+  onGenerateSignal?: (indicator: IndicatorType) => void;
+  onAddToStrategy?: (indicator: IndicatorType) => void;
 };
 
 export default function ChartControls({
@@ -34,9 +40,23 @@ export default function ChartControls({
   onTabChange,
   onVolumeChange,
   onSelectIndicator,
+  onRemoveIndicator,
   onStartDateChange,
-  onEndDateChange
+  onEndDateChange,
+  onConfigureIndicator,
+  onOptimizeIndicator,
+  onGenerateSignal,
+  onAddToStrategy
 }: ChartControlsProps) {
+  
+  const handleRemoveIndicator = (indicator: IndicatorType) => {
+    if (onRemoveIndicator) {
+      onRemoveIndicator(indicator);
+    } else {
+      console.log('Remove indicator handler not provided');
+    }
+  };
+
   return (
     <div className="flex flex-col md:flex-row md:items-center gap-3 ml-auto">
       {/* Controls */}
@@ -56,13 +76,19 @@ export default function ChartControls({
           activeIndicators={activeIndicators} 
         />
         
-        {/* Display active indicators */}
+        {/* Display active indicators with dropdown menus */}
         {activeIndicators.length > 0 && (
           <div className="flex gap-2 items-center">
             {activeIndicators.map((indicator) => (
-              <div key={indicator} className="text-xs bg-slate-800 px-2 py-1 rounded">
-                {indicator}
-              </div>
+              <IndicatorButton 
+                key={indicator}
+                indicator={indicator}
+                onRemove={handleRemoveIndicator}
+                onConfigure={onConfigureIndicator}
+                onOptimize={onOptimizeIndicator}
+                onGenerateSignal={onGenerateSignal}
+                onAddToStrategy={onAddToStrategy}
+              />
             ))}
           </div>
         )}

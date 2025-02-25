@@ -313,6 +313,52 @@ export default function StrategyContainer() {
     setDailyNeedsRefresh(false);
   };
 
+  const handleRemoveIndicator = (indicator: IndicatorType) => {
+    // Remove from active indicators
+    const updatedIndicators = activeIndicators.filter(i => i !== indicator);
+    setActiveIndicators(updatedIndicators);
+    
+    // Get strategy ID for this indicator
+    const strategyId = strategies[indicator];
+    if (!strategyId) return;
+    
+    // Remove from strategies object
+    const updatedStrategies = { ...strategies };
+    delete updatedStrategies[indicator];
+    setStrategies(updatedStrategies);
+    
+    // Remove from indicator plots
+    const updatedPlots = { ...indicatorPlots };
+    delete updatedPlots[strategyId];
+    setIndicatorPlots(updatedPlots);
+    
+    // Note: In a real implementation, you might want to call an API to delete the strategy
+  };
+  
+  // Handler for configuring an indicator
+  const handleConfigureIndicator = (indicator: IndicatorType) => {
+    // For now, just log the action - you'll implement the actual configuration later
+    console.log(`Configure ${indicator}`);
+  };
+  
+  // Handler for optimizing an indicator
+  const handleOptimizeIndicator = (indicator: IndicatorType) => {
+    // For now, just log the action - you'll implement the actual optimization later
+    console.log(`Optimize ${indicator}`);
+  };
+  
+  // Handler for generating signal
+  const handleGenerateSignal = (indicator: IndicatorType) => {
+    // For now, just log the action - you'll implement the signal generation later
+    console.log(`Generate signal for ${indicator}`);
+  };
+  
+  // Handler for adding to strategy
+  const handleAddToStrategy = (indicator: IndicatorType) => {
+    // For now, just log the action - you'll implement adding to strategy later
+    console.log(`Add ${indicator} to strategy`);
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl text-center font-bold mb-6">Strategy Builder</h1>
@@ -344,18 +390,23 @@ export default function StrategyContainer() {
               
               {/* Chart Controls */}
               <div className="ml-auto">
-                <ChartControls 
-                  activeTab={activeTab}
-                  showVolume={showVolume}
-                  activeIndicators={activeIndicators}
-                  startDate={getActiveStartDate()}
-                  endDate={getActiveEndDate()}
-                  onTabChange={handleTabChange}
-                  onVolumeChange={handleVolumeChange}
-                  onSelectIndicator={handleSelectIndicator}
-                  onStartDateChange={handleStartDateChange}
-                  onEndDateChange={handleEndDateChange}
-                />
+              <ChartControls 
+                activeTab={activeTab}
+                showVolume={showVolume}
+                activeIndicators={activeIndicators}
+                startDate={getActiveStartDate()}
+                endDate={getActiveEndDate()}
+                onTabChange={handleTabChange}
+                onVolumeChange={handleVolumeChange}
+                onSelectIndicator={handleSelectIndicator}
+                onRemoveIndicator={handleRemoveIndicator}
+                onStartDateChange={handleStartDateChange}
+                onEndDateChange={handleEndDateChange}
+                onConfigureIndicator={handleConfigureIndicator}
+                onOptimizeIndicator={handleOptimizeIndicator}
+                onGenerateSignal={handleGenerateSignal}
+                onAddToStrategy={handleAddToStrategy}
+              />
               </div>
             </div>
             

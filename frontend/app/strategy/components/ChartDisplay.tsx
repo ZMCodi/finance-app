@@ -468,23 +468,10 @@ export default function ChartDisplay({
               />
             )}
             
-            {/* Display indicator badges */}
-            {activeIndicators.length > 0 && (
-              <div className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg border border-slate-700 backdrop-blur-sm">
-                <div className="flex flex-col gap-1">
-                  {activeIndicators.map((indicator) => (
-                    <div key={indicator} className="flex justify-between items-center gap-4">
-                      <span className="text-xs font-medium">{indicator}</span>
-                      <button className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded">
-                        Settings
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Remove the indicator badges panel */}
           </div>
         </TabsContent>
+
         <TabsContent value="1d" className="h-full">
           <div className="relative h-full">
             {showIndicators && activeIndicators.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
@@ -508,21 +495,7 @@ export default function ChartDisplay({
               />
             )}
             
-            {/* Display indicator badges */}
-            {activeIndicators.length > 0 && (
-              <div className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg border border-slate-700 backdrop-blur-sm">
-                <div className="flex flex-col gap-1">
-                  {activeIndicators.map((indicator) => (
-                    <div key={indicator} className="flex justify-between items-center gap-4">
-                      <span className="text-xs font-medium">{indicator}</span>
-                      <button className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded">
-                        Settings
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Remove the indicator badges panel */}
           </div>
         </TabsContent>
       </Tabs>
