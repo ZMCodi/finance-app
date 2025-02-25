@@ -239,7 +239,6 @@ export default function ChartDisplay({
         // Add overbought/oversold lines
         if (plotData.layout && plotData.layout.shapes) {
           plotData.layout.shapes.forEach(shape => {
-            if ((shape.y0 === 70 && shape.y1 === 70) || (shape.y0 === 30 && shape.y1 === 30)) {
               layout.shapes.push({
                 ...shape,
                 yref: `y${subplotNumber}`,
@@ -247,41 +246,9 @@ export default function ChartDisplay({
                   ...shape.line,
                 }
               });
-            }
-          });
-        } else {
-          // Add default overbought/oversold lines
-          layout.shapes.push({
-            type: 'line',
-            x0: 0,
-            x1: 1,
-            xref: 'x domain',
-            y0: 70,
-            y1: 70,
-            yref: `y${subplotNumber}`,
-            line: {
-              color: 'rgba(255, 50, 50, 0.8)',
-              width: 1,
-              dash: 'dash'
-            }
-          });
-          
-          layout.shapes.push({
-            type: 'line',
-            x0: 0,
-            x1: 1,
-            xref: 'x domain',
-            y0: 30,
-            y1: 30,
-            yref: `y${subplotNumber}`,
-            line: {
-              color: 'rgba(50, 200, 50, 0.8)',
-              width: 1,
-              dash: 'dash'
-            }
           });
         }
-        
+
         indicatorIndex++;
       }
     }
