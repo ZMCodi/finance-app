@@ -23,6 +23,7 @@ export default function MACrossoverDialog({
     const numValue = value === '' ? '' : Number(value);
     onParamChange(key, numValue);
   };
+  const isEwmEnabled = params.ewm === true || params.ewm === 1 || params.ewm === "true";
 
   return (
     <div className="grid gap-4 py-4">
@@ -58,18 +59,18 @@ export default function MACrossoverDialog({
       {/* EWMA options */}
       <div className="grid grid-cols-4 items-center gap-4">
         <div className="col-span-4 flex items-center space-x-2">
-          <Checkbox 
-            id="ewm" 
-            checked={params.ewm ?? false}
-            onCheckedChange={(checked) => {
-              onParamChange('ewm', checked);
-              // If EWMA is being turned off, reset parameter type to 'window'
-              if (!checked) {
-                onParamChange('ptype', 'window');
-              }
-            }}
-            disabled={isLoading}
-          />
+        <Checkbox 
+          id="ewm" 
+          checked={isEwmEnabled}
+          onCheckedChange={(checked) => {
+            onParamChange('ewm', checked);
+            // If EWMA is being turned off, reset parameter type to 'window'
+            if (!checked) {
+              onParamChange('ptype', 'window');
+            }
+          }}
+          disabled={isLoading}
+        />
           <Label htmlFor="ewm" className="text-sm font-medium leading-none cursor-pointer">
             Use Exponentially Weighted Moving Average
           </Label>
@@ -83,9 +84,9 @@ export default function MACrossoverDialog({
         </Label>
         <div className="col-span-3">
           <Select
-            disabled={isLoading || !(params.ewm === true)}
+            disabled={isLoading || !isEwmEnabled}
             value={params.ptype || 'window'}
-            onValueChange={(value) => onParamChange('ptype', value)}
+            onValueChange={(value) => onParamChange('param_type', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select parameter type" />

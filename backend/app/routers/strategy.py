@@ -8,6 +8,7 @@ import json
 from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
 from functools import lru_cache
+from enum import Enum
 
 router = APIRouter(prefix='/api/strategies')
 
@@ -91,9 +92,15 @@ def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: s
 
 @router.patch('/{strategy_key}/params', response_model=StrategyParams)
 def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
+    print(params)
     strategy: Strategy = strategy_cache.get(strategy_key)
     param_updates = params.model_dump(exclude_unset=True)
+    for k, v in param_updates.items():
+        if isinstance(v, Enum):
+            param_updates[k] = v.value
+    print(param_updates)
     strategy.change_params(**param_updates)
+    print(strategy.parameters)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,

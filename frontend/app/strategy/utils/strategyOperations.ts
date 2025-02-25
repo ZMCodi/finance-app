@@ -21,6 +21,7 @@ export class StrategyOperations {
     params: Record<string, any>
   ): Promise<StrategyParams> {
     try {
+      console.log("Sending params to API:", JSON.stringify(params, null, 2));
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/params`, {
         method: 'PATCH',
         headers: {
