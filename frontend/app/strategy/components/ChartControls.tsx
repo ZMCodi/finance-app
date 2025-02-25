@@ -10,16 +10,17 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import IndicatorPanel, { IndicatorType } from './IndicatorPanel';
 
 type ChartControlsProps = {
   activeTab: string;
   showVolume: boolean;
-  showIndicators: boolean;
+  activeIndicators: IndicatorType[];
   startDate?: Date;
   endDate?: Date;
   onTabChange: (value: string) => void;
   onVolumeChange: (show: boolean) => void;
-  onIndicatorsChange: (show: boolean) => void;
+  onSelectIndicator: (indicator: IndicatorType) => void;
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
 };
@@ -27,12 +28,12 @@ type ChartControlsProps = {
 export default function ChartControls({
   activeTab,
   showVolume,
-  showIndicators,
+  activeIndicators,
   startDate,
   endDate,
   onTabChange,
   onVolumeChange,
-  onIndicatorsChange,
+  onSelectIndicator,
   onStartDateChange,
   onEndDateChange
 }: ChartControlsProps) {
@@ -49,14 +50,22 @@ export default function ChartControls({
           <Label htmlFor="volume" className="ml-2">Volume</Label>
         </div>
         
-        <div className="flex items-center">
-          <Checkbox
-            id="indicators"
-            checked={showIndicators}
-            onCheckedChange={(checked) => onIndicatorsChange(checked as boolean)}
-          />
-          <Label htmlFor="indicators" className="ml-2">Indicators</Label>
-        </div>
+        {/* Indicator dropdown replacing the checkbox */}
+        <IndicatorPanel 
+          onSelectIndicator={onSelectIndicator}
+          activeIndicators={activeIndicators} 
+        />
+        
+        {/* Display active indicators */}
+        {activeIndicators.length > 0 && (
+          <div className="flex gap-2 items-center">
+            {activeIndicators.map((indicator) => (
+              <div key={indicator} className="text-xs bg-slate-800 px-2 py-1 rounded">
+                {indicator}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       
       {/* Timeframe Tabs */}

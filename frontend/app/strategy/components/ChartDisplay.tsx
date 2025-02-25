@@ -3,6 +3,16 @@
 
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import AssetChart from '@/components/AssetChart';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+import { IndicatorType } from './IndicatorPanel';
+import { PlotJSON } from '@/src/api/index';
+
+// Import Plotly dynamically to avoid SSR issues
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false,
+  loading: () => <div>Loading...</div>,
+});
 
 type ChartDisplayProps = {
   ticker: string;
@@ -14,6 +24,9 @@ type ChartDisplayProps = {
   onDailyLoad: () => void;
   skipFiveMinFetch: boolean;
   skipDailyFetch: boolean;
+  activeIndicators: IndicatorType[];
+  indicatorPlots: Record<string, PlotJSON>;
+  strategies: Record<IndicatorType, string>;
 };
 
 export default function ChartDisplay({
@@ -25,43 +38,164 @@ export default function ChartDisplay({
   onFiveMinLoad,
   onDailyLoad,
   skipFiveMinFetch,
-  skipDailyFetch
+  skipDailyFetch,
+  activeIndicators,
+  indicatorPlots,
+  strategies
 }: ChartDisplayProps) {
+  // State to store main chart data
+  const [mainChartData, setMainChartData] = useState<PlotJSON | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Effect to fetch and cache the main chart data
+  useEffect(() => {
+    const fetchMainChartData = async () => {
+      try {
+        const queryString = activeTab === '5m' ? fiveMinQueryString : dailyQueryString;
+        const response = await fetch(`http://localhost:8000/api/assets/${ticker}/candlestick?${queryString}`);
+        const data = await response.json();
+        setMainChartData(data.json_data);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching main chart data:", error);
+        setLoading(false);
+      }
+    };
+    
+    if (!skipFiveMinFetch && activeTab === '5m') {
+      fetchMainChartData();
+    } else if (!skipDailyFetch && activeTab === '1d') {
+      fetchMainChartData();
+    }
+  }, [ticker, activeTab, fiveMinQueryString, dailyQueryString, skipFiveMinFetch, skipDailyFetch]);
+  
+  // Function to determine if an indicator should be in a separate subplot
+  const isSubplotIndicator = (indicator: IndicatorType): boolean => {
+    return indicator === 'RSI' || indicator === 'MACD';
+  };
+  
+  // Function to create a combined plot with indicators
+  const renderCombinedPlot = () => {
+    if (!mainChartData) return null;
+    
+    // Start with the main chart data
+    const combinedData = [...mainChartData.data];
+    
+    // Create a new layout based on the main chart layout
+    let layout = { ...mainChartData.layout };
+    
+    // Track how many subplot indicators we have
+    let subplotCount = 0;
+    
+    // Add each indicator's data
+    activeIndicators.forEach(indicator => {
+      const strategyId = strategies[indicator];
+      const plotData = indicatorPlots[strategyId];
+      
+      if (!plotData) return;
+      
+      if (isSubplotIndicator(indicator)) {
+        // For RSI and MACD, create a separate subplot
+        subplotCount++;
+        
+        // Adjust the domain of the main plot
+        const mainHeight = 0.7 / (subplotCount + 1);
+        layout.yaxis = {
+          ...layout.yaxis,
+          domain: [0.3, 1]
+        };
+        
+        // Calculate domain for this subplot
+        const subplotDomain = [0, 0.25];
+        
+        // Create a new y-axis for this subplot
+        const yaxisKey = `yaxis${subplotCount + 1}`;
+        layout[yaxisKey] = {
+          title: indicator,
+          domain: subplotDomain,
+          side: 'right'
+        };
+        
+        // Add this subplot's data
+        plotData.data.forEach(trace => {
+          combinedData.push({
+            ...trace,
+            yaxis: `y${subplotCount + 1}`
+          });
+        });
+      } else {
+        // For MA Crossover and Bollinger Bands, overlay on the main chart
+        plotData.data.forEach(trace => {
+          combinedData.push(trace);
+        });
+      }
+    });
+    
+    // Adjust layout based on subplot count
+    if (subplotCount > 0) {
+      layout = {
+        ...layout,
+        grid: {
+          rows: subplotCount + 1,
+          columns: 1,
+          pattern: 'independent',
+          roworder: 'bottom to top'
+        }
+      };
+    }
+    
+    return (
+      <Plot
+        data={combinedData}
+        layout={layout}
+        config={{
+          responsive: true,
+          displaylogo: false,
+          modeBarButtonsToRemove: ['resetScale2d', 'toImage', 'zoomIn2d', 'autoScale2d', 'select2d', 'lasso2d'],
+        }}
+        className="w-full h-full"
+      />
+    );
+  };
+
   return (
     <div className="h-[70vh]">
       <Tabs value={activeTab} className="h-full">
         <TabsContent value="5m" className="h-full">
           <div className="relative h-full">
-            <AssetChart 
-              key={`${ticker}-5m`}
-              ticker={ticker} 
-              plot_type="candlestick"
-              queryString={fiveMinQueryString}
-              skipFetch={skipFiveMinFetch}
-              onLoad={onFiveMinLoad}
-            />
+            {showIndicators && activeIndicators.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
+              // If we have indicators, use the combined plot
+              <div className="w-full h-full">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center">Loading...</div>
+                ) : (
+                  renderCombinedPlot()
+                )}
+              </div>
+            ) : (
+              // Otherwise use the standard AssetChart component
+              <AssetChart 
+                key={`${ticker}-5m`}
+                ticker={ticker} 
+                plot_type="candlestick"
+                queryString={fiveMinQueryString}
+                skipFetch={skipFiveMinFetch}
+                onLoad={onFiveMinLoad}
+              />
+            )}
             
-            {showIndicators && (
-              <div className="absolute top-2 right-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border max-w-xs">
-                <h3 className="text-sm font-medium mb-2">Technical Indicators</h3>
-                <div className="space-y-2">
-                  {/* This will be replaced with actual indicators */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">Moving Average (20)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">RSI (14)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">MACD (12,26,9)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">Bollinger Bands (20, 2)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
+            {/* Display indicator badges */}
+            {activeIndicators.length > 0 && (
+              <div className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg border border-slate-700 backdrop-blur-sm">
+                <div className="flex flex-col gap-1">
+                  {activeIndicators.map((indicator) => (
+                    <div key={indicator} className="flex justify-between items-center gap-4">
+                      <span className="text-xs font-medium">{indicator}</span>
+                      <button className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded">
+                        Settings
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -69,36 +203,39 @@ export default function ChartDisplay({
         </TabsContent>
         <TabsContent value="1d" className="h-full">
           <div className="relative h-full">
-            <AssetChart 
-              key={`${ticker}-1d`}
-              ticker={ticker} 
-              plot_type="candlestick"
-              queryString={dailyQueryString}
-              skipFetch={skipDailyFetch}
-              onLoad={onDailyLoad}
-            />
+            {showIndicators && activeIndicators.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
+              // If we have indicators, use the combined plot
+              <div className="w-full h-full">
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center">Loading...</div>
+                ) : (
+                  renderCombinedPlot()
+                )}
+              </div>
+            ) : (
+              // Otherwise use the standard AssetChart component
+              <AssetChart 
+                key={`${ticker}-1d`}
+                ticker={ticker} 
+                plot_type="candlestick"
+                queryString={dailyQueryString}
+                skipFetch={skipDailyFetch}
+                onLoad={onDailyLoad}
+              />
+            )}
             
-            {showIndicators && (
-              <div className="absolute top-2 right-2 p-3 bg-white dark:bg-gray-800 rounded-lg shadow-lg border max-w-xs">
-                <h3 className="text-sm font-medium mb-2">Technical Indicators</h3>
-                <div className="space-y-2">
-                  {/* This will be replaced with actual indicators */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">Moving Average (20)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">RSI (14)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">MACD (12,26,9)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs">Bollinger Bands (20, 2)</span>
-                    <button className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">Add</button>
-                  </div>
+            {/* Display indicator badges */}
+            {activeIndicators.length > 0 && (
+              <div className="absolute top-2 right-2 p-2 bg-slate-800/80 rounded-lg border border-slate-700 backdrop-blur-sm">
+                <div className="flex flex-col gap-1">
+                  {activeIndicators.map((indicator) => (
+                    <div key={indicator} className="flex justify-between items-center gap-4">
+                      <span className="text-xs font-medium">{indicator}</span>
+                      <button className="text-xs bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded">
+                        Settings
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

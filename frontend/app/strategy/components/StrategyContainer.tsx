@@ -7,6 +7,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ChartControls from './ChartControls';
 import ChartDisplay from './ChartDisplay';
 import TickerInput from '@/app/assets/components/TickerInput';
+import { IndicatorType, strategyNameMap } from './IndicatorPanel';
+import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
+
+// Cache for indicator plot data
+const indicatorPlotCache: Record<string, PlotJSON> = {};
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -34,8 +39,10 @@ export default function StrategyContainer() {
   // Active tab indicator
   const [activeSideTab, setActiveSideTab] = useState<string>('chart');
   
-  // Technical indicators state
-  const [showIndicators, setShowIndicators] = useState<boolean>(false);
+  // Strategy states
+  const [activeIndicators, setActiveIndicators] = useState<IndicatorType[]>([]);
+  const [strategies, setStrategies] = useState<Record<IndicatorType, string>>({});  // Indicator type -> strategy_id
+  const [indicatorPlots, setIndicatorPlots] = useState<Record<string, PlotJSON>>({});  // Strategy ID -> Plot data
   
   // Update query strings when settings change for 5min
   useEffect(() => {
@@ -54,6 +61,9 @@ export default function StrategyContainer() {
     
     setFiveMinQueryString(params.toString());
     setFiveMinNeedsRefresh(true);
+    
+    // Also clear indicator plot cache when query parameters change
+    clearIndicatorPlotCache();
   }, [fiveMinStartDate, fiveMinEndDate, showVolume]);
   
   // Update query strings when settings change for daily
@@ -73,12 +83,127 @@ export default function StrategyContainer() {
     
     setDailyQueryString(params.toString());
     setDailyNeedsRefresh(true);
+    
+    // Also clear indicator plot cache when query parameters change
+    clearIndicatorPlotCache();
   }, [dailyStartDate, dailyEndDate, showVolume]);
+  
+  // Update indicator plots when needed
+  useEffect(() => {
+    if (activeIndicators.length > 0) {
+      updateIndicatorPlots();
+    }
+  }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh]);
+  
+  // Function to create a new strategy
+  const createStrategy = async (ticker: string, strategyName: string): Promise<string> => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/strategies/${ticker}/${strategyName}`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to create strategy: ${response.statusText}`);
+      }
+      
+      const data: StrategyCreate = await response.json();
+      return data.strategy_id;
+    } catch (error) {
+      console.error("Error creating strategy:", error);
+      throw error;
+    }
+  };
+  
+  // Function to get indicator plot data
+  const getIndicatorPlot = async (strategyId: string, queryParams: string): Promise<PlotJSON> => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/indicator?${queryParams}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch indicator plot: ${response.statusText}`);
+      }
+      
+      const data: StrategyPlot = await response.json();
+      return data.json_data;
+    } catch (error) {
+      console.error("Error fetching indicator plot:", error);
+      throw error;
+    }
+  };
+  
+  // Function to clear indicator plot cache
+  const clearIndicatorPlotCache = () => {
+    // Clear all cache entries
+    Object.keys(indicatorPlotCache).forEach(key => {
+      delete indicatorPlotCache[key];
+    });
+    
+    // Force update of indicator plots
+    if (activeIndicators.length > 0) {
+      updateIndicatorPlots();
+    }
+  };
+  
+  // Function to update all indicator plots
+  const updateIndicatorPlots = async () => {
+    // Skip if no strategies or no selected asset
+    if (Object.keys(strategies).length === 0 || !selectedAsset) return;
+    
+    // Build query params based on current tab
+    const params = new URLSearchParams();
+    params.append('timeframe', activeTab === '5m' ? '5m' : '1d');
+    
+    if (activeTab === '5m' && fiveMinStartDate) {
+      params.append('start_date', format(fiveMinStartDate, 'yyyy-MM-dd'));
+    } else if (activeTab === '1d' && dailyStartDate) {
+      params.append('start_date', format(dailyStartDate, 'yyyy-MM-dd'));
+    }
+    
+    if (activeTab === '5m' && fiveMinEndDate) {
+      params.append('end_date', format(fiveMinEndDate, 'yyyy-MM-dd'));
+    } else if (activeTab === '1d' && dailyEndDate) {
+      params.append('end_date', format(dailyEndDate, 'yyyy-MM-dd'));
+    }
+    
+    const queryString = params.toString();
+    
+    // Update each strategy plot
+    const updatedPlots: Record<string, PlotJSON> = {};
+    const strategyFetches = Object.entries(strategies).map(async ([indicator, strategyId]) => {
+      try {
+        // Create a cache key
+        const cacheKey = `${strategyId}-${activeTab}-${queryString}`;
+        
+        // Check if we have this in cache
+        if (indicatorPlotCache[cacheKey]) {
+          updatedPlots[strategyId] = indicatorPlotCache[cacheKey];
+        } else {
+          // Fetch new data
+          const plotData = await getIndicatorPlot(strategyId, queryString);
+          indicatorPlotCache[cacheKey] = plotData;
+          updatedPlots[strategyId] = plotData;
+        }
+      } catch (error) {
+        console.error(`Error updating plot for ${indicator}:`, error);
+      }
+    });
+    
+    // Wait for all fetches to complete
+    await Promise.all(strategyFetches);
+    
+    // Update state with new plots
+    setIndicatorPlots(updatedPlots);
+  };
   
   const handleAddTicker = (ticker: string) => {
     setSelectedAsset(ticker);
     setFiveMinNeedsRefresh(true);
     setDailyNeedsRefresh(true);
+    
+    // Clear any existing strategies when changing tickers
+    setActiveIndicators([]);
+    setStrategies({});
+    setIndicatorPlots({});
   };
   
   // Handle tab change
@@ -89,6 +214,67 @@ export default function StrategyContainer() {
   // Handle volume change
   const handleVolumeChange = (show: boolean) => {
     setShowVolume(show);
+  };
+  
+  // Handle indicator selection
+  const handleSelectIndicator = async (indicator: IndicatorType) => {
+    if (!selectedAsset || activeIndicators.includes(indicator)) return;
+    
+    try {
+      // Create the strategy
+      const strategyId = await createStrategy(selectedAsset, strategyNameMap[indicator]);
+      
+      // Update strategies map
+      const updatedStrategies = {
+        ...strategies,
+        [indicator]: strategyId
+      };
+      
+      setStrategies(updatedStrategies);
+      
+      // Add to active indicators
+      setActiveIndicators([...activeIndicators, indicator]);
+      
+      // Fetch indicator plot data for current state
+      const params = new URLSearchParams();
+      params.append('timeframe', activeTab === '5m' ? '5m' : '1d');
+      
+      if (activeTab === '5m' && fiveMinStartDate) {
+        params.append('start_date', format(fiveMinStartDate, 'yyyy-MM-dd'));
+      } else if (activeTab === '1d' && dailyStartDate) {
+        params.append('start_date', format(dailyStartDate, 'yyyy-MM-dd'));
+      }
+      
+      if (activeTab === '5m' && fiveMinEndDate) {
+        params.append('end_date', format(fiveMinEndDate, 'yyyy-MM-dd'));
+      } else if (activeTab === '1d' && dailyEndDate) {
+        params.append('end_date', format(dailyEndDate, 'yyyy-MM-dd'));
+      }
+      
+      const queryString = params.toString();
+      const cacheKey = `${strategyId}-${activeTab}-${queryString}`;
+      
+      // Fetch plot data
+      const plotData = await getIndicatorPlot(strategyId, queryString);
+      
+      // Store in cache
+      indicatorPlotCache[cacheKey] = plotData;
+      
+      // Update state with new plot
+      setIndicatorPlots({
+        ...indicatorPlots,
+        [strategyId]: plotData
+      });
+      
+      // Trigger data refresh for the main chart
+      if (activeTab === '5m') {
+        setFiveMinNeedsRefresh(true);
+      } else {
+        setDailyNeedsRefresh(true);
+      }
+    } catch (error) {
+      console.error("Error adding indicator:", error);
+    }
   };
   
   // Handle start date change based on active tab
@@ -161,12 +347,12 @@ export default function StrategyContainer() {
                 <ChartControls 
                   activeTab={activeTab}
                   showVolume={showVolume}
-                  showIndicators={showIndicators}
+                  activeIndicators={activeIndicators}
                   startDate={getActiveStartDate()}
                   endDate={getActiveEndDate()}
                   onTabChange={handleTabChange}
                   onVolumeChange={handleVolumeChange}
-                  onIndicatorsChange={setShowIndicators}
+                  onSelectIndicator={handleSelectIndicator}
                   onStartDateChange={handleStartDateChange}
                   onEndDateChange={handleEndDateChange}
                 />
@@ -179,20 +365,23 @@ export default function StrategyContainer() {
                 <ChartDisplay 
                   ticker={selectedAsset}
                   activeTab={activeTab}
-                  showIndicators={showIndicators}
+                  showIndicators={activeIndicators.length > 0}
                   fiveMinQueryString={fiveMinQueryString}
                   dailyQueryString={dailyQueryString}
                   onFiveMinLoad={handleFiveMinLoad}
                   onDailyLoad={handleDailyLoad}
                   skipFiveMinFetch={!fiveMinNeedsRefresh}
                   skipDailyFetch={!dailyNeedsRefresh}
+                  activeIndicators={activeIndicators}
+                  indicatorPlots={indicatorPlots}
+                  strategies={strategies}
                 />
               </TabsContent>
               
               <TabsContent value="strategy" className="h-full mt-0 w-full">
                 <div className="h-[70vh] p-4 border rounded-lg">
                   <h3 className="text-lg font-medium mb-4">Strategy Builder</h3>
-                  <p className="text-gray-500">Here youll be able to build and backtest your trading strategies.</p>
+                  <p className="text-gray-500">Here you'll be able to build and backtest your trading strategies.</p>
                   {/* Future strategy building interface will go here */}
                 </div>
               </TabsContent>
