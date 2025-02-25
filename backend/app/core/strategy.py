@@ -1079,7 +1079,7 @@ class RSI(Strategy):
                      window: Optional[int] = None, exit: Optional[str] = None,
                      m_rev: Optional[bool] = None, m_rev_bound: Optional[float] = None,
                      method: Optional[str] = None, weights: Optional[np.ndarray] = None,
-                     vote_threshold: Optional[float] = None) -> None:
+                     vote_threshold: Optional[float] = None, signal_type: list = None) -> None:
         """Update multiple strategy parameters at once.
 
         Args:
@@ -1100,6 +1100,8 @@ class RSI(Strategy):
         self.__m_rev = m_rev if m_rev is not None else self.m_rev
         self.__m_rev_bound = m_rev_bound if m_rev_bound is not None else self.m_rev_bound
         self.__method = method if method is not None else self.method
+        if signal_type is not None:
+            self.signal_type = signal_type
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
@@ -1485,7 +1487,7 @@ class MACD(Strategy):
     def change_params(self, fast: Optional[int] = None, slow: Optional[int] = None,
                      signal: Optional[int] = None, method: Optional[str] = None,
                      weights: Optional[np.ndarray] = None, 
-                     vote_threshold: Optional[float] = None) -> None:
+                     vote_threshold: Optional[float] = None, signal_type: list = None) -> None:
         """Update multiple strategy parameters at once.
 
         Args:
@@ -1500,6 +1502,8 @@ class MACD(Strategy):
         self.__slow = slow if slow is not None else self.slow
         self.__signal = signal if signal is not None else self.signal
         self.__method = method if method is not None else self.method
+        if signal_type is not None:
+            self.signal_type = signal_type
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold
@@ -1876,7 +1880,7 @@ class BB(Strategy):
 
     def change_params(self, window: Optional[int] = None, num_std: Optional[float] = None,
                      method: Optional[str] = None, weights: Optional[np.ndarray] = None,
-                     vote_threshold: Optional[float] = None) -> None:
+                     vote_threshold: Optional[float] = None, signal_type: list = None) -> None:
         """Update multiple strategy parameters at once.
 
         Args:
@@ -1889,6 +1893,8 @@ class BB(Strategy):
         self.__window = window if window is not None else self.window
         self.__num_std = num_std if num_std is not None else self.num_std
         self.__method = method if method is not None else self.method
+        if signal_type is not None:
+            self.signal_type = signal_type
         self.__weights = np.array(weights) if weights is not None else self.weights
         self.__weights /= np.sum(self.__weights)
         self.__vote_threshold = vote_threshold if vote_threshold is not None else self.vote_threshold

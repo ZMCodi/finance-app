@@ -98,6 +98,8 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
     for k, v in param_updates.items():
         if isinstance(v, Enum):
             param_updates[k] = v.value
+        elif k == 'signal_type':
+            param_updates[k] = [x.value for x in v]
     print(param_updates)
     strategy.change_params(**param_updates)
     print(strategy.parameters)
@@ -107,25 +109,25 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
         'params': strategy.parameters,
     }
 
-@router.patch('/{strategy_key}/add_signal_type', response_model=StrategyParams)
-def add_signal_type(strategy_key: str, signal: StrategyAddSignalType):
-    strategy: Strategy = strategy_cache.get(strategy_key)
-    strategy.add_signal_type(signal.signal_type.value, signal.weight)
-    return {
-        'ticker': strategy.asset.ticker,
-        'strategy': strategy.__class__.__name__,
-        'params': strategy.parameters,
-    }
+# @router.patch('/{strategy_key}/add_signal_type', response_model=StrategyParams)
+# def add_signal_type(strategy_key: str, signal: StrategyAddSignalType):
+#     strategy: Strategy = strategy_cache.get(strategy_key)
+#     strategy.add_signal_type(signal.signal_type.value, signal.weight)
+#     return {
+#         'ticker': strategy.asset.ticker,
+#         'strategy': strategy.__class__.__name__,
+#         'params': strategy.parameters,
+#     }
 
-@router.patch('/{strategy_key}/remove_signal_type', response_model=StrategyParams)
-def remove_signal_type(strategy_key: str, signal: StrategyRemoveSignalType):
-    strategy: Strategy = strategy_cache.get(strategy_key)
-    strategy.remove_signal_type(signal.signal_type.value)
-    return {
-        'ticker': strategy.asset.ticker,
-        'strategy': strategy.__class__.__name__,
-        'params': strategy.parameters,
-    }
+# @router.patch('/{strategy_key}/remove_signal_type', response_model=StrategyParams)
+# def remove_signal_type(strategy_key: str, signal: StrategyRemoveSignalType):
+#     strategy: Strategy = strategy_cache.get(strategy_key)
+#     strategy.remove_signal_type(signal.signal_type.value)
+#     return {
+#         'ticker': strategy.asset.ticker,
+#         'strategy': strategy.__class__.__name__,
+#         'params': strategy.parameters,
+#     }
 
 # strategies will be added one at a time
 @router.post('/combined/create/{strategy_key}', response_model=StrategyCreate)

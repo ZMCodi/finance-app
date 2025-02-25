@@ -100,6 +100,7 @@ class StrategyUpdateParams(BaseModel):
     method: Optional[VoteMethod] = Field(None, title='Vote Method', description='The voting method for multiple signals')
     weights: Optional[List[float]] = Field(None, title='Weights', description='The weights for the signals')
     vote_threshold: Optional[float] = Field(None, title='Vote Threshold', description='The threshold for the vote')
+    signal_type: Optional[List[SignalType]] = Field(None, title='Signals', description='The signal types to use')
 
 class StrategyAddSignalType(BaseModel):
     signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be added')
