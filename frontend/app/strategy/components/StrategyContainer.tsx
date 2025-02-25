@@ -4,14 +4,13 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import ChartControls from './ChartControls';
 import ChartDisplay from './ChartDisplay';
 import TickerInput from '@/app/assets/components/TickerInput';
 import { IndicatorType, strategyNameMap } from './IndicatorPanel';
 import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
-
-// Cache for indicator plot data
-const indicatorPlotCache: Record<string, PlotJSON> = {};
+import useStrategyOperations from '../hooks/useStrategyOperations';
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -39,10 +38,16 @@ export default function StrategyContainer() {
   // Active tab indicator
   const [activeSideTab, setActiveSideTab] = useState<string>('chart');
   
-  // Strategy states
-  const [activeIndicators, setActiveIndicators] = useState<IndicatorType[]>([]);
-  const [strategies, setStrategies] = useState<Record<IndicatorType, string>>({});  // Indicator type -> strategy_id
-  const [indicatorPlots, setIndicatorPlots] = useState<Record<string, PlotJSON>>({});  // Strategy ID -> Plot data
+  // Use our custom hook for strategy operations
+  const { 
+    state: strategyState, 
+    operationState, 
+    results,
+    actions 
+  } = useStrategyOperations();
+
+  // Destructure strategy state for easier access
+  const { activeIndicators, strategies, indicatorPlots } = strategyState;
   
   // Update query strings when settings change for 5min
   useEffect(() => {
@@ -63,7 +68,7 @@ export default function StrategyContainer() {
     setFiveMinNeedsRefresh(true);
     
     // Also clear indicator plot cache when query parameters change
-    clearIndicatorPlotCache();
+    actions.clearPlotCache();
   }, [fiveMinStartDate, fiveMinEndDate, showVolume]);
   
   // Update query strings when settings change for daily
@@ -85,125 +90,31 @@ export default function StrategyContainer() {
     setDailyNeedsRefresh(true);
     
     // Also clear indicator plot cache when query parameters change
-    clearIndicatorPlotCache();
+    actions.clearPlotCache();
   }, [dailyStartDate, dailyEndDate, showVolume]);
   
   // Update indicator plots when needed
   useEffect(() => {
     if (activeIndicators.length > 0) {
-      updateIndicatorPlots();
-    }
-  }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh]);
-  
-  // Function to create a new strategy
-  const createStrategy = async (ticker: string, strategyName: string): Promise<string> => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/strategies/${ticker}/${strategyName}`, {
-        method: 'POST'
-      });
+      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
-      if (!response.ok) {
-        throw new Error(`Failed to create strategy: ${response.statusText}`);
-      }
-      
-      const data: StrategyCreate = await response.json();
-      return data.strategy_id;
-    } catch (error) {
-      console.error("Error creating strategy:", error);
-      throw error;
+      actions.updateIndicatorPlots(currentTimeframe, startDate, endDate);
     }
-  };
+  }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh, activeIndicators]);
   
-  // Function to get indicator plot data
-  const getIndicatorPlot = async (strategyId: string, queryParams: string): Promise<PlotJSON> => {
-    try {
-      const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/indicator?${queryParams}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch indicator plot: ${response.statusText}`);
-      }
-      
-      const data: StrategyPlot = await response.json();
-      return data.json_data;
-    } catch (error) {
-      console.error("Error fetching indicator plot:", error);
-      throw error;
-    }
-  };
-  
-  // Function to clear indicator plot cache
-  const clearIndicatorPlotCache = () => {
-    // Clear all cache entries
-    Object.keys(indicatorPlotCache).forEach(key => {
-      delete indicatorPlotCache[key];
-    });
-    
-    // Force update of indicator plots
-    if (activeIndicators.length > 0) {
-      updateIndicatorPlots();
-    }
-  };
-  
-  // Function to update all indicator plots
-  const updateIndicatorPlots = async () => {
-    // Skip if no strategies or no selected asset
-    if (Object.keys(strategies).length === 0 || !selectedAsset) return;
-    
-    // Build query params based on current tab
-    const params = new URLSearchParams();
-    params.append('timeframe', activeTab === '5m' ? '5m' : '1d');
-    
-    if (activeTab === '5m' && fiveMinStartDate) {
-      params.append('start_date', format(fiveMinStartDate, 'yyyy-MM-dd'));
-    } else if (activeTab === '1d' && dailyStartDate) {
-      params.append('start_date', format(dailyStartDate, 'yyyy-MM-dd'));
-    }
-    
-    if (activeTab === '5m' && fiveMinEndDate) {
-      params.append('end_date', format(fiveMinEndDate, 'yyyy-MM-dd'));
-    } else if (activeTab === '1d' && dailyEndDate) {
-      params.append('end_date', format(dailyEndDate, 'yyyy-MM-dd'));
-    }
-    
-    const queryString = params.toString();
-    
-    // Update each strategy plot
-    const updatedPlots: Record<string, PlotJSON> = {};
-    const strategyFetches = Object.entries(strategies).map(async ([indicator, strategyId]) => {
-      try {
-        // Create a cache key
-        const cacheKey = `${strategyId}-${activeTab}-${queryString}`;
-        
-        // Check if we have this in cache
-        if (indicatorPlotCache[cacheKey]) {
-          updatedPlots[strategyId] = indicatorPlotCache[cacheKey];
-        } else {
-          // Fetch new data
-          const plotData = await getIndicatorPlot(strategyId, queryString);
-          indicatorPlotCache[cacheKey] = plotData;
-          updatedPlots[strategyId] = plotData;
-        }
-      } catch (error) {
-        console.error(`Error updating plot for ${indicator}:`, error);
-      }
-    });
-    
-    // Wait for all fetches to complete
-    await Promise.all(strategyFetches);
-    
-    // Update state with new plots
-    setIndicatorPlots(updatedPlots);
-  };
-  
+  // Handle adding a ticker
   const handleAddTicker = (ticker: string) => {
     setSelectedAsset(ticker);
     setFiveMinNeedsRefresh(true);
     setDailyNeedsRefresh(true);
     
-    // Clear any existing strategies when changing tickers
-    setActiveIndicators([]);
-    setStrategies({});
-    setIndicatorPlots({});
+    // Reset strategy state when changing tickers
+    // Since we don't have a reset method in the hook, we'll just clear everything manually
+    activeIndicators.forEach(indicator => {
+      actions.removeIndicator(indicator);
+    });
   };
   
   // Handle tab change
@@ -221,50 +132,7 @@ export default function StrategyContainer() {
     if (!selectedAsset || activeIndicators.includes(indicator)) return;
     
     try {
-      // Create the strategy
-      const strategyId = await createStrategy(selectedAsset, strategyNameMap[indicator]);
-      
-      // Update strategies map
-      const updatedStrategies = {
-        ...strategies,
-        [indicator]: strategyId
-      };
-      
-      setStrategies(updatedStrategies);
-      
-      // Add to active indicators
-      setActiveIndicators([...activeIndicators, indicator]);
-      
-      // Fetch indicator plot data for current state
-      const params = new URLSearchParams();
-      params.append('timeframe', activeTab === '5m' ? '5m' : '1d');
-      
-      if (activeTab === '5m' && fiveMinStartDate) {
-        params.append('start_date', format(fiveMinStartDate, 'yyyy-MM-dd'));
-      } else if (activeTab === '1d' && dailyStartDate) {
-        params.append('start_date', format(dailyStartDate, 'yyyy-MM-dd'));
-      }
-      
-      if (activeTab === '5m' && fiveMinEndDate) {
-        params.append('end_date', format(fiveMinEndDate, 'yyyy-MM-dd'));
-      } else if (activeTab === '1d' && dailyEndDate) {
-        params.append('end_date', format(dailyEndDate, 'yyyy-MM-dd'));
-      }
-      
-      const queryString = params.toString();
-      const cacheKey = `${strategyId}-${activeTab}-${queryString}`;
-      
-      // Fetch plot data
-      const plotData = await getIndicatorPlot(strategyId, queryString);
-      
-      // Store in cache
-      indicatorPlotCache[cacheKey] = plotData;
-      
-      // Update state with new plot
-      setIndicatorPlots({
-        ...indicatorPlots,
-        [strategyId]: plotData
-      });
+      await actions.createStrategy(selectedAsset, indicator);
       
       // Trigger data refresh for the main chart
       if (activeTab === '5m') {
@@ -313,50 +181,135 @@ export default function StrategyContainer() {
     setDailyNeedsRefresh(false);
   };
 
+  // Handler for removing an indicator
   const handleRemoveIndicator = (indicator: IndicatorType) => {
-    // Remove from active indicators
-    const updatedIndicators = activeIndicators.filter(i => i !== indicator);
-    setActiveIndicators(updatedIndicators);
-    
-    // Get strategy ID for this indicator
-    const strategyId = strategies[indicator];
-    if (!strategyId) return;
-    
-    // Remove from strategies object
-    const updatedStrategies = { ...strategies };
-    delete updatedStrategies[indicator];
-    setStrategies(updatedStrategies);
-    
-    // Remove from indicator plots
-    const updatedPlots = { ...indicatorPlots };
-    delete updatedPlots[strategyId];
-    setIndicatorPlots(updatedPlots);
-    
-    // Note: In a real implementation, you might want to call an API to delete the strategy
+    actions.removeIndicator(indicator);
   };
   
   // Handler for configuring an indicator
-  const handleConfigureIndicator = (indicator: IndicatorType) => {
-    // For now, just log the action - you'll implement the actual configuration later
+  const handleConfigureIndicator = async (indicator: IndicatorType) => {
+    // This would typically open a modal with a form for configuration
     console.log(`Configure ${indicator}`);
+    
+    // Example configuration - in a real implementation, you'd get this from a form
+    let exampleParams = {};
+    
+    // Different parameters for different strategy types
+    if (indicator === 'MA Crossover') {
+      exampleParams = { 
+        short_window: 10, 
+        long_window: 50 
+      };
+    } else if (indicator === 'RSI') {
+      exampleParams = {
+        window: 14,
+        upper_bound: 70,
+        lower_bound: 30
+      };
+    } else if (indicator === 'MACD') {
+      exampleParams = {
+        fast: 12,
+        slow: 26,
+        signal: 9
+      };
+    } else if (indicator === 'Bollinger Bands') {
+      exampleParams = {
+        window: 20,
+        num_std: 2
+      };
+    }
+    
+    try {
+      const result = await actions.configureIndicator(indicator, exampleParams);
+      console.log('Configuration result:', result);
+      
+      // Refresh charts after configuration
+      if (activeTab === '5m') {
+        setFiveMinNeedsRefresh(true);
+      } else {
+        setDailyNeedsRefresh(true);
+      }
+    } catch (error) {
+      console.error(`Error configuring ${indicator}:`, error);
+    }
   };
   
   // Handler for optimizing an indicator
-  const handleOptimizeIndicator = (indicator: IndicatorType) => {
-    // For now, just log the action - you'll implement the actual optimization later
+  const handleOptimizeIndicator = async (indicator: IndicatorType) => {
     console.log(`Optimize ${indicator}`);
+    
+    try {
+      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      
+      const result = await actions.optimizeIndicator(
+        indicator,
+        currentTimeframe,
+        startDate,
+        endDate
+      );
+      
+      console.log('Optimization result:', result);
+      
+      // Here you would typically show the optimization results in the UI
+      // and possibly apply the optimized parameters
+      
+      // Refresh charts after optimization
+      if (activeTab === '5m') {
+        setFiveMinNeedsRefresh(true);
+      } else {
+        setDailyNeedsRefresh(true);
+      }
+    } catch (error) {
+      console.error(`Error optimizing ${indicator}:`, error);
+    }
   };
   
   // Handler for generating signal
-  const handleGenerateSignal = (indicator: IndicatorType) => {
-    // For now, just log the action - you'll implement the signal generation later
+  const handleGenerateSignal = async (indicator: IndicatorType) => {
     console.log(`Generate signal for ${indicator}`);
+    
+    try {
+      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      
+      const result = await actions.generateSignal(
+        indicator,
+        currentTimeframe,
+        startDate,
+        endDate
+      );
+      
+      console.log('Signal generation result:', result);
+      
+      // Here you would typically visualize the signals on the chart
+      // or show them in a table/panel
+      
+    } catch (error) {
+      console.error(`Error generating signals for ${indicator}:`, error);
+    }
   };
   
   // Handler for adding to strategy
-  const handleAddToStrategy = (indicator: IndicatorType) => {
-    // For now, just log the action - you'll implement adding to strategy later
+  const handleAddToStrategy = async (indicator: IndicatorType) => {
     console.log(`Add ${indicator} to strategy`);
+    
+    try {
+      // Default weight is 1.0
+      const result = await actions.addToStrategy(indicator);
+      console.log('Add to strategy result:', result);
+      
+      // Here you would typically update the UI to show the strategy composition
+      // or navigate to the strategy view
+      if (activeSideTab !== 'strategy') {
+        setActiveSideTab('strategy');
+      }
+      
+    } catch (error) {
+      console.error(`Error adding ${indicator} to strategy:`, error);
+    }
   };
 
   return (
@@ -406,6 +359,12 @@ export default function StrategyContainer() {
                 onOptimizeIndicator={handleOptimizeIndicator}
                 onGenerateSignal={handleGenerateSignal}
                 onAddToStrategy={handleAddToStrategy}
+                isLoading={
+                  operationState.configure.isLoading || 
+                  operationState.optimize.isLoading || 
+                  operationState.generateSignal.isLoading || 
+                  operationState.addToStrategy.isLoading
+                }
               />
               </div>
             </div>
@@ -432,8 +391,86 @@ export default function StrategyContainer() {
               <TabsContent value="strategy" className="h-full mt-0 w-full">
                 <div className="h-[70vh] p-4 border rounded-lg">
                   <h3 className="text-lg font-medium mb-4">Strategy Builder</h3>
-                  <p className="text-gray-500">Here you'll be able to build and backtest your trading strategies.</p>
-                  {/* Future strategy building interface will go here */}
+                  
+                  {strategyState.combinedStrategyId ? (
+                    <div className="space-y-4">
+                      <p className="text-sm">
+                        Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
+                      </p>
+                      
+                      <div className="border p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Strategy Components</h4>
+                        <ul className="space-y-2">
+                          {activeIndicators.map(indicator => (
+                            <li key={indicator} className="flex items-center justify-between">
+                              <span>{indicator}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          onClick={() => {
+                            if (!selectedAsset) return;
+                            const timeframe = activeTab === '5m' ? '5m' : '1d';
+                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                            
+                            // We need to backtest the combined strategy
+                            if (strategyState.combinedStrategyId) {
+                              // Need to implement this
+                              console.log('Backtest combined strategy');
+                            }
+                          }}
+                        >
+                          Backtest
+                        </button>
+                        
+                        <button 
+                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                          onClick={() => {
+                            if (!selectedAsset) return;
+                            const timeframe = activeTab === '5m' ? '5m' : '1d';
+                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                            
+                            // Optimize weights
+                            if (strategyState.combinedStrategyId) {
+                              actions.optimizeStrategyWeights(
+                                timeframe,
+                                startDate,
+                                endDate
+                              ).then(result => {
+                                console.log('Weight optimization result:', result);
+                                // Update the UI with the optimized weights
+                              }).catch(error => {
+                                console.error('Error optimizing weights:', error);
+                              });
+                            }
+                          }}
+                        >
+                          Optimize Weights
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
+                      <button 
+                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+                        disabled={activeIndicators.length === 0}
+                        onClick={() => {
+                          if (activeIndicators.length > 0) {
+                            handleAddToStrategy(activeIndicators[0]);
+                          }
+                        }}
+                      >
+                        Add First Indicator to Strategy
+                      </button>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
             </Tabs>

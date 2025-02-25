@@ -1943,7 +1943,7 @@ class BB(Strategy):
         bol_down = go.Scatter(
             x=df.index.strftime(format),
             y=df['bol_down'],
-            line=dict(color='blue', width=0.5, dash='dash'),
+            line=dict(color='rgb(50, 97, 248)', width=1),
             showlegend=False,
             name='lower band',
             hoverinfo='skip',
@@ -1953,7 +1953,7 @@ class BB(Strategy):
             x=df.index.strftime(format),
             y=df['bol_up'],
             fill='tonexty',
-            line=dict(color='blue', width=0.5, dash='dash'),
+            line=dict(color='rgb(50, 97, 248)', width=1),
             fillcolor='rgba(68, 68, 255, 0.1)',
             showlegend=False,
             name='upper band',
