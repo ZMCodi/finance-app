@@ -11,11 +11,14 @@ import TickerInput from '@/app/assets/components/TickerInput';
 import { IndicatorType, strategyNameMap } from './IndicatorPanel';
 import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
 import useStrategyOperations from '../hooks/useStrategyOperations';
+import StrategyConfigDialog from './StrategyConfigDialog';
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('5m');
   const [showVolume, setShowVolume] = useState(true);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [activeConfigIndicator, setActiveConfigIndicator] = useState<IndicatorType | null>(null);
   
   // Default start date for 5min data (15 days ago)
   const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
@@ -188,39 +191,15 @@ export default function StrategyContainer() {
   
   // Handler for configuring an indicator
   const handleConfigureIndicator = async (indicator: IndicatorType) => {
-    // This would typically open a modal with a form for configuration
     console.log(`Configure ${indicator}`);
-    
-    // Example configuration - in a real implementation, you'd get this from a form
-    let exampleParams = {};
-    
-    // Different parameters for different strategy types
-    if (indicator === 'MA Crossover') {
-      exampleParams = { 
-        short_window: 10, 
-        long_window: 50 
-      };
-    } else if (indicator === 'RSI') {
-      exampleParams = {
-        window: 14,
-        upper_bound: 70,
-        lower_bound: 30
-      };
-    } else if (indicator === 'MACD') {
-      exampleParams = {
-        fast: 12,
-        slow: 26,
-        signal: 9
-      };
-    } else if (indicator === 'Bollinger Bands') {
-      exampleParams = {
-        window: 20,
-        num_std: 2
-      };
-    }
-    
+    setActiveConfigIndicator(indicator);
+    setConfigDialogOpen(true);
+  };
+
+  // Add this handler function for saving configuration
+  const handleSaveConfig = async (indicator: IndicatorType, params: Record<string, any>) => {
     try {
-      const result = await actions.configureIndicator(indicator, exampleParams);
+      const result = await actions.configureIndicator(indicator, params);
       console.log('Configuration result:', result);
       
       // Refresh charts after configuration
@@ -231,6 +210,7 @@ export default function StrategyContainer() {
       }
     } catch (error) {
       console.error(`Error configuring ${indicator}:`, error);
+      throw error; // Rethrow to be handled in the dialog
     }
   };
   
@@ -477,6 +457,13 @@ export default function StrategyContainer() {
           </div>
         </div>
       )}
+      <StrategyConfigDialog
+        open={configDialogOpen}
+        onOpenChange={setConfigDialogOpen}
+        indicator={activeConfigIndicator}
+        strategyId={activeConfigIndicator ? strategies[activeConfigIndicator] : null}
+        onConfigSave={handleSaveConfig}
+      />
     </div>
   );
 }

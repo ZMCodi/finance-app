@@ -563,7 +563,7 @@ class MA_Crossover(Strategy):
     """
 
     def __init__(self, asset: Asset, param_type: str = 'window', 
-                short_window: int = 20, long_window: int = 50,
+                short_window: int = 20, long_window: int = 100,
                 short_alpha: Optional[float] = None, 
                 long_alpha: Optional[float] = None,
                 short_halflife: Optional[float] = None, 
@@ -935,7 +935,7 @@ class RSI(Strategy):
         if signal_type is not None:
             self.signal_type = list(signal_type)
         else:
-            self.signal_type = ['crossover', 'divergence', 'hidden divergence']
+            self.signal_type = ['crossover']
 
         self.__method = str(method)
 
@@ -1378,8 +1378,7 @@ class MACD(Strategy):
         if signal_type is not None:
             self.signal_type = list(signal_type)
         else:
-            self.signal_type = ['crossover', 'divergence', 'hidden divergence', 
-                              'momentum', 'double peak/trough']
+            self.signal_type = ['crossover']
 
         self.__method = str(method)
 
@@ -1783,7 +1782,7 @@ class BB(Strategy):
         if signal_type is not None:
             self.signal_type = list(signal_type)
         else:
-            self.signal_type = ['bounce', 'double', 'walks', 'squeeze', 'breakout', '%B']
+            self.signal_type = ['bounce']
 
         self.__method = str(method)
 
@@ -1903,7 +1902,8 @@ class BB(Strategy):
             dict: Dictionary with parameter names and values
         """
         return {'window': self.window, 'num_std': self.num_std,
-                'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold}
+                'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold,
+                'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
             end_date: Optional[DateLike] = None) -> go.Figure:
