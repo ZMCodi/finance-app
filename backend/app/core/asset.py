@@ -491,7 +491,7 @@ class Asset():
             fig = make_subplots(rows=2, cols=1, 
                             shared_xaxes=True, 
                             vertical_spacing=0.03, 
-                            row_heights=[0.7, 0.3])
+                            row_heights=[0.8, 0.2])
         else:
             fig = go.Figure()
 
@@ -508,16 +508,18 @@ class Asset():
         )
 
         if volume:
-            colors = ['#26A69A' if close >= open else '#EF5350' 
-            for open, close in zip(data['open'], data['close'])]
+            colors_fill = ['rgb(33, 87, 69)' if close >= open else 'rgb(142, 41, 40)'
+                            for open, close in zip(data['open'], data['close'])]
+            colors_outline = ['rgb(58, 155, 109)' if close >= open else 'rgb(231, 79, 56)'
+                            for open, close in zip(data['open'], data['close'])]
 
             volume_bars = go.Bar(
                 x=data.index.strftime(format),
                 y=data['volume'],
                 name='Volume',
                 marker=dict(
-                    color=colors,
-                    line=dict(color=colors)
+                    color=colors_fill,
+                    line=dict(color=colors_outline, width=2)
                 ),
             )
 

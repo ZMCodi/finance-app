@@ -81,6 +81,16 @@ export default function ChartDisplay({
     // Start with the main chart data
     const combinedData = [...mainChartData.data];
     
+    // Determine if volume is displayed in the main chart data
+    const hasVolume = mainChartData.data.some(trace => trace.name === 'Volume');
+    
+    // Count how many subplots we'll need
+    const rsiActive = activeIndicators.includes('RSI');
+    const macdActive = activeIndicators.includes('MACD');
+    
+    // Count the total number of panels needed
+    const numSubplots = (hasVolume ? 1 : 0) + (rsiActive ? 1 : 0) + (macdActive ? 1 : 0);
+    
     // Create a new layout based on the main chart layout
     let layout = { 
       ...mainChartData.layout,
@@ -90,122 +100,213 @@ export default function ChartDisplay({
         gridcolor: 'rgba(50, 50, 50, 0.2)',
         zerolinecolor: 'rgba(50, 50, 50, 0.5)'
       },
-      yaxis: {
-        ...mainChartData.layout.yaxis,
-        gridcolor: 'rgba(50, 50, 50, 0.2)',
-        zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-        domain: [0.3, 1]  // Reserve space for subplots
-      },
       paper_bgcolor: mainChartData.layout.paper_bgcolor || 'rgba(0,0,0,0)',
       plot_bgcolor: mainChartData.layout.plot_bgcolor || 'rgba(0,0,0,0)',
       shapes: [...(mainChartData.layout.shapes || [])]  // Initialize shapes array
     };
     
-    // Track how many subplot indicators we have
-    let subplotCount = 0;
+    // Calculate heights - each subplot gets 20% except the main chart
+    const subplotHeight = 0.2; // 20% for each subplot
+    const mainChartHeight = Math.max(0.4, 1 - (subplotHeight * numSubplots)); // At least 40% for main chart
+    
+    // Set main chart yaxis domain - place at the top
+    layout.yaxis = {
+      ...layout.yaxis,
+      // gridcolor: 'rgba(50, 50, 50, 0.2)',
+      // zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+      domain: [1 - mainChartHeight, 1] // Main chart at the top
+    };
+    
+    // Track current position
+    let currentPosition = 1 - mainChartHeight;
+    
+    // If volume is present, position it below the main chart
+    if (hasVolume) {
+      const volumeTraceIndex = mainChartData.data.findIndex(trace => trace.name === 'Volume');
+      if (volumeTraceIndex !== -1) {
+        // Remove volume from main data and update its y-axis
+        const volumeTrace = { 
+          ...mainChartData.data[volumeTraceIndex],
+          yaxis: 'y2' // First subplot
+        };
+        combinedData.splice(volumeTraceIndex, 1); // Remove from original position
+        combinedData.push(volumeTrace); // Add with updated axis
+        
+        // Add volume y-axis
+        const volumeDomainTop = currentPosition;
+        currentPosition -= subplotHeight;
+        
+        layout.yaxis2 = {
+          title: 'Volume',
+          domain: [currentPosition, volumeDomainTop],
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+        };
+      }
+    }
     
     // Add each indicator's data
-    activeIndicators.forEach(indicator => {
-      const strategyId = strategies[indicator];
+    let indicatorIndex = hasVolume ? 1 : 0; // Start index after volume if present
+    
+    // Add RSI if active
+    if (rsiActive) {
+      const strategyId = strategies['RSI'];
       const plotData = indicatorPlots[strategyId];
       
-      if (!plotData) return;
-      
-      if (isSubplotIndicator(indicator)) {
-        // For RSI and MACD, create a separate subplot
-        subplotCount++;
+      if (plotData) {
+        const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume
         
-        // Calculate domain for this subplot (RSI at bottom, then MACD if present)
-        const subplotHeight = 0.25;
-        const subplotDomain = [0, subplotHeight];
+        // Calculate domain for RSI
+        const rsiDomainTop = currentPosition;
+        currentPosition -= subplotHeight;
+        currentPosition = Math.max(0, currentPosition); // Ensure we don't go below 0
         
-        // Create a new y-axis for this subplot
-        const yaxisKey = `yaxis${subplotCount + 1}`;
+        // Create RSI y-axis
+        layout[`yaxis${subplotNumber}`] = {
+          title: 'RSI',
+          domain: [currentPosition, rsiDomainTop],
+          range: [0, 100],  // Fixed range for RSI
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+        };
         
-        // Special handling for RSI
-        if (indicator === 'RSI') {
-          layout[yaxisKey] = {
-            title: 'RSI',
-            domain: subplotDomain,
-            range: [0, 100],  // Fixed range for RSI
-            gridcolor: 'rgba(50, 50, 50, 0.2)',
-            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
-          };
-          
-          // Add RSI traces
-          plotData.data.forEach(trace => {
-            combinedData.push({
-              ...trace,
-              yaxis: `y${subplotCount + 1}`
-            });
-          });
-          
-          // Add overbought/oversold lines from layout.shapes if they exist
-          if (plotData.layout && plotData.layout.shapes) {
-            plotData.layout.shapes.forEach(shape => {
-              if ((shape.y0 === 70 && shape.y1 === 70) || (shape.y0 === 30 && shape.y1 === 30)) {
-                // This is an overbought/oversold line
-                layout.shapes.push({
-                  ...shape,
-                  yref: `y${subplotCount + 1}`,  // Reference the correct y-axis
-                  line: {
-                    ...shape.line,
-                  }
-                });
-              }
-            });
-          }
-        } else if (indicator === 'MACD') {
-          // MACD layout handling
-          layout[yaxisKey] = {
-            title: 'MACD',
-            domain: subplotDomain,
-            gridcolor: 'rgba(50, 50, 50, 0.2)',
-            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
-          };
-          
-          // Add all MACD traces with the correct y-axis
-          plotData.data.forEach(trace => {
-            combinedData.push({
-              ...trace,
-              yaxis: `y${subplotCount + 1}`
-            });
-          });
-          
-          // Add any shapes from MACD layout if they exist
-          if (plotData.layout && plotData.layout.shapes) {
-            plotData.layout.shapes.forEach(shape => {
-              layout.shapes.push({
-                ...shape,
-                yref: `y${subplotCount + 1}`  // Reference the correct y-axis
-              });
-            });
-          }
-        }
-      } else {
-        // For MA Crossover and Bollinger Bands, overlay on the main chart
+        // Add RSI traces
         plotData.data.forEach(trace => {
-          combinedData.push(trace);
+          combinedData.push({
+            ...trace,
+            yaxis: `y${subplotNumber}`
+          });
         });
         
-        // Add any shapes from the indicator's layout if they exist
+        // Add overbought/oversold lines
         if (plotData.layout && plotData.layout.shapes) {
           plotData.layout.shapes.forEach(shape => {
-            layout.shapes.push(shape);
+            if ((shape.y0 === 70 && shape.y1 === 70) || (shape.y0 === 30 && shape.y1 === 30)) {
+              layout.shapes.push({
+                ...shape,
+                yref: `y${subplotNumber}`,
+                line: {
+                  ...shape.line,
+                }
+              });
+            }
           });
+        } else {
+          // Add default overbought/oversold lines
+          layout.shapes.push({
+            type: 'line',
+            x0: 0,
+            x1: 1,
+            xref: 'x domain',
+            y0: 70,
+            y1: 70,
+            yref: `y${subplotNumber}`,
+            line: {
+              color: 'rgba(255, 50, 50, 0.8)',
+              width: 1,
+              dash: 'dash'
+            }
+          });
+          
+          layout.shapes.push({
+            type: 'line',
+            x0: 0,
+            x1: 1,
+            xref: 'x domain',
+            y0: 30,
+            y1: 30,
+            yref: `y${subplotNumber}`,
+            line: {
+              color: 'rgba(50, 200, 50, 0.8)',
+              width: 1,
+              dash: 'dash'
+            }
+          });
+        }
+        
+        indicatorIndex++;
+      }
+    }
+    
+    // Add MACD if active
+    if (macdActive) {
+      const strategyId = strategies['MACD'];
+      const plotData = indicatorPlots[strategyId];
+      
+      if (plotData) {
+        const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume or RSI
+        
+        // Calculate domain for MACD
+        const macdDomainTop = currentPosition;
+        currentPosition -= subplotHeight;
+        currentPosition = Math.max(0, currentPosition); // Ensure we don't go below 0
+        
+        // Create MACD y-axis
+        layout[`yaxis${subplotNumber}`] = {
+          title: 'MACD',
+          domain: [currentPosition, macdDomainTop],
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+        };
+        
+        // Add all MACD traces
+        plotData.data.forEach(trace => {
+          combinedData.push({
+            ...trace,
+            yaxis: `y${subplotNumber}`
+          });
+        });
+        
+        // Add any MACD layout shapes
+        if (plotData.layout && plotData.layout.shapes) {
+          plotData.layout.shapes.forEach(shape => {
+            layout.shapes.push({
+              ...shape,
+              yref: `y${subplotNumber}`
+            });
+          });
+        }
+      }
+    }
+    
+    // Add MA and BB overlays
+    activeIndicators.forEach(indicator => {
+      if (indicator !== 'RSI' && indicator !== 'MACD') {
+        const strategyId = strategies[indicator];
+        const plotData = indicatorPlots[strategyId];
+        
+        if (plotData) {
+          // Overlay on main chart
+          plotData.data.forEach(trace => {
+            combinedData.push(trace);
+          });
+          
+          // Add any shapes
+          if (plotData.layout && plotData.layout.shapes) {
+            plotData.layout.shapes.forEach(shape => {
+              layout.shapes.push(shape);
+            });
+          }
         }
       }
     });
     
-    // Adjust layout based on subplot count
-    if (subplotCount > 0) {
+    // Adjust layout for multiple plots
+    if (numSubplots > 0) {
       layout = {
         ...layout,
         grid: {
-          rows: subplotCount + 1,
+          rows: numSubplots + 1, // +1 for main chart
           columns: 1,
           pattern: 'independent',
-          roworder: 'bottom to top'
+          roworder: 'top to bottom',
+          // Add small gap between plots
+          ygap: 0.03
+        },
+        margin: {
+          ...layout.margin,
+          b: 40, // Increase bottom margin
+          t: 10, // Decrease top margin to make more space
         }
       };
     }

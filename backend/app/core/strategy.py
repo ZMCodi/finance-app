@@ -1150,7 +1150,7 @@ class RSI(Strategy):
         RSI = go.Scatter(
                 x=df.index.strftime(format),
                 y=df['rsi'],
-                line=dict(color='blue', width=1.5),
+                line=dict(color='rgb(102, 137, 168)', width=1.5),
                 name='RSI'
         )
 
@@ -1550,22 +1550,29 @@ class MACD(Strategy):
         MACD = go.Scatter(
                 x=df.index.strftime(format),
                 y=df['macd'],
-                line=dict(color='red', width=1.5),
+                line=dict(color='rgb(251, 82, 87)', width=1.5),
                 name='MACD'
         )
 
         signal_line = go.Scatter(
                 x=df.index.strftime(format),
                 y=df['signal_line'],
-                line=dict(color='blue', width=1.5),
+                line=dict(color='rgb(43, 153, 247)', width=1.5),
                 name='Signal Line'
         )
 
-        colors = ['#26A69A' if x >= 0 else '#EF5350' for x in df['macd_hist']]
+        colors_fill = ['rgb(33, 87, 69)' if x >= 0 else 'rgb(142, 41, 40)' for x in df['macd_hist']]
+        colors_outline = ['rgb(58, 155, 109)' if x >= 0 else 'rgb(231, 79, 56)' for x in df['macd_hist']]
         macd_hist = go.Bar(
                 x=df.index.strftime(format),
                 y=df['macd_hist'],
-                marker_color=colors,
+                marker=dict(
+                    color=colors_fill,
+                    line=dict(
+                        color=colors_outline,
+                        width=2
+                    )
+                ),
                 name='MACD Histogram'
         )
 
