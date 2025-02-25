@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { IndicatorType } from './IndicatorPanel';
 import { PlotJSON } from '@/src/api/index';
+import { chartDataCache } from '@/components/AssetChart';
 
 // Import Plotly dynamically to avoid SSR issues
 const Plot = dynamic(() => import('react-plotly.js'), {
@@ -52,22 +53,55 @@ export default function ChartDisplay({
     const fetchMainChartData = async () => {
       try {
         const queryString = activeTab === '5m' ? fiveMinQueryString : dailyQueryString;
+        const cacheKey = `${ticker}-candlestick-${queryString}`;
+        
+        // Check if data exists in cache
+        if ((skipFiveMinFetch && activeTab === '5m') || (skipDailyFetch && activeTab === '1d')) {
+          if (chartDataCache[cacheKey]) {
+            console.log('Using cached candlestick data:', cacheKey);
+            setMainChartData(chartDataCache[cacheKey]);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Fetch from API if not in cache
+        console.log('Fetching candlestick data:', cacheKey);
         const response = await fetch(`http://localhost:8000/api/assets/${ticker}/candlestick?${queryString}`);
         const data = await response.json();
+        
+        // Store in cache
+        chartDataCache[cacheKey] = data.json_data;
         setMainChartData(data.json_data);
         setLoading(false);
+        
+        // Call appropriate callback
+        if (activeTab === '5m') {
+          onFiveMinLoad();
+        } else {
+          onDailyLoad();
+        }
       } catch (error) {
         console.error("Error fetching main chart data:", error);
         setLoading(false);
       }
     };
     
-    if (!skipFiveMinFetch && activeTab === '5m') {
+    // Only fetch if we need to
+    if ((!skipFiveMinFetch && activeTab === '5m') || (!skipDailyFetch && activeTab === '1d')) {
       fetchMainChartData();
-    } else if (!skipDailyFetch && activeTab === '1d') {
-      fetchMainChartData();
+    } else {
+      // Try to load from cache anyway
+      const queryString = activeTab === '5m' ? fiveMinQueryString : dailyQueryString;
+      const cacheKey = `${ticker}-candlestick-${queryString}`;
+      
+      if (chartDataCache[cacheKey]) {
+        console.log('Using cached candlestick data (skip fetch):', cacheKey);
+        setMainChartData(chartDataCache[cacheKey]);
+        setLoading(false);
+      }
     }
-  }, [ticker, activeTab, fiveMinQueryString, dailyQueryString, skipFiveMinFetch, skipDailyFetch]);
+  }, [ticker, activeTab, fiveMinQueryString, dailyQueryString, skipFiveMinFetch, skipDailyFetch, onFiveMinLoad, onDailyLoad]);
   
   // Function to determine if an indicator should be in a separate subplot
   const isSubplotIndicator = (indicator: IndicatorType): boolean => {
@@ -327,6 +361,8 @@ export default function ChartDisplay({
       }
     });
     
+    // Update your renderCombinedPlot function to include shared x-axis configuration
+
     // Adjust layout for multiple plots
     if (numSubplots > 0) {
       layout = {
@@ -346,34 +382,49 @@ export default function ChartDisplay({
         }
       };
       
+      // First hide all x-axis labels
+      layout.xaxis.showticklabels = false;
+      
       // Find the bottom subplot and show its x-axis labels
       if (activeSubplots.length > 0) {
         // Sort subplots by number, highest is the last subplot added (which is at the bottom)
         activeSubplots.sort((a, b) => a - b);
         const bottomSubplotNumber = activeSubplots[activeSubplots.length - 1];
         
+        // Get the x-axis properties we want to share across all subplots
+        const sharedXAxisProps = {
+          // These properties will be synchronized across all x-axes
+          range: layout.xaxis.range,
+          type: layout.xaxis.type,
+          autorange: layout.xaxis.autorange,
+          domain: layout.xaxis.domain,
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          scaleanchor: 'x' // Anchor all x-axes to the main x-axis
+        };
         
-        // Show tick labels for ONLY the bottom subplot
-        if (bottomSubplotNumber === 1) {
-          layout.xaxis.showticklabels = true;
-        } else {
-          // Make sure the x-axis object exists for the bottom subplot
-          if (!layout[`xaxis${bottomSubplotNumber}`]) {
-            layout[`xaxis${bottomSubplotNumber}`] = {};
-          }
+        // Apply shared x-axis properties to all subplots
+        for (let i = 1; i <= numSubplots + 1; i++) {
+          const axisName = i === 1 ? 'xaxis' : `xaxis${i}`;
           
-          // Set explicit x-axis properties for the bottom subplot
-          layout[`xaxis${bottomSubplotNumber}`] = {
-            ...layout[`xaxis${bottomSubplotNumber}`],
-            showticklabels: true,
-            // Use these same properties from the main chart
-            nticks: 5,
-            type: layout.xaxis.type,
-            tickformat: layout.xaxis.tickformat,
-            gridcolor: 'rgba(50, 50, 50, 0.2)',
-            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+          // Only the bottom subplot should show date labels
+          const showLabels = i === bottomSubplotNumber;
+          
+          layout[axisName] = {
+            ...layout[axisName],
+            ...sharedXAxisProps,
+            showticklabels: showLabels,
+            // For bottom subplot, ensure we use the original tickformat
+            ...(showLabels ? { tickformat: layout.xaxis.tickformat } : {}),
+            nticks: 5
           };
         }
+      }
+      
+      // Set up linked zoom behavior - critical part for synchronization
+      layout.xaxis.matches = 'x';
+      for (let i = 2; i <= numSubplots + 1; i++) {
+        layout[`xaxis${i}`].matches = 'x';
       }
     }
     

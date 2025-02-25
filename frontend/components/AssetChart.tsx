@@ -6,7 +6,7 @@ import { useResizeObserver } from "usehooks-ts";
 import { AssetPlot, PlotJSON } from "@/src/api/index";
 
 // Cache for storing chart data
-const chartDataCache: Record<string, PlotJSON> = {};
+export const chartDataCache: Record<string, PlotJSON> = {};
 
 interface AssetChartProps {
     ticker: string;
