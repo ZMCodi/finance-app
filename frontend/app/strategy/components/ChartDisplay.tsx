@@ -82,7 +82,24 @@ export default function ChartDisplay({
     const combinedData = [...mainChartData.data];
     
     // Create a new layout based on the main chart layout
-    let layout = { ...mainChartData.layout };
+    let layout = { 
+      ...mainChartData.layout,
+      // Ensure dark grid colors are set for the main chart
+      xaxis: {
+        ...mainChartData.layout.xaxis,
+        gridcolor: 'rgba(50, 50, 50, 0.2)',
+        zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+      },
+      yaxis: {
+        ...mainChartData.layout.yaxis,
+        gridcolor: 'rgba(50, 50, 50, 0.2)',
+        zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+        domain: [0.3, 1]  // Reserve space for subplots
+      },
+      paper_bgcolor: mainChartData.layout.paper_bgcolor || 'rgba(0,0,0,0)',
+      plot_bgcolor: mainChartData.layout.plot_bgcolor || 'rgba(0,0,0,0)',
+      shapes: [...(mainChartData.layout.shapes || [])]  // Initialize shapes array
+    };
     
     // Track how many subplot indicators we have
     let subplotCount = 0;
@@ -98,36 +115,85 @@ export default function ChartDisplay({
         // For RSI and MACD, create a separate subplot
         subplotCount++;
         
-        // Adjust the domain of the main plot
-        const mainHeight = 0.7 / (subplotCount + 1);
-        layout.yaxis = {
-          ...layout.yaxis,
-          domain: [0.3, 1]
-        };
-        
-        // Calculate domain for this subplot
-        const subplotDomain = [0, 0.25];
+        // Calculate domain for this subplot (RSI at bottom, then MACD if present)
+        const subplotHeight = 0.25;
+        const subplotDomain = [0, subplotHeight];
         
         // Create a new y-axis for this subplot
         const yaxisKey = `yaxis${subplotCount + 1}`;
-        layout[yaxisKey] = {
-          title: indicator,
-          domain: subplotDomain,
-          side: 'right'
-        };
         
-        // Add this subplot's data
-        plotData.data.forEach(trace => {
-          combinedData.push({
-            ...trace,
-            yaxis: `y${subplotCount + 1}`
+        // Special handling for RSI
+        if (indicator === 'RSI') {
+          layout[yaxisKey] = {
+            title: 'RSI',
+            domain: subplotDomain,
+            range: [0, 100],  // Fixed range for RSI
+            gridcolor: 'rgba(50, 50, 50, 0.2)',
+            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+          };
+          
+          // Add RSI traces
+          plotData.data.forEach(trace => {
+            combinedData.push({
+              ...trace,
+              yaxis: `y${subplotCount + 1}`
+            });
           });
-        });
+          
+          // Add overbought/oversold lines from layout.shapes if they exist
+          if (plotData.layout && plotData.layout.shapes) {
+            plotData.layout.shapes.forEach(shape => {
+              if ((shape.y0 === 70 && shape.y1 === 70) || (shape.y0 === 30 && shape.y1 === 30)) {
+                // This is an overbought/oversold line
+                layout.shapes.push({
+                  ...shape,
+                  yref: `y${subplotCount + 1}`,  // Reference the correct y-axis
+                  line: {
+                    ...shape.line,
+                  }
+                });
+              }
+            });
+          }
+        } else if (indicator === 'MACD') {
+          // MACD layout handling
+          layout[yaxisKey] = {
+            title: 'MACD',
+            domain: subplotDomain,
+            gridcolor: 'rgba(50, 50, 50, 0.2)',
+            zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+          };
+          
+          // Add all MACD traces with the correct y-axis
+          plotData.data.forEach(trace => {
+            combinedData.push({
+              ...trace,
+              yaxis: `y${subplotCount + 1}`
+            });
+          });
+          
+          // Add any shapes from MACD layout if they exist
+          if (plotData.layout && plotData.layout.shapes) {
+            plotData.layout.shapes.forEach(shape => {
+              layout.shapes.push({
+                ...shape,
+                yref: `y${subplotCount + 1}`  // Reference the correct y-axis
+              });
+            });
+          }
+        }
       } else {
         // For MA Crossover and Bollinger Bands, overlay on the main chart
         plotData.data.forEach(trace => {
           combinedData.push(trace);
         });
+        
+        // Add any shapes from the indicator's layout if they exist
+        if (plotData.layout && plotData.layout.shapes) {
+          plotData.layout.shapes.forEach(shape => {
+            layout.shapes.push(shape);
+          });
+        }
       }
     });
     

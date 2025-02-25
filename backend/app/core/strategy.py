@@ -1155,8 +1155,8 @@ class RSI(Strategy):
         )
 
         fig.add_trace(RSI)
-        fig.add_hline(y=self.ub)
-        fig.add_hline(y=self.lb)
+        fig.add_hline(y=self.ub, line=dict(color='white', width=0.5), name='Overbought')
+        fig.add_hline(y=self.lb, line=dict(color='white', width=0.5), name='Oversold')
 
 
         layout = {}
@@ -1187,8 +1187,8 @@ class RSI(Strategy):
         layout[f'xaxis1_rangeslider_visible'] = False
 
         fig.update_layout(**layout,
-                            paper_bgcolor='white',
-                            plot_bgcolor='rgba(240,240,240,0.95)',
+                            paper_bgcolor='rgba(0, 0, 0, 0)',
+                            plot_bgcolor='rgba(0, 0, 0, 0)',
                             hovermode='x unified')
 
         # fig.show()
@@ -1603,12 +1603,12 @@ class MACD(Strategy):
         layout[f'xaxis1_rangeslider_visible'] = False
 
         fig.update_layout(**layout,
-                            paper_bgcolor='white',
-                            plot_bgcolor='rgba(240,240,240,0.95)',
+                            paper_bgcolor='rgba(0, 0, 0, 0)',
+                            plot_bgcolor='rgba(0, 0, 0, 0)',
                             hovermode='x unified',
                             showlegend=False)
 
-        fig.show()
+        # fig.show()
 
         return fig
 
@@ -1934,19 +1934,21 @@ class BB(Strategy):
         bol_down = go.Scatter(
             x=df.index.strftime(format),
             y=df['bol_down'],
-            line=dict(color='#FF4081', width=1, dash='dash'),
+            line=dict(color='blue', width=0.5, dash='dash'),
             showlegend=False,
-            name='lower band'
+            name='lower band',
+            hoverinfo='skip',
         )
 
         bol_up = go.Scatter(
             x=df.index.strftime(format),
             y=df['bol_up'],
             fill='tonexty',
-            line=dict(color='#FF4081', width=1, dash='dash'),
+            line=dict(color='blue', width=0.5, dash='dash'),
             fillcolor='rgba(68, 68, 255, 0.1)',
             showlegend=False,
-            name='upper band'
+            name='upper band',
+            hoverinfo='skip',
         )
 
         traces.extend([bol_down, bol_up])
