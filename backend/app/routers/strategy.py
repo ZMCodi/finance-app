@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
 from app.models.strategy import (StrategyCreate, StrategyPlot, StrategyParams, 
                                  StrategySignal, StrategyUpdateParams,
-                                 StrategyAddSignalType, StrategyRemoveSignalType,
                                  StrategyOptimize)
 import json
 from plotly.utils import PlotlyJSONEncoder
@@ -109,26 +108,6 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
         'params': strategy.parameters,
     }
 
-# @router.patch('/{strategy_key}/add_signal_type', response_model=StrategyParams)
-# def add_signal_type(strategy_key: str, signal: StrategyAddSignalType):
-#     strategy: Strategy = strategy_cache.get(strategy_key)
-#     strategy.add_signal_type(signal.signal_type.value, signal.weight)
-#     return {
-#         'ticker': strategy.asset.ticker,
-#         'strategy': strategy.__class__.__name__,
-#         'params': strategy.parameters,
-#     }
-
-# @router.patch('/{strategy_key}/remove_signal_type', response_model=StrategyParams)
-# def remove_signal_type(strategy_key: str, signal: StrategyRemoveSignalType):
-#     strategy: Strategy = strategy_cache.get(strategy_key)
-#     strategy.remove_signal_type(signal.signal_type.value)
-#     return {
-#         'ticker': strategy.asset.ticker,
-#         'strategy': strategy.__class__.__name__,
-#         'params': strategy.parameters,
-#     }
-
 # strategies will be added one at a time
 @router.post('/combined/create/{strategy_key}', response_model=StrategyCreate)
 def create_combined_strategy(strategy_key: str):
@@ -181,6 +160,7 @@ def backtest(strategy_key: str, timeframe: str = '1d', start_date: str = None, e
 def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
     strategy: Strategy = strategy_cache.get(strategy_key)
     res = strategy.optimize(timeframe=timeframe, start_date=start_date, end_date=end_date)
+    print(res)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
@@ -191,6 +171,7 @@ def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: st
 def optimize_weights(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None, runs: int = 20):
     strategy: Strategy = strategy_cache.get(strategy_key)
     res = strategy.optimize_weights(timeframe=timeframe, start_date=start_date, end_date=end_date, runs=runs)
+    print(res)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,

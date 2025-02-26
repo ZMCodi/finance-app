@@ -4,6 +4,8 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SignalGenerationConfig from './SignalGenerationConfig';
 
@@ -18,12 +20,16 @@ interface RSIDialogProps {
   params: Record<string, any>;
   onParamChange: (key: string, value: any) => void;
   isLoading: boolean;
+  onOptimizeParams?: () => Promise<void>;
+  onOptimizeWeights?: () => Promise<void>;
 }
 
 export default function RSIDialog({
   params,
   onParamChange,
-  isLoading
+  isLoading,
+  onOptimizeParams,
+  onOptimizeWeights
 }: RSIDialogProps) {
   
   // Handle number input change (convert string to number)
@@ -34,8 +40,23 @@ export default function RSIDialog({
 
   return (
     <div className="grid gap-4 py-4">
-      {/* Technical Indicator Parameters */}
-      <h4 className="font-medium">Technical Indicator Parameters</h4>
+      {/* Technical Indicator Parameters with Optimize Button */}
+      <div className="flex justify-between items-center">
+        <h4 className="font-medium">Technical Indicator Parameters</h4>
+        {onOptimizeParams && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onOptimizeParams}
+            disabled={isLoading}
+            className="h-8 flex items-center gap-1"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="text-xs">Optimize</span>
+          </Button>
+        )}
+      </div>
+      
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="window" className="text-right">
           Window
@@ -148,6 +169,7 @@ export default function RSIDialog({
         onParamChange={onParamChange}
         signalTypes={RSI_SIGNALS}
         isLoading={isLoading}
+        onOptimizeWeights={onOptimizeWeights}
       />
     </div>
   );

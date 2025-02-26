@@ -102,12 +102,5 @@ class StrategyUpdateParams(BaseModel):
     vote_threshold: Optional[float] = Field(None, title='Vote Threshold', description='The threshold for the vote')
     signal_type: Optional[List[SignalType]] = Field(None, title='Signals', description='The signal types to use')
 
-class StrategyAddSignalType(BaseModel):
-    signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be added')
-    weight: float = Field(..., title='Signal type weight', description='Weight for the added signal type')
-
-class StrategyRemoveSignalType(BaseModel):
-    signal_type: SignalType = Field(..., title='Signal Type', description='The type of signal-generation pattern to be removed')
-
 class StrategyOptimize(StrategyBase):
     results: OptimizeParamsResults | OptimizeWeightResults = Field(..., title='Results', description='The results of the optimization')

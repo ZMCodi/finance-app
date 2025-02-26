@@ -214,37 +214,66 @@ export default function StrategyContainer() {
     }
   };
   
-  // Handler for optimizing an indicator
-  const handleOptimizeIndicator = async (indicator: IndicatorType) => {
-    console.log(`Optimize ${indicator}`);
-    
+
+  const handleOptimizeParamsInDialog = async (indicator: IndicatorType) => {
     try {
-      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
+      console.log(`Optimizing parameters for ${indicator} in dialog`);
+      
+      const timeframe = activeTab === '5m' ? '5m' : '1d';
       const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
       const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
       const result = await actions.optimizeIndicator(
         indicator,
-        currentTimeframe,
+        timeframe,
         startDate,
         endDate
       );
       
-      console.log('Optimization result:', result);
+      console.log('Optimization API result:', result);
       
-      // Here you would typically show the optimization results in the UI
-      // and possibly apply the optimized parameters
-      
-      // Refresh charts after optimization
-      if (activeTab === '5m') {
-        setFiveMinNeedsRefresh(true);
-      } else {
-        setDailyNeedsRefresh(true);
-      }
+      // Return the result directly - it should already contain a params object
+      // based on the API response you shared
+      return result;
     } catch (error) {
-      console.error(`Error optimizing ${indicator}:`, error);
+      console.error(`Error optimizing ${indicator} parameters:`, error);
+      throw error;
     }
   };
+
+  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {
+    try {
+      console.log(`Optimizing weights for ${indicator} in dialog`);
+      
+      const timeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      
+      const strategyId = strategies[indicator];
+      if (!strategyId) {
+        throw new Error(`No strategy ID found for indicator: ${indicator}`);
+      }
+      
+      // Call the API through strategyOperations if possible
+      const response = await fetch(
+        `http://localhost:8000/api/strategies/${strategyId}/optimize/weights?timeframe=${timeframe}`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to optimize weights: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Weight optimization API result:', data);
+      
+      // Return the data in the expected format
+      return data; // Should contain a params object with weights
+    } catch (error) {
+      console.error(`Error optimizing ${indicator} weights:`, error);
+      throw error;
+    }
+  };
+  
   
   // Handler for generating signal
   const handleGenerateSignal = async (indicator: IndicatorType) => {
@@ -336,7 +365,6 @@ export default function StrategyContainer() {
                 onStartDateChange={handleStartDateChange}
                 onEndDateChange={handleEndDateChange}
                 onConfigureIndicator={handleConfigureIndicator}
-                onOptimizeIndicator={handleOptimizeIndicator}
                 onGenerateSignal={handleGenerateSignal}
                 onAddToStrategy={handleAddToStrategy}
                 isLoading={
@@ -463,6 +491,8 @@ export default function StrategyContainer() {
         indicator={activeConfigIndicator}
         strategyId={activeConfigIndicator ? strategies[activeConfigIndicator] : null}
         onConfigSave={handleSaveConfig}
+        onOptimizeParams={handleOptimizeParamsInDialog}
+        onOptimizeWeights={handleOptimizeWeightsInDialog}
       />
     </div>
   );

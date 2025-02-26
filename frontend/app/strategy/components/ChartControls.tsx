@@ -31,7 +31,6 @@ interface ChartControlsProps {
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
   onConfigureIndicator: (indicator: IndicatorType) => void;
-  onOptimizeIndicator: (indicator: IndicatorType) => void;
   onGenerateSignal: (indicator: IndicatorType) => void;
   onAddToStrategy: (indicator: IndicatorType) => void;
 }
@@ -50,7 +49,6 @@ export default function ChartControls({
   onStartDateChange,
   onEndDateChange,
   onConfigureIndicator,
-  onOptimizeIndicator,
   onGenerateSignal,
   onAddToStrategy
 }: ChartControlsProps) {
@@ -174,14 +172,6 @@ export default function ChartControls({
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Configure</span>
-                </DropdownMenuItem>
-                
-                <DropdownMenuItem
-                  onClick={() => onOptimizeIndicator(indicator)}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  <span>Optimize</span>
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem

@@ -233,6 +233,7 @@ export class StrategyOperations {
   // Utility function to create a new strategy
   async createStrategy(ticker: string, strategyName: string): Promise<string> {
     try {
+      console.log("Creating strategy:", ticker, strategyName);
       const response = await fetch(`${this.baseUrl}/api/strategies/${ticker}/${strategyName}`, {
         method: 'POST'
       });
@@ -252,6 +253,7 @@ export class StrategyOperations {
   // Utility function to get indicator plot data
   async getIndicatorPlot(strategyId: string, queryParams: string): Promise<any> {
     try {
+      console.log("Fetching indicator plot:", strategyId, queryParams);
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/indicator?${queryParams}`);
       
       if (!response.ok) {

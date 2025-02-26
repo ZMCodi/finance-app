@@ -463,7 +463,7 @@ class Strategy(ABC):
 
         n_weights = len(self.weights)
         if threshold_range is None:
-            threshold_range = np.arange(0.2, 0.9, 0.1)
+            threshold_range = np.arange(-1.0, 1.0, 0.1)
 
         if self.method in ['unanimous', 'majority']:
             return old_params

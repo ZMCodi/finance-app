@@ -4,6 +4,8 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -17,13 +19,15 @@ interface SignalGenerationConfigProps {
   onParamChange: (key: string, value: any) => void;
   signalTypes: SignalInfo[];
   isLoading: boolean;
+  onOptimizeWeights?: () => Promise<Record<string, any>>;
 }
 
 export default function SignalGenerationConfig({
   params,
   onParamChange,
   signalTypes,
-  isLoading
+  isLoading,
+  onOptimizeWeights
 }: SignalGenerationConfigProps) {
 
   // Handle number input change (convert string to number)
@@ -34,7 +38,22 @@ export default function SignalGenerationConfig({
 
   return (
     <div>
-      <h4 className="font-medium ">Signal Generation Parameters</h4>
+      {/* Title with Optimize Button */}
+      <div className="flex justify-between items-center">
+        <h4 className="font-medium">Signal Generation Parameters</h4>
+        {onOptimizeWeights && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onOptimizeWeights}
+            disabled={isLoading}
+            className="h-8 flex items-center gap-1"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="text-xs">Optimize Weights</span>
+          </Button>
+        )}
+      </div>
       
       {/* Voting Method & Threshold */}
       <div className="grid grid-cols-8 items-center gap-4 mt-2">
@@ -62,29 +81,25 @@ export default function SignalGenerationConfig({
           Vote Threshold
         </Label>
         <div className="col-span-2">
-          <Input
-            id="vote_threshold"
-            type="number"
-            min="0"
-            max="100"
-            step="1"
-            className="w-full"
-            value={
-              // Convert threshold to percentage (0-100)
-              (params.vote_threshold ?? 0) === 0 
-                ? 50 
-                : Math.round((params.vote_threshold ?? 0) * 100)
-            }
-            onChange={(e) => {
-              // Convert percentage back to 0-1 scale
-              const percentValue = Number(e.target.value);
-              const thresholdValue = percentValue === 50 
-                ? 0 // Special case: 50% means "majority" (0)
-                : percentValue / 100;
-              handleNumberChange('vote_threshold', thresholdValue);
-            }}
-            disabled={isLoading || params.method === 'unanimous'}
-          />
+        <Input
+          id="vote_threshold"
+          type="number"
+          min="0"
+          max="100"
+          step="1"
+          className="w-full"
+          value={
+            // Convert threshold to percentage of signals that must agree
+            Math.round(((params.vote_threshold ?? 0) + 1) / 2 * 100)
+          }
+          onChange={(e) => {
+            // Convert percentage back to -1 to 1 scale threshold
+            const percentValue = Number(e.target.value);
+            const thresholdValue = (percentValue / 100 * 2) - 1;
+            handleNumberChange('vote_threshold', thresholdValue);
+          }}
+          disabled={isLoading || params.method === 'unanimous'}
+        />
         </div>
       </div>
       
