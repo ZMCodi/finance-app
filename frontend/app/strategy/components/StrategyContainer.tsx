@@ -190,6 +190,13 @@ export default function StrategyContainer() {
   // Handler for removing an indicator
   const handleRemoveIndicator = (indicator: IndicatorType) => {
     actions.removeIndicator(indicator);
+
+    // Also clear the signal data for this indicator from local state
+  setSignalData(prev => {
+    const updated = { ...prev };
+    delete updated[indicator];
+    return updated;
+  });
   };
   
   // Handler for configuring an indicator

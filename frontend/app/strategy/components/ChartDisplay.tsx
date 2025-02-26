@@ -168,9 +168,6 @@ export default function ChartDisplay({
     
     // Add secondary y-axis for signals - attached to the main chart
     layout.yaxis2 = {
-      title: 'Signal',
-      titlefont: { color: 'green' },
-      tickfont: { color: 'green' },
       overlaying: 'y',
       side: 'right',
       range: [-1.5, 1.5], // Set fixed range for signal
@@ -199,7 +196,6 @@ export default function ChartDisplay({
             mode: 'lines',
             name: `${indicator} Signal`,
             line: {
-              color: 'green',
               width: 1.5
             },
             yaxis: 'y2', // Use the secondary y-axis

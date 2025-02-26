@@ -834,7 +834,7 @@ class MA_Crossover(Strategy):
         for short, long in product(short_range, long_range):
             if self.ptype == 'alpha' and short <= long:
                 continue
-            elif short >= long:
+            elif self.ptype != 'alpha' and short >= long:
                 continue
 
             self.change_params(short=short, long=long)
