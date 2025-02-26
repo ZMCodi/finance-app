@@ -40,6 +40,9 @@ export default function StrategyContainer() {
   
   // Active tab indicator
   const [activeSideTab, setActiveSideTab] = useState<string>('chart');
+
+  // buy/sell signal data
+  const [signalData, setSignalData] = useState<Record<IndicatorType, any>>({});
   
   // Use our custom hook for strategy operations
   const { 
@@ -284,8 +287,11 @@ export default function StrategyContainer() {
       
       console.log('Signal generation result:', result);
       
-      // Here you would typically visualize the signals on the chart
-      // or show them in a table/panel
+      // Store the signal data
+      setSignalData(prev => ({
+        ...prev,
+        [indicator]: result
+      }));
       
     } catch (error) {
       console.error(`Error generating signals for ${indicator}:`, error);
@@ -384,6 +390,7 @@ export default function StrategyContainer() {
                   activeIndicators={activeIndicators}
                   indicatorPlots={indicatorPlots}
                   strategies={strategies}
+                  signalData={signalData}
                 />
               </TabsContent>
               

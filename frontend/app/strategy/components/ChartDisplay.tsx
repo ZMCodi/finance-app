@@ -26,8 +26,9 @@ type ChartDisplayProps = {
   skipFiveMinFetch: boolean;
   skipDailyFetch: boolean;
   activeIndicators: IndicatorType[];
-  indicatorPlots: Record<string, PlotJSON>;
+  indicatorPlots: Record<string, PlotJSON[]>;
   strategies: Record<IndicatorType, string>;
+  signalData: Record<IndicatorType, any>;
 };
 
 export default function ChartDisplay({
@@ -42,10 +43,11 @@ export default function ChartDisplay({
   skipDailyFetch,
   activeIndicators,
   indicatorPlots,
-  strategies
+  strategies,
+  signalData
 }: ChartDisplayProps) {
   // State to store main chart data
-  const [mainChartData, setMainChartData] = useState<PlotJSON | null>(null);
+  const [mainChartData, setMainChartData] = useState<PlotJSON[] | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Effect to fetch and cache the main chart data
@@ -110,40 +112,53 @@ export default function ChartDisplay({
   
   // Function to create a combined plot with indicators
   const renderCombinedPlot = () => {
-    if (!mainChartData) return null;
+    if (!mainChartData || mainChartData.length === 0) return null;
+    
+    // Get the main chart data (first element in the array)
+    const mainPlot = mainChartData[0];
+    
+    // Check if we have volume (second element in the array)
+    const hasVolume = mainChartData.length > 1;
+    const volumePlot = hasVolume ? mainChartData[1] : null;
     
     // Start with the main chart data
-    const combinedData = [...mainChartData.data];
+    const combinedData = [...mainPlot.data];
     
-    // Determine if volume is displayed in the main chart data
-    const hasVolume = mainChartData.data.some(trace => trace.name === 'Volume');
-    
-    // Count how many subplots we'll need
+    // Count how many additional subplots we'll need
     const rsiActive = activeIndicators.includes('RSI');
     const macdActive = activeIndicators.includes('MACD');
     
-    // Count the total number of panels needed
-    const numSubplots = (hasVolume ? 1 : 0) + (rsiActive ? 1 : 0) + (macdActive ? 1 : 0);
+    // Count the total number of panels needed (excluding main chart and volume)
+    const numAdditionalSubplots = (rsiActive ? 1 : 0) + (macdActive ? 1 : 0);
+    const totalSubplots = numAdditionalSubplots + (hasVolume ? 1 : 0);
     
     // Create a new layout based on the main chart layout
     let layout = { 
-      ...mainChartData.layout,
+      ...mainPlot.layout,
       // Ensure dark grid colors are set for the main chart
       xaxis: {
-        ...mainChartData.layout.xaxis,
+        ...mainPlot.layout.xaxis,
         gridcolor: 'rgba(50, 50, 50, 0.2)',
         zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-        // Hide x-axis labels for the main chart
-        showticklabels: false
+        // Hide x-axis labels for the main chart if we have subplots
+        showticklabels: totalSubplots === 0,
+        rangeslider: { visible: false }
       },
-      paper_bgcolor: mainChartData.layout.paper_bgcolor || 'rgba(0,0,0,0)',
-      plot_bgcolor: mainChartData.layout.plot_bgcolor || 'rgba(0,0,0,0)',
-      shapes: [...(mainChartData.layout.shapes || [])]  // Initialize shapes array
+      paper_bgcolor: mainPlot.layout.paper_bgcolor || 'rgba(0,0,0,0)',
+      plot_bgcolor: mainPlot.layout.plot_bgcolor || 'rgba(0,0,0,0)',
+      shapes: [...(mainPlot.layout.shapes || [])]
     };
     
-    // Calculate heights - each subplot gets 20% except the main chart
-    const subplotHeight = 0.2; // 20% for each subplot
-    const mainChartHeight = Math.max(0.4, 1 - (subplotHeight * numSubplots)); // At least 40% for main chart
+    // Calculate heights for subplots
+    const additionalSubplotHeight = 0.2; // 20% for each additional subplot (RSI, MACD)
+    const volumeHeight = 0.15; // 15% for volume
+    
+    // Main chart height calculation
+    let mainChartHeight = 1.0;
+    if (totalSubplots > 0) {
+      mainChartHeight = 1.0 - (numAdditionalSubplots * additionalSubplotHeight) - (hasVolume ? volumeHeight : 0);
+      mainChartHeight = Math.max(0.4, mainChartHeight); // Ensure main chart is at least 40%
+    }
     
     // Set main chart yaxis domain - place at the top
     layout.yaxis = {
@@ -151,158 +166,178 @@ export default function ChartDisplay({
       domain: [1 - mainChartHeight, 1] // Main chart at the top
     };
     
-    // Track current position and the active subplots
-    let currentPosition = 1 - mainChartHeight;
-    const activeSubplots = [];
+    // Add secondary y-axis for signals - attached to the main chart
+    layout.yaxis2 = {
+      title: 'Signal',
+      titlefont: { color: 'green' },
+      tickfont: { color: 'green' },
+      overlaying: 'y',
+      side: 'right',
+      range: [-1.5, 1.5], // Set fixed range for signal
+      showgrid: false,
+      zeroline: false,
+      tickvals: [-1, 1],
+      ticktext: ['Sell', 'Buy'],
+      domain: layout.yaxis.domain // Same domain as main chart
+    };
     
-    // If volume is present, position it below the main chart
-    if (hasVolume) {
-      const volumeTraceIndex = mainChartData.data.findIndex(trace => trace.name === 'Volume');
-      if (volumeTraceIndex !== -1) {
-        // Remove volume from main data and update its y-axis
-        const volumeTrace = { 
-          ...mainChartData.data[volumeTraceIndex],
-          yaxis: 'y2', // First subplot
-          xaxis: 'x2'  // Make sure it uses its own x-axis
-        };
-        combinedData.splice(volumeTraceIndex, 1); // Remove from original position
-        combinedData.push(volumeTrace); // Add with updated axis
+    // Add signals if available for any active indicator
+    for (const indicator of activeIndicators) {
+      if (signalData[indicator]) {
+        const signalResult = signalData[indicator];
         
-        // Add volume y-axis
-        const volumeDomainTop = currentPosition;
-        currentPosition -= subplotHeight;
+        // Convert the signals object to arrays for plotting
+        const dates = Object.keys(signalResult.signals);
+        const values = Object.values(signalResult.signals) as number[];
         
-        layout.yaxis2 = {
-          title: 'Volume',
-          domain: [currentPosition, volumeDomainTop],
-          gridcolor: 'rgba(50, 50, 50, 0.2)',
-          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-          showticklabels: false,  // Hide labels by default
-        };
-        
-        layout.xaxis2 = {
-          showticklabels: false,  // Hide labels by default
-          gridcolor: 'rgba(50, 50, 50, 0.2)',
-          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
-        };
-        
-        // Track that volume is an active subplot
-        activeSubplots.push(2);
+        if (dates.length > 0) {
+          // Create the signal trace
+          const signalTrace = {
+            x: dates,
+            y: values,
+            type: 'scatter',
+            mode: 'lines',
+            name: `${indicator} Signal`,
+            line: {
+              color: 'green',
+              width: 1.5
+            },
+            yaxis: 'y2', // Use the secondary y-axis
+            // Make sure it's visible by setting showlegend
+            showlegend: true
+          };
+          
+          // Add to combined data
+          combinedData.push(signalTrace);
+          
+          // Make sure the secondary y-axis is visible now that we have data
+          layout.yaxis2.showticklabels = true;
+        }
       }
     }
     
-    // Add each indicator's data
-    let indicatorIndex = hasVolume ? 1 : 0; // Start index after volume if present
+    // Track current position for subplots
+    let currentPosition = 1 - mainChartHeight;
+    const axisMappings = {}; // Map indicator types to y-axis numbers
+    
+    // Add volume if present
+    if (hasVolume && volumePlot) {
+      const volumeDomainTop = currentPosition;
+      currentPosition -= volumeHeight;
+      currentPosition = Math.max(0, currentPosition);
+      
+      const volumeYAxisNumber = 3; // yaxis3 for volume
+      
+      layout[`yaxis${volumeYAxisNumber}`] = {
+        title: 'Volume',
+        domain: [currentPosition, volumeDomainTop],
+        gridcolor: 'rgba(50, 50, 50, 0.2)',
+        zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+        showticklabels: true
+      };
+      
+      layout[`xaxis${volumeYAxisNumber}`] = {
+        showticklabels: totalSubplots === 1, // Show labels only if this is the last subplot
+        gridcolor: 'rgba(50, 50, 50, 0.2)',
+        zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+        // Match the range of the main x-axis
+        range: layout.xaxis.range,
+        type: layout.xaxis.type
+      };
+      
+      // Add volume traces
+      volumePlot.data.forEach(trace => {
+        const volumeTrace = {
+          ...trace,
+          yaxis: `y${volumeYAxisNumber}`,
+          xaxis: `x` // Share the main x-axis
+        };
+        combinedData.push(volumeTrace);
+      });
+    }
     
     // Add RSI if active
+    let rsiYAxisNumber = hasVolume ? 4 : 3;
     if (rsiActive) {
       const strategyId = strategies['RSI'];
       const plotData = indicatorPlots[strategyId];
       
-      if (plotData) {
-        const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume
+      if (plotData && plotData.length > 0) {
+        const rsiPlot = plotData[0];
         
-        // Track that RSI is an active subplot
-        activeSubplots.push(subplotNumber);
+        // Store the y-axis mapping for this indicator
+        axisMappings['RSI'] = rsiYAxisNumber;
         
         // Calculate domain for RSI
         const rsiDomainTop = currentPosition;
-        currentPosition -= subplotHeight;
-        currentPosition = Math.max(0, currentPosition); // Ensure we don't go below 0
+        currentPosition -= additionalSubplotHeight;
+        currentPosition = Math.max(0, currentPosition);
         
         // Create RSI y-axis
-        layout[`yaxis${subplotNumber}`] = {
+        layout[`yaxis${rsiYAxisNumber}`] = {
           title: 'RSI',
           domain: [currentPosition, rsiDomainTop],
-          range: [0, 100],  // Fixed range for RSI
+          range: [0, 100], // Fixed range for RSI
           gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-          showticklabels: false,  // Hide
-        };
-        
-        // Create RSI x-axis
-        layout[`xaxis${subplotNumber}`] = {
-          showticklabels: false,  // Hide labels by default
-          gridcolor: 'rgba(50, 50, 50, 0.2)',
-          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
+          showticklabels: true
         };
         
         // Add RSI traces
-        plotData.data.forEach(trace => {
+        rsiPlot.data.forEach(trace => {
           combinedData.push({
             ...trace,
-            yaxis: `y${subplotNumber}`,
-            xaxis: `x${subplotNumber}`  // Make sure it uses its own x-axis
+            yaxis: `y${rsiYAxisNumber}`,
+            xaxis: 'x' // Share the main x-axis
           });
         });
         
         // Add overbought/oversold lines
-        if (plotData.layout && plotData.layout.shapes) {
-          plotData.layout.shapes.forEach(shape => {
-              layout.shapes.push({
-                ...shape,
-                yref: `y${subplotNumber}`,
-                line: {
-                  ...shape.line,
-                }
-              });
+        if (rsiPlot.layout && rsiPlot.layout.shapes) {
+          rsiPlot.layout.shapes.forEach(shape => {
+            layout.shapes.push({
+              ...shape,
+              yref: `y${rsiYAxisNumber}`
+            });
           });
         }
-
-        indicatorIndex++;
       }
     }
     
     // Add MACD if active
+    let macdYAxisNumber = rsiActive ? rsiYAxisNumber + 1 : (hasVolume ? 4 : 3);
     if (macdActive) {
       const strategyId = strategies['MACD'];
       const plotData = indicatorPlots[strategyId];
       
-      if (plotData) {
-        const subplotNumber = indicatorIndex + 2; // +2 because yaxis1 is main, yaxis2 might be volume or RSI
+      if (plotData && plotData.length > 0) {
+        const macdPlot = plotData[0];
         
-        // Track that MACD is an active subplot
-        activeSubplots.push(subplotNumber);
+        // Store the y-axis mapping for this indicator
+        axisMappings['MACD'] = macdYAxisNumber;
         
         // Calculate domain for MACD
         const macdDomainTop = currentPosition;
-        currentPosition -= subplotHeight;
-        currentPosition = Math.max(0, currentPosition); // Ensure we don't go below 0
+        currentPosition -= additionalSubplotHeight;
+        currentPosition = Math.max(0, currentPosition);
         
         // Create MACD y-axis
-        layout[`yaxis${subplotNumber}`] = {
+        layout[`yaxis${macdYAxisNumber}`] = {
           title: 'MACD',
           domain: [currentPosition, macdDomainTop],
           gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-          showticklabels: false,  // Hide
+          showticklabels: true
         };
         
-        // Create MACD x-axis
-        layout[`xaxis${subplotNumber}`] = {
-          showticklabels: false,  // Hide labels by default
-          gridcolor: 'rgba(50, 50, 50, 0.2)',
-          zerolinecolor: 'rgba(50, 50, 50, 0.5)'
-        };
-        
-        // Add all MACD traces
-        plotData.data.forEach(trace => {
+        // Add MACD traces
+        macdPlot.data.forEach(trace => {
           combinedData.push({
             ...trace,
-            yaxis: `y${subplotNumber}`,
-            xaxis: `x${subplotNumber}`  // Make sure it uses its own x-axis
+            yaxis: `y${macdYAxisNumber}`,
+            xaxis: 'x' // Share the main x-axis
           });
         });
-        
-        // Add any MACD layout shapes
-        if (plotData.layout && plotData.layout.shapes) {
-          plotData.layout.shapes.forEach(shape => {
-            layout.shapes.push({
-              ...shape,
-              yref: `y${subplotNumber}`
-            });
-          });
-        }
       }
     }
     
@@ -312,15 +347,18 @@ export default function ChartDisplay({
         const strategyId = strategies[indicator];
         const plotData = indicatorPlots[strategyId];
         
-        if (plotData) {
+        if (plotData && plotData.length > 0) {
+          const indicatorPlot = plotData[0];
+          
           // Overlay on main chart
-          plotData.data.forEach(trace => {
+          indicatorPlot.data.forEach(trace => {
+            // These indicators are overlaid on the main price chart
             combinedData.push(trace);
           });
           
           // Add any shapes
-          if (plotData.layout && plotData.layout.shapes) {
-            plotData.layout.shapes.forEach(shape => {
+          if (indicatorPlot.layout && indicatorPlot.layout.shapes) {
+            indicatorPlot.layout.shapes.forEach(shape => {
               layout.shapes.push(shape);
             });
           }
@@ -328,70 +366,46 @@ export default function ChartDisplay({
       }
     });
     
-    // Update your renderCombinedPlot function to include shared x-axis configuration
-
-    // Adjust layout for multiple plots
-    if (numSubplots > 0) {
-      layout = {
-        ...layout,
-        grid: {
-          rows: numSubplots + 1, // +1 for main chart
-          columns: 1,
-          pattern: 'independent',
-          roworder: 'top to bottom',
-          // Add small gap between plots
-          ygap: 0.03
-        },
-        margin: {
-          ...layout.margin,
-          b: 40, // Increase bottom margin
-          t: 10, // Decrease top margin to make more space
-        }
-      };
-      
-      // First hide all x-axis labels
+    // Ensure the bottom-most subplot shows x-axis labels
+    if (totalSubplots > 0) {
+      // Hide all x-axis labels first
       layout.xaxis.showticklabels = false;
       
-      // Find the bottom subplot and show its x-axis labels
-      if (activeSubplots.length > 0) {
-        // Sort subplots by number, highest is the last subplot added (which is at the bottom)
-        activeSubplots.sort((a, b) => a - b);
-        const bottomSubplotNumber = activeSubplots[activeSubplots.length - 1];
-        
-        // Get the x-axis properties we want to share across all subplots
-        const sharedXAxisProps = {
-          // These properties will be synchronized across all x-axes
-          range: layout.xaxis.range,
-          type: layout.xaxis.type,
-          autorange: layout.xaxis.autorange,
-          domain: layout.xaxis.domain,
+      if (macdActive) {
+        layout[`xaxis${macdYAxisNumber}`] = {
+          showticklabels: true,
           gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          // Match the range of the main x-axis
+          range: layout.xaxis.range,
+          type: layout.xaxis.type
         };
-        
-        // Apply shared x-axis properties to all subplots
-        for (let i = 1; i <= numSubplots + 1; i++) {
-          const axisName = i === 1 ? 'xaxis' : `xaxis${i}`;
-          
-          // Only the bottom subplot should show date labels
-          const showLabels = i === bottomSubplotNumber;
-          
-          layout[axisName] = {
-            ...layout[axisName],
-            ...sharedXAxisProps,
-            showticklabels: showLabels,
-            // For bottom subplot, ensure we use the original tickformat
-            ...(showLabels ? { tickformat: layout.xaxis.tickformat } : {}),
-            nticks: 5
-          };
-        }
-      }
-      
-      // Set up linked zoom behavior - critical part for synchronization
-      for (let i = 2; i <= numSubplots + 1; i++) {
-        layout[`xaxis${i}`].matches = 'x';
+      } else if (rsiActive) {
+        layout[`xaxis${rsiYAxisNumber}`] = {
+          showticklabels: true,
+          gridcolor: 'rgba(50, 50, 50, 0.2)',
+          zerolinecolor: 'rgba(50, 50, 50, 0.5)',
+          // Match the range of the main x-axis
+          range: layout.xaxis.range,
+          type: layout.xaxis.type
+        };
+      } else if (hasVolume) {
+        // Volume is the bottom subplot
+        layout[`xaxis3`].showticklabels = true;
       }
     }
+    
+    // Set up linked zoom behavior between all x-axes
+    // Create an array of all x-axis keys
+    const xAxisKeys = Object.keys(layout).filter(key => key.startsWith('xaxis') && key !== 'xaxis');
+    
+    // Link all x-axes to the main one
+    xAxisKeys.forEach(key => {
+      layout[key] = {
+        ...layout[key],
+        matches: 'x'
+      };
+    });
     
     return (
       <Plot
@@ -433,8 +447,6 @@ export default function ChartDisplay({
                 onLoad={onFiveMinLoad}
               />
             )}
-            
-            {/* Remove the indicator badges panel */}
           </div>
         </TabsContent>
 
@@ -460,8 +472,6 @@ export default function ChartDisplay({
                 onLoad={onDailyLoad}
               />
             )}
-            
-            {/* Remove the indicator badges panel */}
           </div>
         </TabsContent>
       </Tabs>

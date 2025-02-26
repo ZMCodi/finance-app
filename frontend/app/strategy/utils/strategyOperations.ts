@@ -1,6 +1,6 @@
 // app/strategy/utils/strategyOperations.ts
 import { IndicatorType, strategyNameMap } from '../components/IndicatorPanel';
-import { StrategyParams, StrategyOptimize, StrategyPlot } from '@/src/api/index';
+import { StrategyParams, StrategyOptimize, StrategyPlot, PlotJSON } from '@/src/api/index';
 
 export interface StrategyOperationsConfig {
   baseUrl: string;
@@ -252,7 +252,7 @@ export class StrategyOperations {
   }
 
   // Utility function to get indicator plot data
-  async getIndicatorPlot(strategyId: string, queryParams: string): Promise<any> {
+  async getIndicatorPlot(strategyId: string, queryParams: string): Promise<PlotJSON[]> {
     try {
       console.log("Fetching indicator plot using utils:", strategyId, queryParams);
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/indicator?${queryParams}`);
@@ -261,7 +261,7 @@ export class StrategyOperations {
         throw new Error(`Failed to fetch indicator plot: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data: StrategyPlot = await response.json();
       return data.json_data;
     } catch (error) {
       console.error("Error fetching indicator plot:", error);

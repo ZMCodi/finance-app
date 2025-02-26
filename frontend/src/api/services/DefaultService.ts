@@ -5,12 +5,10 @@
 import type { AssetPlot } from '../models/AssetPlot';
 import type { AssetResponse } from '../models/AssetResponse';
 import type { AssetStats } from '../models/AssetStats';
-import type { StrategyAddSignalType } from '../models/StrategyAddSignalType';
 import type { StrategyCreate } from '../models/StrategyCreate';
 import type { StrategyOptimize } from '../models/StrategyOptimize';
 import type { StrategyParams } from '../models/StrategyParams';
 import type { StrategyPlot } from '../models/StrategyPlot';
-import type { StrategyRemoveSignalType } from '../models/StrategyRemoveSignalType';
 import type { StrategySignal } from '../models/StrategySignal';
 import type { StrategyUpdateParams } from '../models/StrategyUpdateParams';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -294,54 +292,6 @@ export class DefaultService {
                 'start_date': startDate,
                 'end_date': endDate,
             },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
-     * Add Signal Type
-     * @param strategyKey
-     * @param requestBody
-     * @returns StrategyParams Successful Response
-     * @throws ApiError
-     */
-    public static addSignalTypeApiStrategiesStrategyKeyAddSignalTypePatch(
-        strategyKey: string,
-        requestBody: StrategyAddSignalType,
-    ): CancelablePromise<StrategyParams> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/strategies/{strategy_key}/add_signal_type',
-            path: {
-                'strategy_key': strategyKey,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
-     * Remove Signal Type
-     * @param strategyKey
-     * @param requestBody
-     * @returns StrategyParams Successful Response
-     * @throws ApiError
-     */
-    public static removeSignalTypeApiStrategiesStrategyKeyRemoveSignalTypePatch(
-        strategyKey: string,
-        requestBody: StrategyRemoveSignalType,
-    ): CancelablePromise<StrategyParams> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/strategies/{strategy_key}/remove_signal_type',
-            path: {
-                'strategy_key': strategyKey,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

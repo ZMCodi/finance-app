@@ -20,6 +20,6 @@ export type StrategyPlot = {
     /**
      * The JSON representation of the plot
      */
-    json_data: PlotJSON;
+    json_data: Array<PlotJSON>;
 };
 

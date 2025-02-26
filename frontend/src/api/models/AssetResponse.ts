@@ -19,6 +19,6 @@ export type AssetResponse = {
     /**
      * The sector the asset belongs to
      */
-    sector: string;
+    sector: (string | null);
 };
 

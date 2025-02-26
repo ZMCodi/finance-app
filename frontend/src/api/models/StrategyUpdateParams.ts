@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { MA_ParamType } from './MA_ParamType';
 import type { RSI_Exit } from './RSI_Exit';
+import type { SignalType } from './SignalType';
 import type { VoteMethod } from './VoteMethod';
 export type StrategyUpdateParams = {
     /**
@@ -74,5 +75,9 @@ export type StrategyUpdateParams = {
      * The threshold for the vote
      */
     vote_threshold?: (number | null);
+    /**
+     * The signal types to use
+     */
+    signal_type?: (Array<SignalType> | null);
 };
 
