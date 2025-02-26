@@ -5,6 +5,13 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { ChevronDown, Settings, RefreshCw, LineChart, FolderPlus, X } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 import ChartControls from './ChartControls';
 import ChartDisplay from './ChartDisplay';
 import TickerInput from '@/app/assets/components/TickerInput';
@@ -12,6 +19,7 @@ import { IndicatorType, strategyNameMap } from './IndicatorPanel';
 import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
 import useStrategyOperations from '../hooks/useStrategyOperations';
 import StrategyConfigDialog from './StrategyConfigDialog';
+import CombinedStrategyIndicatorRow from './CombinedStrategyIndicatorRow';
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -19,6 +27,7 @@ export default function StrategyContainer() {
   const [showVolume, setShowVolume] = useState(true);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [activeConfigIndicator, setActiveConfigIndicator] = useState<IndicatorType | null>(null);
+  const [activeConfigStrategyId, setActiveConfigStrategyId] = useState<string | null>(null);
   
   // Default start date for 5min data (15 days ago)
   const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
@@ -192,24 +201,69 @@ export default function StrategyContainer() {
     actions.removeIndicator(indicator);
 
     // Also clear the signal data for this indicator from local state
-  setSignalData(prev => {
-    const updated = { ...prev };
-    delete updated[indicator];
-    return updated;
-  });
+    setSignalData(prev => {
+      const updated = { ...prev };
+      delete updated[indicator];
+      return updated;
+    });
   };
   
   // Handler for configuring an indicator
   const handleConfigureIndicator = async (indicator: IndicatorType) => {
     console.log(`Configure ${indicator}`);
     setActiveConfigIndicator(indicator);
+    setActiveConfigStrategyId(strategies[indicator]);
     setConfigDialogOpen(true);
   };
 
-  // Add this handler function for saving configuration
+  // Handler for configuring a combined strategy indicator
+  const handleConfigureCombinedIndicator = (indicatorType: IndicatorType, strategyId: string) => {
+    console.log(`Configure combined strategy indicator ${indicatorType} (ID: ${strategyId})`);
+    
+    // Set the active config indicator and strategy ID directly
+    setActiveConfigIndicator(indicatorType);
+    setActiveConfigStrategyId(strategyId);
+    setConfigDialogOpen(true);
+  };
+
+  // Handler for removing from combined strategy
+  const handleRemoveFromStrategy = async (strategyId: string) => {
+    try {
+      console.log(`Removing strategy ${strategyId} from combined strategy`);
+      await actions.removeFromStrategy(strategyId);
+      
+      // The state will be updated by the hook
+    } catch (error) {
+      console.error(`Error removing strategy from combined strategy:`, error);
+    }
+  };
+
+  // Update the handleSaveConfig function to work with direct strategy IDs
   const handleSaveConfig = async (indicator: IndicatorType, params: Record<string, any>) => {
     try {
-      const result = await actions.configureIndicator(indicator, params);
+      // Always prioritize activeConfigStrategyId, because it may be a strategy ID 
+      // from an indicator no longer in the active indicators list
+      const strategyId = activeConfigStrategyId;
+      if (!strategyId) {
+        throw new Error(`No strategy ID found for configuration`);
+      }
+      
+      console.log(`Configuring strategy ${strategyId} with params:`, params);
+      
+      // Call the API directly since we're using a specific strategy ID
+      const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/params`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to configure strategy: ${response.statusText}`);
+      }
+
+      const result = await response.json();
       console.log('Configuration result:', result);
       
       // Refresh charts after configuration
@@ -218,8 +272,10 @@ export default function StrategyContainer() {
       } else {
         setDailyNeedsRefresh(true);
       }
+      
+      return result;
     } catch (error) {
-      console.error(`Error configuring ${indicator}:`, error);
+      console.error(`Error configuring strategy:`, error);
       throw error; // Rethrow to be handled in the dialog
     }
   };
@@ -251,7 +307,7 @@ export default function StrategyContainer() {
     }
   };
 
-  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {  // use hook similar to above
+  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {
     try {
       console.log(`Optimizing weights for ${indicator} in dialog`);
       
@@ -375,7 +431,8 @@ export default function StrategyContainer() {
                   operationState.configure.isLoading || 
                   operationState.optimize.isLoading || 
                   operationState.generateSignal.isLoading || 
-                  operationState.addToStrategy.isLoading
+                  operationState.addToStrategy.isLoading ||
+                  operationState.removeFromStrategy.isLoading
                 }
               />
               </div>
@@ -404,104 +461,134 @@ export default function StrategyContainer() {
               <TabsContent value="strategy" className="h-full mt-0 w-full">
                 <div className="h-[70vh] p-4 border rounded-lg">
                   <h3 className="text-lg font-medium mb-4">Strategy Builder</h3>
-                {strategyState.combinedStrategyId ? (
-                  <div className="space-y-4">
-                    <p className="text-sm">
-                      Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
-                    </p>
-                    
-                    <div className="border p-4 rounded-lg">
-                      <h4 className="font-medium mb-2">Strategy Components</h4>
-                      {combinedStrategyIndicators.length > 0 ? (
-                        <ul className="space-y-2">
-                          {combinedStrategyIndicators.map(indicator => (
-                            <li key={indicator} className="flex items-center justify-between">
-                              <span>{indicator}</span>
-                            </li>
-                          ))}
-                        </ul>
+                  
+                  {strategyState.combinedStrategyId ? (
+                    <div className="space-y-4">
+                      <p className="text-sm">
+                        Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
+                      </p>
+                      
+                      <div className="border p-4 rounded-lg">
+                        <h4 className="font-medium mb-2">Strategy Components</h4>
+                        {combinedStrategyIndicators.length > 0 ? (
+                          <ul className="space-y-2">
+                            {combinedStrategyIndicators.map((indicator) => (
+                              <CombinedStrategyIndicatorRow
+                                key={indicator.strategyId}
+                                indicator={indicator}
+                                onConfigure={handleConfigureCombinedIndicator}
+                                onRemove={handleRemoveFromStrategy}
+                                isLoading={
+                                  operationState.configure.isLoading || 
+                                  operationState.removeFromStrategy.isLoading
+                                }
+                              />
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-gray-500 text-sm">No indicators added to strategy yet</p>
+                        )}
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          onClick={() => {
+                            if (!selectedAsset) return;
+                            const timeframe = activeTab === '5m' ? '5m' : '1d';
+                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                            
+                            // We need to backtest the combined strategy
+                            if (strategyState.combinedStrategyId) {
+                              // Need to implement this
+                              console.log('Backtest combined strategy');
+                            }
+                          }}
+                        >
+                          Backtest
+                        </button>
+                        
+                        <button 
+                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                          disabled={combinedStrategyIndicators.length === 0}
+                          onClick={() => {
+                            if (!selectedAsset) return;
+                            const timeframe = activeTab === '5m' ? '5m' : '1d';
+                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                            
+                            // Optimize weights
+                            if (strategyState.combinedStrategyId && combinedStrategyIndicators.length > 0) {
+                              // Use first indicator in the combined strategy
+                              const firstIndicator = combinedStrategyIndicators[0];
+                              actions.optimizeStrategyWeights(
+                                firstIndicator.indicatorType,
+                                timeframe,
+                                startDate,
+                                endDate
+                              ).then(result => {
+                                console.log('Weight optimization result:', result);
+                                // Update the UI with the optimized weights
+                              }).catch(error => {
+                                console.error('Error optimizing weights:', error);
+                              });
+                            }
+                          }}
+                        >
+                          Optimize Weights
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
+                      
+                      {activeIndicators.length > 0 ? (
+                        <div className="flex flex-col items-center">
+                          <p className="text-gray-600 mb-2">Select an indicator to add:</p>
+                          <div className="flex flex-wrap gap-2 justify-center">
+                            {activeIndicators.map(indicator => {
+                              const strategyId = strategies[indicator];
+                              // Check if this indicator is already in the combined strategy
+                              const isAlreadyInStrategy = combinedStrategyIndicators.some(
+                                item => item.strategyId === strategyId
+                              );
+                              
+                              return (
+                                <button
+                                  key={strategyId}
+                                  className={`px-3 py-1 rounded flex items-center gap-1 ${
+                                    isAlreadyInStrategy 
+                                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                                  }`}
+                                  onClick={() => !isAlreadyInStrategy && handleAddToStrategy(indicator)}
+                                  disabled={isAlreadyInStrategy}
+                                >
+                                  {isAlreadyInStrategy ? (
+                                    <>
+                                      <span>{indicator}</span>
+                                      <span className="text-xs">(Already Added)</span>
+                                    </>
+                                  ) : (
+                                    <>Add {indicator}</>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ) : (
-                        <p className="text-gray-500 text-sm">No indicators added to strategy yet</p>
+                        <button 
+                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+                          disabled
+                        >
+                          No Indicators Available
+                        </button>
                       )}
                     </div>
-                    
-                    <div className="flex space-x-2">
-                      <button 
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        onClick={() => {
-                          if (!selectedAsset) return;
-                          const timeframe = activeTab === '5m' ? '5m' : '1d';
-                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                          
-                          // We need to backtest the combined strategy
-                          if (strategyState.combinedStrategyId) {
-                            // Need to implement this
-                            console.log('Backtest combined strategy');
-                          }
-                        }}
-                      >
-                        Backtest
-                      </button>
-                      
-                      <button 
-                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                        onClick={() => {
-                          if (!selectedAsset) return;
-                          const timeframe = activeTab === '5m' ? '5m' : '1d';
-                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                          
-                          // Optimize weights
-                          if (strategyState.combinedStrategyId && combinedStrategyIndicators.length > 0) {
-                            // Use first indicator as reference since it's a combined strategy
-                            actions.optimizeStrategyWeights(
-                              combinedStrategyIndicators[0],
-                              timeframe,
-                              startDate,
-                              endDate
-                            ).then(result => {
-                              console.log('Weight optimization result:', result);
-                              // Update the UI with the optimized weights
-                            }).catch(error => {
-                              console.error('Error optimizing weights:', error);
-                            });
-                          }
-                        }}
-                      >
-                        Optimize Weights
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
-                    
-                    {activeIndicators.length > 0 ? (
-                      <div className="flex flex-col items-center">
-                        <p className="text-gray-600 mb-2">Select an indicator to add:</p>
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {activeIndicators.map(indicator => (
-                            <button
-                              key={indicator}
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                              onClick={() => handleAddToStrategy(indicator)}
-                            >
-                              Add {indicator}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <button 
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
-                        disabled
-                      >
-                        No Indicators Available
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
                 </div>
               </TabsContent>
             </Tabs>
@@ -512,7 +599,7 @@ export default function StrategyContainer() {
         open={configDialogOpen}
         onOpenChange={setConfigDialogOpen}
         indicator={activeConfigIndicator}
-        strategyId={activeConfigIndicator ? strategies[activeConfigIndicator] : null}
+        strategyId={activeConfigStrategyId}
         onConfigSave={handleSaveConfig}
         onOptimizeParams={handleOptimizeParamsInDialog}
         onOptimizeWeights={handleOptimizeWeightsInDialog}

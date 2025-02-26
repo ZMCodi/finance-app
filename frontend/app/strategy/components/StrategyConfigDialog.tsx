@@ -62,10 +62,10 @@ interface StrategyConfigDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   indicator: IndicatorType | null;
-  strategyId: string | null;
-  onConfigSave: (indicator: IndicatorType, params: Record<string, any>) => Promise<void>;
-  onOptimizeParams?: (indicator: IndicatorType) => Promise<void>;
-  onOptimizeWeights?: (indicator: IndicatorType) => Promise<void>;
+  strategyId: string | null;  // Add this prop
+  onConfigSave: (indicator: IndicatorType, params: Record<string, any>) => Promise<any>;
+  onOptimizeParams: (indicator: IndicatorType) => Promise<any>;
+  onOptimizeWeights: (indicator: IndicatorType) => Promise<any>;
 }
 
 export default function StrategyConfigDialog({
