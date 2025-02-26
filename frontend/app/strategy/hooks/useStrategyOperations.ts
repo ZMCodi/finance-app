@@ -34,6 +34,7 @@ export interface StrategyOperationState {
   removeFromStrategy: StrategyOperation;
   backtest: StrategyOperation;
   optimizeWeights: StrategyOperation;
+  fetchCombinedParams: StrategyOperation;
 }
 
 export default function useStrategyOperations(
@@ -57,6 +58,7 @@ export default function useStrategyOperations(
     removeFromStrategy: { isLoading: false, error: null },
     backtest: { isLoading: false, error: null },
     optimizeWeights: { isLoading: false, error: null },
+    fetchCombinedParams: { isLoading: false, error: null }
   });
 
   // State for operation results
@@ -65,6 +67,11 @@ export default function useStrategyOperations(
   const [signalResult, setSignalResult] = useState<any>(null);
   const [backtestResult, setBacktestResult] = useState<any>(null);
   const [optimizeWeightsResult, setOptimizeWeightsResult] = useState<any>(null);
+  const [combinedStrategyParams, setCombinedStrategyParams] = useState<Record<string, any>>({
+    method: 'weighted',
+    vote_threshold: 0,
+    weights: []
+  });
   
   // Use useRef to maintain the cache across renders
   const indicatorPlotCacheRef = useRef<Record<string, PlotJSON>>({});
@@ -318,6 +325,10 @@ export default function useStrategyOperations(
             }
           ]
         }));
+        
+        // Get initial parameters after creating
+        await fetchCombinedStrategyParams();
+        
         updateOperationState('addToStrategy', false);
         return combinedId;
       }
@@ -330,7 +341,6 @@ export default function useStrategyOperations(
       );
       
       // Update state to include this indicator in the combined strategy
-      // Only add if the strategy ID is not already in the list
       setState(prev => {
         if (prev.combinedStrategyIndicators.some(item => item.strategyId === strategyId)) {
           return prev; // No change needed, already in the list
@@ -347,6 +357,9 @@ export default function useStrategyOperations(
           ]
         };
       });
+      
+      // Fetch updated parameters including weights
+      await fetchCombinedStrategyParams();
       
       updateOperationState('addToStrategy', false);
       return result;
@@ -379,11 +392,102 @@ export default function useStrategyOperations(
         )
       }));
       
+      // Fetch updated parameters to get renormalized weights
+      await fetchCombinedStrategyParams();
+      
       updateOperationState('removeFromStrategy', false);
     } catch (error) {
       updateOperationState('removeFromStrategy', false, error as Error);
       throw error;
     }
+  };
+
+  // Add function to fetch combined strategy parameters
+  const fetchCombinedStrategyParams = async () => {
+    if (!state.combinedStrategyId) return;
+    
+    updateOperationState('fetchCombinedParams', true);
+    
+    try {
+      const response = await fetch(`${strategyOperations['baseUrl']}/api/strategies/${state.combinedStrategyId}/params`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch combined strategy params: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setCombinedStrategyParams(data.params || {});
+      
+      // Update weights in combined strategy indicators
+      if (data.params?.weights) {
+        setState(prev => {
+          const updatedIndicators = prev.combinedStrategyIndicators.map((item, index) => ({
+            ...item,
+            weight: index < data.params.weights.length ? data.params.weights[index] : item.weight
+          }));
+          
+          return {
+            ...prev,
+            combinedStrategyIndicators: updatedIndicators
+          };
+        });
+      }
+      
+      updateOperationState('fetchCombinedParams', false);
+      return data.params;
+    } catch (error) {
+      updateOperationState('fetchCombinedParams', false, error as Error);
+      console.error('Error fetching combined strategy params:', error);
+      throw error;
+    }
+  };
+
+  // Add function to update combined strategy parameters
+  const updateCombinedStrategyParams = async (params: Record<string, any>) => {
+    if (!state.combinedStrategyId) return;
+    
+    updateOperationState('configure', true);
+    
+    try {
+      const response = await fetch(`${strategyOperations['baseUrl']}/api/strategies/${state.combinedStrategyId}/params`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update combined strategy params: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setCombinedStrategyParams(prev => ({
+        ...prev,
+        ...params
+      }));
+      
+      updateOperationState('configure', false);
+      return data;
+    } catch (error) {
+      updateOperationState('configure', false, error as Error);
+      console.error('Error updating combined strategy params:', error);
+      throw error;
+    }
+  };
+
+  // Add function to update a specific indicator weight
+  const updateIndicatorWeight = (strategyId: string, weight: number) => {
+    setState(prev => {
+      const updatedIndicators = prev.combinedStrategyIndicators.map(item => 
+        item.strategyId === strategyId ? { ...item, weight } : item
+      );
+      
+      return {
+        ...prev,
+        combinedStrategyIndicators: updatedIndicators
+      };
+    });
   };
 
   // Backtest a strategy
@@ -473,6 +577,7 @@ export default function useStrategyOperations(
   return {
     state,
     operationState,
+    combinedStrategyParams,
     results: {
       configure: configureResult,
       optimize: optimizeResult,
@@ -492,6 +597,9 @@ export default function useStrategyOperations(
       optimizeStrategyWeights,
       removeIndicator,
       clearPlotCache,
+      fetchCombinedStrategyParams,
+      updateCombinedStrategyParams,
+      updateIndicatorWeight,
     }
   };
 }

@@ -1,6 +1,7 @@
 // app/strategy/components/CombinedStrategyIndicatorRow.tsx
 import { ChevronDown, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,28 +15,44 @@ interface CombinedStrategyIndicatorRowProps {
   indicator: CombinedStrategyIndicator;
   onConfigure: (indicatorType: IndicatorType, strategyId: string) => void;
   onRemove: (strategyId: string) => void;
+  onWeightChange: (strategyId: string, weight: number) => void;
   isLoading?: boolean;
+  isWeightEditable?: boolean;
 }
 
 export default function CombinedStrategyIndicatorRow({
   indicator,
   onConfigure,
   onRemove,
-  isLoading = false
+  onWeightChange,
+  isLoading = false,
+  isWeightEditable = true
 }: CombinedStrategyIndicatorRowProps) {
   const { strategyId, indicatorType, weight } = indicator;
   
   return (
     <li className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-1">
         <span className="font-medium">{indicatorType}</span>
         <span className="text-xs text-gray-500">ID: {strategyId.substring(0, 8)}...</span>
-        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded-full">
-          Weight: {weight}
-        </span>
       </div>
       
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        {/* Weight Input */}
+        <div className="w-20">
+          <Input
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+            value={weight}
+            onChange={(e) => onWeightChange(strategyId, parseFloat(e.target.value) || 0)}
+            disabled={isLoading || !isWeightEditable}
+            className="h-8 text-sm"
+          />
+        </div>
+        
+        {/* Actions Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button 

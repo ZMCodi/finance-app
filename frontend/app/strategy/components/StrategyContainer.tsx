@@ -20,6 +20,7 @@ import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
 import useStrategyOperations from '../hooks/useStrategyOperations';
 import StrategyConfigDialog from './StrategyConfigDialog';
 import CombinedStrategyIndicatorRow from './CombinedStrategyIndicatorRow';
+import CombinedStrategyControls from './CombinedStrategyControls';
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -52,6 +53,12 @@ export default function StrategyContainer() {
 
   // buy/sell signal data
   const [signalData, setSignalData] = useState<Record<IndicatorType, any>>({});
+
+  const [combinedParams, setCombinedParams] = useState<Record<string, any>>({
+    method: 'weighted',
+    vote_threshold: 0,
+    weights: []
+  });
   
   // Use our custom hook for strategy operations
   const { 
@@ -118,6 +125,21 @@ export default function StrategyContainer() {
       actions.updateIndicatorPlots(currentTimeframe, startDate, endDate);
     }
   }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh, activeIndicators]);
+
+  // Add effect to fetch combined parameters when needed
+  useEffect(() => {
+    if (strategyState.combinedStrategyId && combinedStrategyIndicators.length > 0) {
+      actions.fetchCombinedStrategyParams()
+        .then(params => {
+          if (params) {
+            setCombinedParams(params);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching combined params:', error);
+        });
+    }
+  }, [strategyState.combinedStrategyId, combinedStrategyIndicators.length]);
   
   // Handle adding a ticker
   const handleAddTicker = (ticker: string) => {
@@ -381,6 +403,50 @@ export default function StrategyContainer() {
     }
   };
 
+  // Add the handler for weight changes
+  const handleWeightChange = (strategyId: string, weight: number) => {
+    actions.updateIndicatorWeight(strategyId, weight);
+    
+    // Also update the weights array in the params
+    const index = combinedStrategyIndicators.findIndex(item => item.strategyId === strategyId);
+    if (index !== -1) {
+      const newWeights = [...(combinedParams.weights || [])];
+      newWeights[index] = weight;
+      setCombinedParams(prev => ({
+        ...prev,
+        weights: newWeights
+      }));
+    }
+  };
+
+  // Add handler for parameter changes
+  const handleCombinedParamChange = (key: string, value: any) => {
+    setCombinedParams(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  // Add handler to apply changes
+  const handleApplyCombinedChanges = async () => {
+    try {
+      // Ensure weights array matches the indicators
+      const weights = combinedStrategyIndicators.map(item => item.weight);
+      
+      // Create the params object to send
+      const paramsToUpdate = {
+        ...combinedParams,
+        weights
+      };
+      
+      await actions.updateCombinedStrategyParams(paramsToUpdate);
+      await actions.fetchCombinedStrategyParams();
+      console.log('Combined strategy parameters updated successfully');
+    } catch (error) {
+      console.error('Error updating combined strategy parameters:', error);
+    }
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl text-center font-bold mb-6">Strategy Builder</h1>
@@ -468,6 +534,41 @@ export default function StrategyContainer() {
                         Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
                       </p>
                       
+                      {/* Combined Strategy Controls */}
+                      <CombinedStrategyControls
+                        params={combinedParams}
+                        onParamChange={handleCombinedParamChange}
+                        isLoading={
+                          operationState.configure.isLoading || 
+                          operationState.optimizeWeights.isLoading || 
+                          operationState.fetchCombinedParams.isLoading
+                        }
+                        onOptimizeWeights={async () => {
+                          if (!selectedAsset || combinedStrategyIndicators.length === 0) return;
+                          
+                          const timeframe = activeTab === '5m' ? '5m' : '1d';
+                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                          
+                          // Use first indicator as reference for the combined strategy
+                          const firstIndicator = combinedStrategyIndicators[0];
+                          try {
+                            await actions.optimizeStrategyWeights(
+                              firstIndicator.indicatorType,
+                              timeframe,
+                              startDate,
+                              endDate
+                            );
+                            
+                            // Refresh combined params after optimization
+                            await actions.fetchCombinedStrategyParams();
+                          } catch (error) {
+                            console.error('Error optimizing weights:', error);
+                          }
+                        }}
+                        onApplyChanges={handleApplyCombinedChanges}
+                      />
+                      
                       <div className="border p-4 rounded-lg">
                         <h4 className="font-medium mb-2">Strategy Components</h4>
                         {combinedStrategyIndicators.length > 0 ? (
@@ -478,6 +579,8 @@ export default function StrategyContainer() {
                                 indicator={indicator}
                                 onConfigure={handleConfigureCombinedIndicator}
                                 onRemove={handleRemoveFromStrategy}
+                                onWeightChange={handleWeightChange}
+                                isWeightEditable={combinedParams.method === 'weighted'}
                                 isLoading={
                                   operationState.configure.isLoading || 
                                   operationState.removeFromStrategy.isLoading
@@ -507,36 +610,6 @@ export default function StrategyContainer() {
                           }}
                         >
                           Backtest
-                        </button>
-                        
-                        <button 
-                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                          disabled={combinedStrategyIndicators.length === 0}
-                          onClick={() => {
-                            if (!selectedAsset) return;
-                            const timeframe = activeTab === '5m' ? '5m' : '1d';
-                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                            
-                            // Optimize weights
-                            if (strategyState.combinedStrategyId && combinedStrategyIndicators.length > 0) {
-                              // Use first indicator in the combined strategy
-                              const firstIndicator = combinedStrategyIndicators[0];
-                              actions.optimizeStrategyWeights(
-                                firstIndicator.indicatorType,
-                                timeframe,
-                                startDate,
-                                endDate
-                              ).then(result => {
-                                console.log('Weight optimization result:', result);
-                                // Update the UI with the optimized weights
-                              }).catch(error => {
-                                console.error('Error optimizing weights:', error);
-                              });
-                            }
-                          }}
-                        >
-                          Optimize Weights
                         </button>
                       </div>
                     </div>
