@@ -65,7 +65,7 @@ class StrategyCreate(StrategyBase):
 
 class StrategyPlot(StrategyBase):
     results: Optional[Dict[str, float]] = Field(None, title='Results', description='The results of the backtest')
-    json_data: PlotJSON = Field(..., title='JSON', description='The JSON representation of the plot')
+    json_data: List[PlotJSON] = Field(..., title='JSON', description='The JSON representation of the plot')
 
 class StrategyParams(StrategyBase):
     params: Dict[str, float | str | List] = Field(..., title='Parameters', description='The parameters of the strategy')

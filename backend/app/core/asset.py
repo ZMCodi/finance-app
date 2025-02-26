@@ -17,7 +17,7 @@ from datetime import datetime, date
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy import stats
-from typing import Optional
+from typing import Optional, List
 from dotenv import load_dotenv
 import os
 
@@ -384,7 +384,7 @@ class Asset():
 
     def plot_price_history(self, *, timeframe: str = '1d', start_date: Optional[DateLike] = None,
                         end_date: Optional[DateLike] = None, resample: Optional[str] = None, 
-                        line: Optional[int | float] = None) -> go.Figure:
+                        line: Optional[int | float] = None) -> List[go.Figure]:
         """Plots the price history of the underlying asset.
 
         Args:
@@ -455,11 +455,11 @@ class Asset():
 
         # fig.show()
 
-        return fig
+        return [fig]
 
 
     def plot_candlestick(self, *, timeframe: str = '1d', start_date: Optional[DateLike] = None, end_date: Optional[DateLike] = None, 
-                         resample: Optional[str] = None, volume: bool = True) -> go.Figure:
+                         resample: Optional[str] = None, volume: bool = True) -> List[go.Figure]:
         """Plots the candlestick chart of the underlying asset.
 
         Args:
@@ -487,13 +487,9 @@ class Asset():
         data = data.dropna()
 
         # create or use existing figure
+        fig = go.Figure()
         if volume:
-            fig = make_subplots(rows=2, cols=1, 
-                            shared_xaxes=True, 
-                            vertical_spacing=0.03, 
-                            row_heights=[0.8, 0.2])
-        else:
-            fig = go.Figure()
+            volume_fig = go.Figure()
 
         format = '%Y-%m-%d' if timeframe == '1d' else '%Y-%m-%d<br>%H:%M:%S'
 
@@ -523,10 +519,9 @@ class Asset():
                 ),
             )
 
-            fig.add_trace(candlestick, row=1, col=1)
-            fig.add_trace(volume_bars, row=2, col=1)
-        else:
-            fig.add_trace(candlestick)
+            volume_fig.add_trace(volume_bars)
+
+        fig.add_trace(candlestick)
 
         # # Update layout
         # title = f'{self.ticker} Candlestick Chart'
@@ -534,11 +529,11 @@ class Asset():
         #     title += ' with Volume Bars'
 
         layout_updates = {
-            'xaxis1_rangeslider_visible': False,
+            'xaxis_rangeslider_visible': False,
             # 'height': 800 if volume else 600
         }
 
-        layout_updates['xaxis1'] = dict(
+        layout_updates['xaxis'] = dict(
             type='category',
             categoryorder='category ascending',
             nticks=5,
@@ -547,10 +542,6 @@ class Asset():
 
         # layout_updates['height'] = 400
 
-        if volume:
-            layout_updates[f'xaxis2_rangeslider_visible'] = False
-            layout_updates['xaxis2'] = layout_updates['xaxis1']
-            # layout_updates['height'] = 500
 
         # layout_updates['title'] = title
 
@@ -559,10 +550,6 @@ class Asset():
             gridcolor='rgba(128,128,128,0.2)',
         )
         
-        layout_updates['yaxis2'] = dict(
-            gridcolor='rgba(128,128,128,0.2)',
-            nticks=3,
-        )
 
         fig.update_layout(**layout_updates,
                           hovermode='x unified',
@@ -574,11 +561,21 @@ class Asset():
         )
 
         # fig.show()
+        if volume:
+            volume_fig.update_layout(**layout_updates,
+                            hovermode='x unified',
+                            hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
+                            paper_bgcolor='rgba(0, 0, 0, 0)',
+                            plot_bgcolor='rgba(0, 0, 0, 0)',
+                            font=dict(color='white'),
+                            showlegend=False,
+                )
+            return [fig, volume_fig]
 
-        return fig
+        return [fig]
 
     def plot_returns_dist(self, *, timeframe: str = '1d', log_rets: bool = False, bins: int = 100,
-                        show_stats: bool = True) -> go.Figure:
+                        show_stats: bool = True) -> List[go.Figure]:
         """Plots the returns distribution histogram of the underlying asset.
 
         Args:
@@ -665,7 +662,7 @@ class Asset():
 
         # fig.show()
 
-        return fig
+        return [fig]
 
     def resample(self, period: str, five_min: bool = False) -> DataFrame:
         """Resamples the asset data

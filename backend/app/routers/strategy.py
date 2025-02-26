@@ -73,7 +73,7 @@ def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: s
     if timeframe == '1d':
         signal = strategy.daily['signal']
     elif timeframe == '5m':
-        signal = strategy.five_minute['signal']
+        signal = strategy.five_min['signal']
 
     if start_date is not None:
         signal = signal.loc[start_date:]

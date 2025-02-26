@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from enum import Enum
 from app.models.common import PlotJSON
+from typing import List
 
 class AssetType(str, Enum):
     EQUITY = 'Equity'
@@ -22,7 +23,7 @@ class AssetResponse(BaseModel):
 class AssetPlot(BaseModel):
     ticker: str = Field(..., title='Ticker', description='The asset ticker according to Yahoo Finance')
     plot_type: PlotType = Field(..., title='Plot Type', description='The type of plot')
-    json_data: PlotJSON = Field(..., title='JSON', description='The JSON representation of the plot')
+    json_data: List[PlotJSON] = Field(..., title='JSON', description='The JSON representation of the plot')
 
 class ReturnsStats(BaseModel):
     total_returns: float = Field(..., title='Total Returns', description='The total returns of the asset')

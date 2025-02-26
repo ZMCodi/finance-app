@@ -28,7 +28,7 @@ import numpy as np
 import app.core.signal_gen as sg
 import scipy.optimize as sco
 from app.core.asset import Asset
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, date
 import multiprocessing as mp
 
@@ -687,7 +687,7 @@ class MA_Crossover(Strategy):
 
     def plot(self, timeframe: str = '1d', 
             start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> List[go.Figure]:
         """Create interactive plot of moving averages and signals.
 
         Args:
@@ -782,7 +782,7 @@ class MA_Crossover(Strategy):
 
         # fig.show()
 
-        return fig
+        return [fig]
 
     def optimize(self, inplace: bool = False, timeframe: str = '1d',
                 start_date: Optional[DateLike] = None, 
@@ -1120,7 +1120,7 @@ class RSI(Strategy):
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> List[go.Figure]:
         """Create interactive plot of RSI and price with signals.
 
         Creates a two-panel plot with:
@@ -1196,7 +1196,7 @@ class RSI(Strategy):
 
         # fig.show()
 
-        return fig
+        return [fig]
 
     @classmethod
     def _backtest_wrapper(cls, strategy_params: dict, ub: float, lb: float, window: int,
@@ -1521,7 +1521,7 @@ class MACD(Strategy):
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> List[go.Figure]:
         """Create interactive plot of MACD components and price with signals.
 
         Creates a two-panel plot with:
@@ -1622,7 +1622,7 @@ class MACD(Strategy):
 
         # fig.show()
 
-        return fig
+        return [fig]
 
     @classmethod
     def _backtest_wrapper(cls, strategy_params: dict, fast: int, slow: int, signal: int, 
@@ -1912,7 +1912,7 @@ class BB(Strategy):
                 'signal_type': self.signal_type}
 
     def plot(self, timeframe: str = '1d', start_date: Optional[DateLike] = None,
-            end_date: Optional[DateLike] = None) -> go.Figure:
+            end_date: Optional[DateLike] = None) -> List[go.Figure]:
         """Create interactive plot of Bollinger Bands and signals.
 
         Creates a plot showing:
@@ -2008,7 +2008,7 @@ class BB(Strategy):
                             showlegend=False)
 
 
-        return fig
+        return [fig]
 
     def optimize(self, inplace: bool = False, timeframe: str = '1d',
                 start_date: Optional[DateLike] = None, 
