@@ -353,29 +353,38 @@ export default function useStrategyOperations(
   };
 
   // Remove indicator
-  const removeIndicator = (indicator: IndicatorType) => {
+  // Remove indicator
+  const removeIndicator = async (indicator: IndicatorType) => {
     const strategyId = state.strategies[indicator];
     if (!strategyId) return;
     
-    // Clear cache entries for this strategy
-    clearStrategyFromCache(strategyId);
-    
-    // Update state to remove indicator
-    setState(prev => {
-      const updatedStrategies = { ...prev.strategies };
-      delete updatedStrategies[indicator];
+    try {
+      // Call the API to delete the strategy from backend cache
+      await strategyOperations.deleteStrategy(strategyId);
       
-      const updatedPlots = { ...prev.indicatorPlots };
-      delete updatedPlots[strategyId];
+      // Clear cache entries for this strategy
+      clearStrategyFromCache(strategyId);
       
-      return {
-        ...prev,
-        activeIndicators: prev.activeIndicators.filter(i => i !== indicator),
-        strategies: updatedStrategies,
-        indicatorPlots: updatedPlots
-      };
-    });
-  };
+      // Update state to remove indicator
+      setState(prev => {
+        const updatedStrategies = { ...prev.strategies };
+        delete updatedStrategies[indicator];
+        
+        const updatedPlots = { ...prev.indicatorPlots };
+        delete updatedPlots[strategyId];
+        
+        return {
+          ...prev,
+          activeIndicators: prev.activeIndicators.filter(i => i !== indicator),
+          strategies: updatedStrategies,
+          indicatorPlots: updatedPlots
+        };
+      });
+    } catch (error) {
+      console.error(`Error removing strategy for indicator ${indicator}:`, error);
+      // You might want to show an error notification here
+    }
+};
 
   // Helper to clear specific strategy from cache
   const clearStrategyFromCache = (strategyId: string) => {

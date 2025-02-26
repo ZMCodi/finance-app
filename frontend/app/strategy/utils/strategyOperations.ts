@@ -251,6 +251,23 @@ export class StrategyOperations {
     }
   }
 
+  // Utility function to delete strategy
+  async deleteStrategy(strategyId: string): Promise<void> {
+    try {
+      console.log("Deleting strategy using utils:", strategyId);
+      const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/delete`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete strategy: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Error deleting strategy:", error);
+      throw error;
+    }
+  }
+
   // Utility function to get indicator plot data
   async getIndicatorPlot(strategyId: string, queryParams: string): Promise<PlotJSON[]> {
     try {

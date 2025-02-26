@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
-from app.models.strategy import (StrategyCreate, StrategyPlot, StrategyParams, 
+from app.models.strategy import (StrategyBase, StrategyCreate, StrategyPlot, StrategyParams, 
                                  StrategySignal, StrategyUpdateParams,
                                  StrategyOptimize)
 import json
@@ -38,6 +38,14 @@ def create_strategy(strategy_name: str, asset: Asset = Depends(get_asset)):
         'strategy': strategy.__class__.__name__,
         'ticker': asset.ticker,
         'strategy_id': key,
+    }
+
+@router.delete('/{strategy_key}/delete', response_model=StrategyBase)
+def delete_strategy(strategy_key: str):
+    strategy = strategy_cache.pop(strategy_key)
+    return {
+        'ticker': strategy.asset.ticker,
+        'strategy': strategy.__class__.__name__,
     }
 
 @router.get("/cache")
