@@ -177,7 +177,7 @@ export class StrategyOperations {
     try {
       const params = new URLSearchParams();
       params.append('weight', weight.toString());
-      
+      console.log("Adding to combined strategy using utils:", combinedStrategyId, strategyId, params.toString());
       const response = await fetch(
         `${this.baseUrl}/api/strategies/combined/${combinedStrategyId}/${strategyId}/add_strategy?${params.toString()}`, 
         {
@@ -192,6 +192,33 @@ export class StrategyOperations {
       return await response.json();
     } catch (error) {
       console.error('Error adding to combined strategy:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove strategy from combined strategy
+   */
+  async removeFromCombinedStrategy(
+    combinedStrategyId: string,
+    strategyId: string,
+  ): Promise<StrategyParams> {
+    try {
+      console.log("Removing from combined strategy using utils:", combinedStrategyId, strategyId);
+      const response = await fetch(
+        `${this.baseUrl}/api/strategies/combined/${combinedStrategyId}/${strategyId}/remove_strategy`,
+        {
+          method: 'PATCH',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to remove strategy from combined: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error removing from combined strategy:', error);
       throw error;
     }
   }

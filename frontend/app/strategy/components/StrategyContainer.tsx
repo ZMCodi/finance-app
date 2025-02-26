@@ -53,7 +53,7 @@ export default function StrategyContainer() {
   } = useStrategyOperations();
 
   // Destructure strategy state for easier access
-  const { activeIndicators, strategies, indicatorPlots } = strategyState;
+  const { activeIndicators, strategies, indicatorPlots, combinedStrategyIndicators } = strategyState;
   
   // Update query strings when settings change for 5min
   useEffect(() => {
@@ -404,86 +404,104 @@ export default function StrategyContainer() {
               <TabsContent value="strategy" className="h-full mt-0 w-full">
                 <div className="h-[70vh] p-4 border rounded-lg">
                   <h3 className="text-lg font-medium mb-4">Strategy Builder</h3>
-                  
-                  {strategyState.combinedStrategyId ? (
-                    <div className="space-y-4">
-                      <p className="text-sm">
-                        Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
-                      </p>
-                      
-                      <div className="border p-4 rounded-lg">
-                        <h4 className="font-medium mb-2">Strategy Components</h4>
+                {strategyState.combinedStrategyId ? (
+                  <div className="space-y-4">
+                    <p className="text-sm">
+                      Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
+                    </p>
+                    
+                    <div className="border p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Strategy Components</h4>
+                      {combinedStrategyIndicators.length > 0 ? (
                         <ul className="space-y-2">
-                          {activeIndicators.map(indicator => (
+                          {combinedStrategyIndicators.map(indicator => (
                             <li key={indicator} className="flex items-center justify-between">
                               <span>{indicator}</span>
                             </li>
                           ))}
                         </ul>
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <button 
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                          onClick={() => {
-                            if (!selectedAsset) return;
-                            const timeframe = activeTab === '5m' ? '5m' : '1d';
-                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                            
-                            // We need to backtest the combined strategy
-                            if (strategyState.combinedStrategyId) {
-                              // Need to implement this
-                              console.log('Backtest combined strategy');
-                            }
-                          }}
-                        >
-                          Backtest
-                        </button>
-                        
-                        <button 
-                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
-                          onClick={() => {
-                            if (!selectedAsset) return;
-                            const timeframe = activeTab === '5m' ? '5m' : '1d';
-                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                            
-                            // Optimize weights
-                            if (strategyState.combinedStrategyId) {
-                              actions.optimizeStrategyWeights(
-                                timeframe,
-                                startDate,
-                                endDate
-                              ).then(result => {
-                                console.log('Weight optimization result:', result);
-                                // Update the UI with the optimized weights
-                              }).catch(error => {
-                                console.error('Error optimizing weights:', error);
-                              });
-                            }
-                          }}
-                        >
-                          Optimize Weights
-                        </button>
-                      </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No indicators added to strategy yet</p>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full">
-                      <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
+                    
+                    <div className="flex space-x-2">
                       <button 
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
-                        disabled={activeIndicators.length === 0}
+                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                         onClick={() => {
-                          if (activeIndicators.length > 0) {
-                            handleAddToStrategy(activeIndicators[0]);
+                          if (!selectedAsset) return;
+                          const timeframe = activeTab === '5m' ? '5m' : '1d';
+                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                          
+                          // We need to backtest the combined strategy
+                          if (strategyState.combinedStrategyId) {
+                            // Need to implement this
+                            console.log('Backtest combined strategy');
                           }
                         }}
                       >
-                        Add First Indicator to Strategy
+                        Backtest
+                      </button>
+                      
+                      <button 
+                        className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600"
+                        onClick={() => {
+                          if (!selectedAsset) return;
+                          const timeframe = activeTab === '5m' ? '5m' : '1d';
+                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+                          
+                          // Optimize weights
+                          if (strategyState.combinedStrategyId && combinedStrategyIndicators.length > 0) {
+                            // Use first indicator as reference since it's a combined strategy
+                            actions.optimizeStrategyWeights(
+                              combinedStrategyIndicators[0],
+                              timeframe,
+                              startDate,
+                              endDate
+                            ).then(result => {
+                              console.log('Weight optimization result:', result);
+                              // Update the UI with the optimized weights
+                            }).catch(error => {
+                              console.error('Error optimizing weights:', error);
+                            });
+                          }
+                        }}
+                      >
+                        Optimize Weights
                       </button>
                     </div>
-                  )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
+                    
+                    {activeIndicators.length > 0 ? (
+                      <div className="flex flex-col items-center">
+                        <p className="text-gray-600 mb-2">Select an indicator to add:</p>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                          {activeIndicators.map(indicator => (
+                            <button
+                              key={indicator}
+                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                              onClick={() => handleAddToStrategy(indicator)}
+                            >
+                              Add {indicator}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <button 
+                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
+                        disabled
+                      >
+                        No Indicators Available
+                      </button>
+                    )}
+                  </div>
+                )}
                 </div>
               </TabsContent>
             </Tabs>

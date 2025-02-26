@@ -597,14 +597,6 @@ class MA_Crossover(Strategy):
         self.engine = TAEngine()
         self.__get_data()
 
-    def __str__(self) -> str:
-        """String representation of the strategy.
-
-        Returns:
-            str: Strategy description with parameters
-        """
-        return f'MA_Crossover({self.asset.ticker}, short_{self.ptype}={self.short}, long_{self.ptype}={self.long})'
-
     def __get_data(self) -> None:
         """Calculate moving averages and generate trading signals.
         
@@ -948,14 +940,6 @@ class RSI(Strategy):
         self.__vote_threshold = vote_threshold
         self.engine = TAEngine()
         self.__get_data()
-
-    def __str__(self) -> str:
-        """String representation of the strategy.
-
-        Returns:
-            str: Strategy description with parameters
-        """
-        return f'RSI({self.asset.ticker}, ub={self.ub}, lb={self.lb}, window={self.window}, exit={self.exit}, m_rev={self.m_rev}, m_rev_bound={self.m_rev_bound})'
 
     def __get_data(self) -> None:
         """Calculate RSI and generate trading signals.
@@ -2197,6 +2181,8 @@ class CombinedStrategy(Strategy):
         self.__get_data()
 
     def add_strategy(self, strategy: Strategy, weight: float = 1.):
+        if strategy in self.__strategies:
+            return
         self.__strategies.append(strategy)
         self.weights = np.append(self.weights, weight)
         self.__get_data()
@@ -2214,7 +2200,7 @@ class CombinedStrategy(Strategy):
         Returns:
             dict: Dictionary with parameter names and values
         """
-        return {'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold
+        return {'method': self.method, 'weights': [float(w) for w in self.weights], 'vote_threshold': self.vote_threshold, 'strategies': [str(s) for s in self.strategies],
                 }
 
     def change_params(self,

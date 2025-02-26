@@ -15,6 +15,7 @@ export interface StrategyState {
   strategies: Record<IndicatorType, string>;  // Indicator type -> strategy_id
   indicatorPlots: Record<string, PlotJSON>;  // Strategy ID -> Plot data
   combinedStrategyId: string | null;
+  combinedStrategyIndicators: IndicatorType[];  // Indicators added to the combined strategy
 }
 
 export interface StrategyOperationState {
@@ -31,7 +32,8 @@ export default function useStrategyOperations(
     activeIndicators: [],
     strategies: {},
     indicatorPlots: {},
-    combinedStrategyId: null
+    combinedStrategyId: null,
+    combinedStrategyIndicators: []
   }
 ) {
   // State for strategy data
@@ -268,7 +270,7 @@ export default function useStrategyOperations(
       
       const result = await strategyOperations.generateSignals(
         strategyId,
-        timeframe,
+        currentTimeframe,
         startDateStr,
         endDateStr
       );
@@ -297,7 +299,8 @@ export default function useStrategyOperations(
         const combinedId = await strategyOperations.createCombinedStrategy(strategyId);
         setState(prev => ({
           ...prev,
-          combinedStrategyId: combinedId
+          combinedStrategyId: combinedId,
+          combinedStrategyIndicators: [indicator] // Initialize with the first indicator
         }));
         updateOperationState('addToStrategy', false);
         return combinedId;
@@ -309,6 +312,18 @@ export default function useStrategyOperations(
         strategyId,
         weight
       );
+      
+      // Update state to include this indicator in the combined strategy
+      // Only add if it's not already in the list
+      setState(prev => {
+        if (prev.combinedStrategyIndicators.includes(indicator)) {
+          return prev; // No change needed
+        }
+        return {
+          ...prev,
+          combinedStrategyIndicators: [...prev.combinedStrategyIndicators, indicator]
+        };
+      });
       
       updateOperationState('addToStrategy', false);
       return result;
@@ -353,7 +368,6 @@ export default function useStrategyOperations(
   };
 
   // Remove indicator
-  // Remove indicator
   const removeIndicator = async (indicator: IndicatorType) => {
     const strategyId = state.strategies[indicator];
     if (!strategyId) return;
@@ -373,18 +387,22 @@ export default function useStrategyOperations(
         const updatedPlots = { ...prev.indicatorPlots };
         delete updatedPlots[strategyId];
         
+        // Also remove this indicator from combined strategy indicators if present
+        const updatedCombinedIndicators = prev.combinedStrategyIndicators.filter(i => i !== indicator);
+        
         return {
           ...prev,
           activeIndicators: prev.activeIndicators.filter(i => i !== indicator),
           strategies: updatedStrategies,
-          indicatorPlots: updatedPlots
+          indicatorPlots: updatedPlots,
+          combinedStrategyIndicators: updatedCombinedIndicators
         };
       });
     } catch (error) {
       console.error(`Error removing strategy for indicator ${indicator}:`, error);
       // You might want to show an error notification here
     }
-};
+  };
 
   // Helper to clear specific strategy from cache
   const clearStrategyFromCache = (strategyId: string) => {
