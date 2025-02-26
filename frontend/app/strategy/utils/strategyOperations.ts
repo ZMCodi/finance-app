@@ -21,7 +21,7 @@ export class StrategyOperations {
     params: Record<string, any>
   ): Promise<StrategyParams> {
     try {
-      console.log("Sending params to API:", JSON.stringify(params, null, 2));
+      console.log("Sending params to API using utils:", JSON.stringify(params, null, 2));
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/params`, {
         method: 'PATCH',
         headers: {
@@ -61,7 +61,7 @@ export class StrategyOperations {
       if (endDate) {
         params.append('end_date', endDate);
       }
-      
+      console.log("Optimizing strategy using utils:", strategyId, params.toString());
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/optimize/params?${params.toString()}`);
       
       if (!response.ok) {
@@ -71,6 +71,42 @@ export class StrategyOperations {
       return await response.json();
     } catch (error) {
       console.error('Error optimizing strategy:', error);
+      throw error;
+    }
+  }
+
+  /**
+ * Optimize weights for a strategy
+ */
+  async optimizeWeights(
+    strategyId: string,
+    timeframe: string = '1d',
+    startDate?: string,
+    endDate?: string,
+    runs: number = 20
+  ): Promise<StrategyOptimize> {
+    try {
+      const params = new URLSearchParams();
+      params.append('timeframe', timeframe);
+      params.append('runs', runs.toString());
+      
+      if (startDate) {
+        params.append('start_date', startDate);
+      }
+      
+      if (endDate) {
+        params.append('end_date', endDate);
+      }
+      console.log("Optimizing weights using utils:", strategyId, params.toString());  // make sure this is printed
+      const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/optimize/weights?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to optimize weights: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error optimizing weights:', error);
       throw error;
     }
   }
@@ -194,46 +230,11 @@ export class StrategyOperations {
     }
   }
 
-  /**
-   * Optimize weights for a strategy
-   */
-  async optimizeWeights(
-    strategyId: string,
-    timeframe: string = '1d',
-    startDate?: string,
-    endDate?: string,
-    runs: number = 20
-  ): Promise<StrategyOptimize> {
-    try {
-      const params = new URLSearchParams();
-      params.append('timeframe', timeframe);
-      params.append('runs', runs.toString());
-      
-      if (startDate) {
-        params.append('start_date', startDate);
-      }
-      
-      if (endDate) {
-        params.append('end_date', endDate);
-      }
-      
-      const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/optimize/weights?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to optimize weights: ${response.statusText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error optimizing weights:', error);
-      throw error;
-    }
-  }
 
   // Utility function to create a new strategy
   async createStrategy(ticker: string, strategyName: string): Promise<string> {
     try {
-      console.log("Creating strategy:", ticker, strategyName);
+      console.log("Creating strategy using utils:", ticker, strategyName);
       const response = await fetch(`${this.baseUrl}/api/strategies/${ticker}/${strategyName}`, {
         method: 'POST'
       });
@@ -253,7 +254,7 @@ export class StrategyOperations {
   // Utility function to get indicator plot data
   async getIndicatorPlot(strategyId: string, queryParams: string): Promise<any> {
     try {
-      console.log("Fetching indicator plot:", strategyId, queryParams);
+      console.log("Fetching indicator plot using utils:", strategyId, queryParams);
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/indicator?${queryParams}`);
       
       if (!response.ok) {

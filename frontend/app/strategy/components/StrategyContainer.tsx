@@ -241,7 +241,7 @@ export default function StrategyContainer() {
     }
   };
 
-  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {
+  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {  // use hook similar to above
     try {
       console.log(`Optimizing weights for ${indicator} in dialog`);
       
@@ -249,25 +249,16 @@ export default function StrategyContainer() {
       const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
       const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
-      const strategyId = strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
-      // Call the API through strategyOperations if possible
-      const response = await fetch(
-        `http://localhost:8000/api/strategies/${strategyId}/optimize/weights?timeframe=${timeframe}`
+      const result = await actions.optimizeStrategyWeights(
+        indicator,
+        timeframe,
+        startDate,
+        endDate
       );
-      
-      if (!response.ok) {
-        throw new Error(`Failed to optimize weights: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Weight optimization API result:', data);
-      
-      // Return the data in the expected format
-      return data; // Should contain a params object with weights
+
+      console.log('Optimization API result:', result);
+
+      return result;
     } catch (error) {
       console.error(`Error optimizing ${indicator} weights:`, error);
       throw error;

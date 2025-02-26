@@ -208,6 +208,46 @@ export default function useStrategyOperations(
     }
   };
 
+  // Optimize weights for a combined strategy
+  const optimizeStrategyWeights = async (  // change this to work with all strategies 
+    indicator: IndicatorType,
+    timeframe: string = '1d',
+    startDate?: Date,
+    endDate?: Date,
+    runs: number = 20
+  ) => {
+    updateOperationState('optimizeWeights', true);
+    
+    try {
+      const strategyId = state.strategies[indicator];
+      if (!strategyId) {
+        throw new Error(`No strategy ID found for indicator: ${indicator}`);
+      }
+      
+      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+      
+      const result = await strategyOperations.optimizeWeights(
+        strategyId,
+        timeframe,
+        startDateStr,
+        endDateStr,
+        runs
+      );
+      
+      setOptimizeWeightsResult(result);
+      updateOperationState('optimizeWeights', false);
+      
+      // Clear all cache entries for combined strategy
+      clearStrategyFromCache(strategyId);
+      
+      return result;
+    } catch (error) {
+      updateOperationState('optimizeWeights', false, error as Error);
+      throw error;
+    }
+  };
+
   // Generate signals
   const generateSignal = async (
     indicator: IndicatorType,
@@ -308,44 +348,6 @@ export default function useStrategyOperations(
       return result;
     } catch (error) {
       updateOperationState('backtest', false, error as Error);
-      throw error;
-    }
-  };
-
-  // Optimize weights for a combined strategy
-  const optimizeStrategyWeights = async (
-    timeframe: string = '1d',
-    startDate?: Date,
-    endDate?: Date,
-    runs: number = 20
-  ) => {
-    updateOperationState('optimizeWeights', true);
-    
-    try {
-      if (!state.combinedStrategyId) {
-        throw new Error('No combined strategy exists to optimize weights');
-      }
-      
-      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-      
-      const result = await strategyOperations.optimizeWeights(
-        state.combinedStrategyId,
-        timeframe,
-        startDateStr,
-        endDateStr,
-        runs
-      );
-      
-      setOptimizeWeightsResult(result);
-      updateOperationState('optimizeWeights', false);
-      
-      // Clear all cache entries for combined strategy
-      clearStrategyFromCache(state.combinedStrategyId);
-      
-      return result;
-    } catch (error) {
-      updateOperationState('optimizeWeights', false, error as Error);
       throw error;
     }
   };

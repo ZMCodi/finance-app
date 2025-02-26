@@ -724,7 +724,7 @@ class MA_Crossover(Strategy):
                 width=2,
                 dash='solid'
             ),
-            name=f'{self.asset.ticker} MA ({short_param})',
+            name=f'MA ({short_param})',
             yaxis='y'
         )
 
@@ -737,7 +737,7 @@ class MA_Crossover(Strategy):
                 width=2,
                 dash='solid'
             ),
-            name=f'{self.asset.ticker} MA ({long_param})',
+            name=f'MA ({long_param})',
             yaxis='y'
         )
 
