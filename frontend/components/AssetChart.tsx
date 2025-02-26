@@ -122,6 +122,7 @@ export default function AssetChart({
                                 responsive: true,
                                 displaylogo: false,
                                 modeBarButtonsToRemove: ['resetScale2d', 'toImage', 'zoomIn2d', 'autoScale2d', 'select2d', 'lasso2d'],
+                                logging: 0,
                             }}
                             className="w-full h-full"
                         />

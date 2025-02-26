@@ -80,8 +80,9 @@ export default function StrategyConfigDialog({
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
   
-  // Error state
+  // Error and success state
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   
   // Parameter states
   const [params, setParams] = useState<Record<string, any>>({});
@@ -99,6 +100,7 @@ export default function StrategyConfigDialog({
     
     setIsLoading(true);
     setError(null);
+    setSuccess(null);
     
     try {
       const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/params`);
@@ -144,6 +146,7 @@ export default function StrategyConfigDialog({
     
     setIsLoading(true);
     setError(null);
+    setSuccess(null);
     
     try {
       // Convert empty string values to defaults
@@ -158,7 +161,10 @@ export default function StrategyConfigDialog({
       });
       
       await onConfigSave(indicator, cleanedParams);
-      onOpenChange(false);
+      // Show success message instead of closing
+      setSuccess('Changes saved successfully!');
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error saving parameters:', error);
       setError('Failed to save parameters');
@@ -167,86 +173,94 @@ export default function StrategyConfigDialog({
     }
   };
 
-// Handle the optimize params click in StrategyConfigDialog.tsx
-    const handleOptimizeParams = async () => {
-        if (!indicator || !onOptimizeParams) return;
+  // Handle the optimize params click in StrategyConfigDialog.tsx
+  const handleOptimizeParams = async () => {
+    if (!indicator || !onOptimizeParams) return;
+    
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const optimizationResult = await onOptimizeParams(indicator);
+      
+      console.log('Got optimization result:', optimizationResult);
+      
+      // Extract from the correct structure: response.results.params
+      if (optimizationResult && optimizationResult.results && optimizationResult.results.params) {
+        const optimizedParams = optimizationResult.results.params;
         
-        setIsLoading(true);
-        setError(null);
+        // Apply the optimized parameters
+        setParams({
+          ...params,
+          ...optimizedParams
+        });
         
-        try {
-        const optimizationResult = await onOptimizeParams(indicator);
-        
-        console.log('Got optimization result:', optimizationResult);
-        
-        // Extract from the correct structure: response.results.params
-        if (optimizationResult && optimizationResult.results && optimizationResult.results.params) {
-            const optimizedParams = optimizationResult.results.params;
-            
-            // Apply the optimized parameters
-            setParams({
-            ...params,
-            ...optimizedParams
-            });
-            
-            console.log('Applied optimized parameters:', optimizedParams);
-        } else {
-            console.warn('Optimization did not return usable parameters', optimizationResult);
-        }
-        } catch (error) {
-        console.error('Error optimizing parameters:', error);
-        setError('Failed to optimize parameters');
-        } finally {
-        setIsLoading(false);
-        }
-    };
+        console.log('Applied optimized parameters:', optimizedParams);
+        setSuccess('Parameters optimized successfully!');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        console.warn('Optimization did not return usable parameters', optimizationResult);
+        setError('Optimization did not return usable parameters');
+      }
+    } catch (error) {
+      console.error('Error optimizing parameters:', error);
+      setError('Failed to optimize parameters');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // Handle the optimize weights click in StrategyConfigDialog.tsx
-    const handleOptimizeWeights = async () => {
-        if (!indicator || !onOptimizeWeights) return;
+  // Handle the optimize weights click in StrategyConfigDialog.tsx
+  const handleOptimizeWeights = async () => {
+    if (!indicator || !onOptimizeWeights) return;
+    
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+    
+    try {
+      const optimizationResult = await onOptimizeWeights(indicator);
+      
+      console.log('Weights optimization result:', optimizationResult);
+      
+      // Extract from the correct structure: response.results.weights and response.results.vote_threshold
+      if (optimizationResult && optimizationResult.results) {
+        const updatedParams = {...params};
         
-        setIsLoading(true);
-        setError(null);
-        
-        try {
-        const optimizationResult = await onOptimizeWeights(indicator);
-        
-        console.log('Weights optimization result:', optimizationResult);
-        
-        // Extract from the correct structure: response.results.weights and response.results.vote_threshold
-        if (optimizationResult && optimizationResult.results) {
-            const updatedParams = {...params};
-            
-            // Apply weights if they exist
-            if (optimizationResult.results.weights) {
-            updatedParams.weights = optimizationResult.results.weights;
-            console.log('Applying optimized weights:', optimizationResult.results.weights);
-            }
-            
-            // Apply vote threshold if it exists
-            if (optimizationResult.results.vote_threshold !== undefined) {
-            updatedParams.vote_threshold = optimizationResult.results.vote_threshold;
-            console.log('Applying optimized vote threshold:', optimizationResult.results.vote_threshold);
-            }
-            
-            // Apply any other parameters from results.params if they exist
-            if (optimizationResult.results.params) {
-            Object.assign(updatedParams, optimizationResult.results.params);
-            console.log('Applying other optimized params:', optimizationResult.results.params);
-            }
-            
-            setParams(updatedParams);
-            console.log('Final updated params:', updatedParams);
-        } else {
-            console.warn('Weight optimization did not return results in expected structure', optimizationResult);
+        // Apply weights if they exist
+        if (optimizationResult.results.weights) {
+          updatedParams.weights = optimizationResult.results.weights;
+          console.log('Applying optimized weights:', optimizationResult.results.weights);
         }
-        } catch (error) {
-        console.error('Error optimizing weights:', error);
-        setError('Failed to optimize weights');
-        } finally {
-        setIsLoading(false);
+        
+        // Apply vote threshold if it exists
+        if (optimizationResult.results.vote_threshold !== undefined) {
+          updatedParams.vote_threshold = optimizationResult.results.vote_threshold;
+          console.log('Applying optimized vote threshold:', optimizationResult.results.vote_threshold);
         }
-    };
+        
+        // Apply any other parameters from results.params if they exist
+        if (optimizationResult.results.params) {
+          Object.assign(updatedParams, optimizationResult.results.params);
+          console.log('Applying other optimized params:', optimizationResult.results.params);
+        }
+        
+        setParams(updatedParams);
+        console.log('Final updated params:', updatedParams);
+        setSuccess('Weights optimized successfully!');
+        setTimeout(() => setSuccess(null), 3000);
+      } else {
+        console.warn('Weight optimization did not return results in expected structure', optimizationResult);
+        setError('Weight optimization did not return expected results');
+      }
+    } catch (error) {
+      console.error('Error optimizing weights:', error);
+      setError('Failed to optimize weights');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Render the appropriate dialog based on the indicator type
   const renderDialogContent = () => {
@@ -316,6 +330,12 @@ export default function StrategyConfigDialog({
         {error && (
           <div className="py-2 text-center text-red-500">
             {error}
+          </div>
+        )}
+        
+        {success && (
+          <div className="py-2 text-center text-green-500">
+            {success}
           </div>
         )}
         

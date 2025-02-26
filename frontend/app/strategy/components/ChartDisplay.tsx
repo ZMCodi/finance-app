@@ -367,7 +367,6 @@ export default function ChartDisplay({
           domain: layout.xaxis.domain,
           gridcolor: 'rgba(50, 50, 50, 0.2)',
           zerolinecolor: 'rgba(50, 50, 50, 0.5)',
-          scaleanchor: 'x' // Anchor all x-axes to the main x-axis
         };
         
         // Apply shared x-axis properties to all subplots
@@ -389,7 +388,6 @@ export default function ChartDisplay({
       }
       
       // Set up linked zoom behavior - critical part for synchronization
-      layout.xaxis.matches = 'x';
       for (let i = 2; i <= numSubplots + 1; i++) {
         layout[`xaxis${i}`].matches = 'x';
       }
@@ -403,6 +401,7 @@ export default function ChartDisplay({
           responsive: true,
           displaylogo: false,
           modeBarButtonsToRemove: ['resetScale2d', 'toImage', 'zoomIn2d', 'autoScale2d', 'select2d', 'lasso2d'],
+          logging: 0
         }}
         className="w-full h-full"
       />
