@@ -22,6 +22,7 @@ import StrategyConfigDialog from './StrategyConfigDialog';
 import CombinedStrategyIndicatorRow from './CombinedStrategyIndicatorRow';
 import CombinedStrategyControls from './CombinedStrategyControls';
 import BacktestChart from './BacktestChart';
+import SignalManagement from './SignalManagement';
 import { get } from 'http';
 
 export default function StrategyContainer() {
@@ -54,7 +55,13 @@ export default function StrategyContainer() {
   const [activeSideTab, setActiveSideTab] = useState<string>('chart');
 
   // buy/sell signal data
-  const [signalData, setSignalData] = useState<Record<string, any>>({});
+  const [signalData, setSignalData] = useState<{
+    '5m': Record<string, any>,
+    '1d': Record<string, any>
+  }>({
+    '5m': {},
+    '1d': {}
+  });
 
   // backtest results
   const [backtestResults, setBacktestResults] = useState<Record<string, any>>({});
@@ -234,9 +241,14 @@ export default function StrategyContainer() {
   
     // Clear signal data for this strategy
     setSignalData(prev => {
-      const updated = { ...prev };
-      delete updated[strategyId];
-      return updated;
+      const updated5m = { ...prev['5m'] };
+      const updated1d = { ...prev['1d'] };
+      delete updated5m[strategyId];
+      delete updated1d[strategyId];
+      return {
+        '5m': updated5m,
+        '1d': updated1d
+      };
     });
   };
   
@@ -280,15 +292,34 @@ export default function StrategyContainer() {
       
       console.log('Signal generation result:', result);
       
-      // Store the signal data by strategy ID
+      // Store the signal data by timeframe and strategy ID
       setSignalData(prev => ({
         ...prev,
-        [strategyId]: result
+        [currentTimeframe]: {
+          ...prev[currentTimeframe],
+          [strategyId]: result
+        }
       }));
       
     } catch (error) {
       console.error(`Error generating signals for strategy ${strategyId}:`, error);
     }
+  };
+  
+  // 3. Update the handleRemoveSignal function to remove signals by timeframe:
+  const handleRemoveSignal = (strategyId: string) => {
+    console.log(`Removing signal for strategy ${strategyId} in timeframe ${activeTab}`);
+    
+    // Remove the signal data for this strategy in the current timeframe
+    setSignalData(prev => {
+      const updatedTimeframeData = { ...prev[activeTab] };
+      delete updatedTimeframeData[strategyId];
+      
+      return {
+        ...prev,
+        [activeTab]: updatedTimeframeData
+      };
+    });
   };
   
   // Handler for adding to strategy
@@ -607,7 +638,8 @@ export default function StrategyContainer() {
             {/* Content Based on Selected Tab */}
             <Tabs value={activeSideTab} className="h-full w-full">
               <TabsContent value="chart" className="h-full mt-0 w-full">
-              <ChartDisplay 
+                <div className="flex flex-col h-full">
+                <ChartDisplay 
                   ticker={selectedAsset}
                   activeTab={activeTab}
                   showIndicators={activeStrategies.length > 0}
@@ -619,8 +651,15 @@ export default function StrategyContainer() {
                   skipDailyFetch={!dailyNeedsRefresh}
                   activeStrategies={activeStrategies}
                   indicatorPlots={indicatorPlots}
-                  signalData={signalData}
+                  signalData={signalData[activeTab]}
                 />
+                <SignalManagement
+                activeStrategies={activeStrategies}
+                signalData={signalData[activeTab]}
+                onRemoveSignal={handleRemoveSignal}
+                timeframe={activeTab}
+                />
+                </div>
               </TabsContent>
               
               <TabsContent value="strategy" className="h-full mt-0 w-full">
