@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover-dialog';
 
 interface BacktestDialogProps {
   open: boolean;
@@ -38,6 +38,9 @@ export default function BacktestDialog({
   const [startDate, setStartDate] = useState<Date | undefined>(currentStartDate);
   const [endDate, setEndDate] = useState<Date | undefined>(currentEndDate);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Track active popover state
+  const [activePopover, setActivePopover] = useState<string | null>(null);
 
   // Reset state when dialog opens
   React.useEffect(() => {
@@ -64,7 +67,7 @@ export default function BacktestDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Backtest Settings</DialogTitle>
+          <DialogTitle>Backtest Settings ({currentTimeframe} timeframe)</DialogTitle>
         </DialogHeader>
         
         <div className="grid gap-4 py-4">
@@ -74,22 +77,31 @@ export default function BacktestDialog({
               Start Date
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover 
+                open={activePopover === 'start-date'} 
+                onOpenChange={(open) => {
+                  setActivePopover(open ? 'start-date' : null);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
+                    id="start-date"
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
                     disabled={isLoading}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Pick a date"}
+                    {startDate ? format(startDate, 'MMM d, yyyy') : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={setStartDate}
+                    onSelect={(date) => {
+                      setStartDate(date);
+                      setActivePopover(null);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
@@ -103,22 +115,31 @@ export default function BacktestDialog({
               End Date
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover 
+                open={activePopover === 'end-date'} 
+                onOpenChange={(open) => {
+                  setActivePopover(open ? 'end-date' : null);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button
+                    id="end-date"
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
                     disabled={isLoading}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : "Pick a date"}
+                    {endDate ? format(endDate, 'MMM d, yyyy') : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={setEndDate}
+                    onSelect={(date) => {
+                      setEndDate(date);
+                      setActivePopover(null);
+                    }}
                     initialFocus
                     disabled={(date) => 
                       startDate ? date < startDate : false
