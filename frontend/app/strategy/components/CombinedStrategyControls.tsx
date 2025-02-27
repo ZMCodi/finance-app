@@ -5,26 +5,37 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, TestTubeDiagonal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import BacktestDialog from './dialogs/BacktestDialog';
 
 interface CombinedStrategyControlsProps {
   params: Record<string, any>;
   onParamChange: (key: string, value: any) => void;
   isLoading: boolean;
+  onBacktest?: (startDate?: Date, endDate?: Date) => Promise<void>;
   onOptimizeWeights?: () => Promise<void>;
   onApplyChanges: () => Promise<void>;
+  currentTimeframe: string;
+  currentStartDate?: Date;
+  currentEndDate?: Date;
 }
 
 export default function CombinedStrategyControls({
   params,
   onParamChange,
   isLoading,
+  onBacktest,
   onOptimizeWeights,
-  onApplyChanges
+  onApplyChanges,
+  currentTimeframe,
+  currentStartDate,
+  currentEndDate
 }: CombinedStrategyControlsProps) {
   // Success message state
   const [optimizeSuccess, setOptimizeSuccess] = useState(false);
+  // State for backtest dialog
+  const [backtestDialogOpen, setBacktestDialogOpen] = useState(false);
   
   // Handle number input change (convert string to number)
   const handleNumberChange = (key: string, value: string) => {
@@ -52,9 +63,9 @@ export default function CombinedStrategyControls({
   };
 
   return (
-    <div className="mb-3 pb-3 border-b">
+    <div className="mb-1 pb-1 border-b">
       {/* Title and controls in one line */}
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-1">
         <div className="flex items-center space-x-4">
           <h4 className="font-medium text-sm">Strategy Parameters</h4>
           
@@ -101,6 +112,18 @@ export default function CombinedStrategyControls({
         </div>
         
         <div className="flex gap-2">
+          {onBacktest && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setBacktestDialogOpen(true)}
+              disabled={isLoading}
+              className="h-7 text-xs px-2"
+            >
+              <TestTubeDiagonal />
+              Backtest
+            </Button>
+          )}
           {onOptimizeWeights && (
             <Button 
               variant="outline" 
@@ -130,6 +153,18 @@ export default function CombinedStrategyControls({
         <div className="mb-2 p-1.5 bg-green-50 border border-green-200 rounded text-green-600 text-xs">
           Weights optimized successfully!
         </div>
+      )}
+
+      {/* Backtest Dialog */}
+      {onBacktest && (
+        <BacktestDialog
+          open={backtestDialogOpen}
+          onOpenChange={setBacktestDialogOpen}
+          onBacktest={onBacktest}
+          currentTimeframe={currentTimeframe}
+          currentStartDate={currentStartDate}
+          currentEndDate={currentEndDate}
+        />
       )}
     </div>
   );

@@ -323,7 +323,8 @@ class Strategy(ABC):
                     y=df['signal'],
                     line=dict(color='green', width=0.8, dash='solid'),
                     name='Buy/Sell signal',
-                    yaxis='y2'
+                    yaxis='y2',
+                    showlegend=False
                 )
 
 
@@ -338,11 +339,7 @@ class Strategy(ABC):
             # Update layout with secondary y-axis
             layout = {}
 
-            layout['title'] = dict(
-                    text=f'{self.asset.ticker} {name} Backtest {self.params}',
-                    x=0.5,
-                    y=0.95
-                )
+
 
             layout['xaxis'] = dict(
                     showgrid=True,
@@ -363,31 +360,34 @@ class Strategy(ABC):
 
             if show_signal:
                 layout['yaxis2'] = dict(
-                        title='Signal',
                         overlaying='y',
                         side='right',
                         range=[-1.1, 1.1],
                         tickmode='array',
                         tickvals=[-1, 1],
-                        ticktext=['Sell', 'Buy']
+                        ticktext=['Sell', 'Buy'],
+                        showgrid=False,
+                        zeroline=False
                     )
 
-            layout['legend'] = dict(
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="center",
-                    x=0.5,
-                    orientation="h",
-                    bgcolor='rgba(255,255,255,0.8)'
-                )
+            # layout['legend'] = dict(
+            #         yanchor="bottom",
+            #         y=1.02,
+            #         xanchor="center",
+            #         x=0.5,
+            #         orientation="h",
+            #         bgcolor='rgba(255,255,255,0.8)'
+            #     )
 
             fig.update_layout(**layout,
-                                paper_bgcolor='white',
-                                plot_bgcolor='rgba(240,240,240,0.95)',
-                                hovermode='x unified')
+                                paper_bgcolor='rgba(0, 0, 0, 0)',
+                                plot_bgcolor='rgba(0, 0, 0, 0)',
+                                hovermode='x unified',
+                                hoverlabel=dict(bgcolor='rgba(0, 0, 0, 0.5)'),
+                                font=dict(color='white'))
 
             # fig.show()
-            return np.exp(df[['returns', 'strategy']].sum()) - 1, fig
+            return np.exp(df[['returns', 'strategy']].sum()) - 1, [fig]
             
 
 

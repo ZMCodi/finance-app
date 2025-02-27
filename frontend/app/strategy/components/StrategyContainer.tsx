@@ -21,6 +21,8 @@ import useStrategyOperations from '../hooks/useStrategyOperations';
 import StrategyConfigDialog from './StrategyConfigDialog';
 import CombinedStrategyIndicatorRow from './CombinedStrategyIndicatorRow';
 import CombinedStrategyControls from './CombinedStrategyControls';
+import BacktestChart from './BacktestChart';
+import { get } from 'http';
 
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
@@ -53,6 +55,10 @@ export default function StrategyContainer() {
 
   // buy/sell signal data
   const [signalData, setSignalData] = useState<Record<string, any>>({});
+
+  // backtest results
+  const [backtestResults, setBacktestResults] = useState<Record<string, any>>({});
+  const [backtestLoading, setBacktestLoading] = useState(false);
 
   const [combinedParams, setCombinedParams] = useState<Record<string, any>>({
     method: 'weighted',
@@ -261,9 +267,9 @@ export default function StrategyContainer() {
     console.log(`Generate signal for strategy ${strategyId}`);
     
     try {
-      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
-      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      const currentTimeframe = activeTab;
+      const startDate = getActiveStartDate();
+      const endDate = getActiveEndDate();
       
       const result = await actions.generateSignal(
         strategyId,
@@ -313,9 +319,9 @@ export default function StrategyContainer() {
       
       console.log(`Optimizing parameters for ${indicator} (ID: ${activeConfigStrategyId})`);
       
-      const timeframe = activeTab === '5m' ? '5m' : '1d';
-      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      const timeframe = activeTab;
+      const startDate = getActiveStartDate();
+      const endDate = getActiveEndDate();
       
       const result = await actions.optimizeIndicator(
         activeConfigStrategyId,
@@ -368,9 +374,9 @@ export default function StrategyContainer() {
       
       console.log(`Optimizing weights for strategy ID ${activeConfigStrategyId}`);
       
-      const timeframe = activeTab === '5m' ? '5m' : '1d';
-      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      const timeframe = activeTab;
+      const startDate = getActiveStartDate();
+      const endDate = getActiveEndDate();
       
       const result = await actions.optimizeStrategyWeights(
         activeConfigStrategyId,  // Use strategyId directly
@@ -430,9 +436,9 @@ export default function StrategyContainer() {
   const handleOptimizeCombinedWeights = async () => {
     if (!strategyState.combinedStrategyId || combinedStrategyIndicators.length === 0) return;
     
-    const timeframe = activeTab === '5m' ? '5m' : '1d';
-    const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-    const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+    const timeframe = activeTab;
+    const startDate = getActiveStartDate();
+    const endDate = getActiveEndDate();
     
     try {
       // Show loading state
@@ -505,6 +511,39 @@ export default function StrategyContainer() {
       console.log('Combined strategy parameters updated successfully');
     } catch (error) {
       console.error('Error updating combined strategy parameters:', error);
+    }
+  };
+
+  // Add handler for backtesting
+  const handleBacktest = async (startDate?: Date, endDate?: Date) => {
+    if (!strategyState.combinedStrategyId) {
+      console.error('No combined strategy ID found for backtesting');
+      return;
+    }
+  
+    setBacktestLoading(true);
+    
+    try {
+      // Always use the current activeTab for timeframe
+      const currentTimeframe = activeTab;
+      
+      // Use provided dates if available, otherwise use active ones
+      const effectiveStartDate = startDate || getActiveStartDate();
+      const effectiveEndDate = endDate || getActiveEndDate();
+      
+      const result = await actions.backtestStrategy(
+        strategyState.combinedStrategyId,
+        currentTimeframe,
+        effectiveStartDate,
+        effectiveEndDate
+      );
+      console.log('Backtest result:', result);
+      
+      setBacktestResults(result);
+    } catch (error) {
+      console.error('Error backtesting combined strategy:', error);
+    } finally {
+      setBacktestLoading(false);
     }
   };
 
@@ -585,21 +624,25 @@ export default function StrategyContainer() {
               </TabsContent>
               
               <TabsContent value="strategy" className="h-full mt-0 w-full">
-                <div className="h-[70vh] p-4 border rounded-lg">
-                  <h3 className="text-lg font-medium mb-4">Strategy Builder</h3>
+                <div className="h-[90vh] p-2 border rounded-lg">
+                  <h3 className="text-lg font-medium mb-1">Strategy Builder</h3>
                   
                   {strategyState.combinedStrategyId ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 flex flex-col h-[95%]">
                       {/* Combined Strategy Controls */}
                       <CombinedStrategyControls
                         params={combinedParams}
                         onParamChange={handleCombinedParamChange}
-                        isLoading={operationState.optimize.isLoading}
+                        isLoading={operationState.optimize.isLoading || operationState.backtest.isLoading}
+                        onBacktest={handleBacktest}
                         onOptimizeWeights={handleOptimizeCombinedWeights}
                         onApplyChanges={handleApplyCombinedChanges}
+                        currentTimeframe={activeTab}
+                        currentStartDate={getActiveStartDate()}
+                        currentEndDate={getActiveEndDate()}
                       />
                       
-                      <div className="border p-2 rounded-lg">
+                      {/* <div className=""> */}
                         <h4 className="font-medium text-sm mb-2">Strategy Components</h4>
                         {combinedStrategyIndicators.length > 0 ? (
                           <div className="flex flex-wrap">
@@ -621,17 +664,19 @@ export default function StrategyContainer() {
                         ) : (
                           <p className="text-gray-500 text-xs">No indicators added to strategy yet</p>
                         )}
-                      </div>
-                      
-                      <div className="flex space-x-2">
-                        <Button 
-                          className="px-3 py-1"
-                          onClick={() => {
-                            // ...backtest function...
-                          }}
-                        >
-                          Backtest
-                        </Button>
+                      {/* </div> */}
+
+                      <div className="border p-2 pb-1 rounded-lg flex-1 flex flex-col">
+                        <h4 className="font-medium text-sm mb-2">Backtest Results</h4>
+                        <div className="flex-1 min-h-0">
+                          {backtestLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                              <span>Loading backtest results...</span>
+                            </div>
+                          ) : (
+                            <BacktestChart backtestResults={backtestResults} />
+                          )}
+                        </div>
                       </div>
                     </div>
                   ) : (

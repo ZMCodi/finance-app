@@ -275,7 +275,7 @@ export class StrategyOperations {
       if (endDateStr) {
         params.append('end_date', endDateStr);
       }
-      
+      console.log("Backtesting strategy using utils:", strategyId, params.toString());
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/backtest?${params.toString()}`);
       
       if (!response.ok) {

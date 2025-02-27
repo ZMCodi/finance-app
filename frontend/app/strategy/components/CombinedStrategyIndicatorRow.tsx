@@ -47,22 +47,21 @@ export default function CombinedStrategyIndicatorRow({
   };
   
   return (
-    <div className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-md p-1.5 m-1">
-      <span className="font-medium text-xs">{indicatorType}</span>
+    <div className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full p-1.5 m-1 mt-0">
+      <span className="font-medium text-xs m-1">{indicatorType}</span>
       
-      {/* Weight Input */}
-      <Input
-        type="number"
-        min="0"
-        max="1"
-        step="0.01"
-        value={localWeight}
-        onChange={(e) => handleWeightChange(e.target.value)}
-        disabled={isLoading || !isWeightEditable}
-        className="h-6 w-14 text-xs px-1 py-0.5 mx-1"
-      />
-      
-      {/* Actions Dropdown */}
+        <Input
+          type="number"
+          min="0"
+          max="1"
+          step="0.01"
+          value={localWeight.toFixed(2)}
+          onChange={(e) => handleWeightChange(e.target.value)}
+          disabled={isLoading || !isWeightEditable}
+          className="h-6 w-14 text-xs px-0.5 py-0.5"
+        />
+        
+        {/* Actions Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button 
@@ -83,15 +82,6 @@ export default function CombinedStrategyIndicatorRow({
           >
             <Settings className="mr-1.5 h-3 w-3" />
             <span>Configure</span>
-          </DropdownMenuItem>
-          
-          <DropdownMenuItem
-            onClick={() => onRemove(strategyId)}
-            className="text-red-600 focus:text-red-600 text-xs py-1.5"
-            disabled={isLoading}
-          >
-            <X className="mr-1.5 h-3 w-3" />
-            <span>Remove</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
