@@ -20,25 +20,28 @@ import IndicatorPanel, { IndicatorType } from './IndicatorPanel';
 interface ChartControlsProps {
   activeTab: string;
   showVolume: boolean;
-  activeIndicators: IndicatorType[];
+  // Use activeStrategies instead of activeIndicators
+  activeStrategies: Array<{ id: string; indicator: IndicatorType }>;
   startDate?: Date;
   endDate?: Date;
   isLoading?: boolean;
   onTabChange: (tab: string) => void;
   onVolumeChange: (show: boolean) => void;
   onSelectIndicator: (indicator: IndicatorType) => void;
-  onRemoveIndicator: (indicator: IndicatorType) => void;
+  // Update to use strategy ID
+  onRemoveIndicator: (strategyId: string) => void;
   onStartDateChange: (date?: Date) => void;
   onEndDateChange: (date?: Date) => void;
-  onConfigureIndicator: (indicator: IndicatorType) => void;
-  onGenerateSignal: (indicator: IndicatorType) => void;
-  onAddToStrategy: (indicator: IndicatorType) => void;
+  // Update to use strategy ID
+  onConfigureIndicator: (strategyId: string) => void;
+  onGenerateSignal: (strategyId: string) => void;
+  onAddToStrategy: (strategyId: string) => void;
 }
 
 export default function ChartControls({
   activeTab,
   showVolume,
-  activeIndicators,
+  activeStrategies,
   startDate,
   endDate,
   isLoading = false,
@@ -56,7 +59,7 @@ export default function ChartControls({
   const [activePopover, setActivePopover] = useState<string | null>(null);
   
   // State for indicator menu
-  const [activeMenuIndicator, setActiveMenuIndicator] = useState<IndicatorType | null>(null);
+  const [activeMenuStrategyId, setActiveMenuStrategyId] = useState<string | null>(null);
   
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -134,23 +137,23 @@ export default function ChartControls({
       {/* Indicator Selector */}
       <IndicatorPanel 
         onSelectIndicator={onSelectIndicator} 
-        activeIndicators={activeIndicators} 
+        activeIndicators={activeStrategies.map((s) => s.indicator)} 
       />
       
       {/* Active Indicators Display */}
-      <div className="flex flex-wrap gap-1">
-        {activeIndicators.map((indicator) => (
+        <div className="flex flex-wrap gap-1">
+        {activeStrategies.map(({ id, indicator }) => (
           <div 
-            key={indicator} 
+            key={id} 
             className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-1 text-xs"
           >
             <span>{indicator}</span>
             
             {/* Indicator Actions Menu */}
             <DropdownMenu
-              open={activeMenuIndicator === indicator}
+              open={activeMenuStrategyId === id}
               onOpenChange={(open) => {
-                setActiveMenuIndicator(open ? indicator : null);
+                setActiveMenuStrategyId(open ? id : null);
               }}
             >
               <DropdownMenuTrigger asChild>
@@ -167,7 +170,7 @@ export default function ChartControls({
               
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
-                  onClick={() => onConfigureIndicator(indicator)}
+                  onClick={() => onConfigureIndicator(id)}
                   disabled={isLoading}
                 >
                   <Settings className="mr-2 h-4 w-4" />
@@ -175,7 +178,7 @@ export default function ChartControls({
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem
-                  onClick={() => onGenerateSignal(indicator)}
+                  onClick={() => onGenerateSignal(id)}
                   disabled={isLoading}
                 >
                   <LineChart className="mr-2 h-4 w-4" />
@@ -183,7 +186,7 @@ export default function ChartControls({
                 </DropdownMenuItem>
                 
                 <DropdownMenuItem
-                  onClick={() => onAddToStrategy(indicator)}
+                  onClick={() => onAddToStrategy(id)}
                   disabled={isLoading}
                 >
                   <FolderPlus className="mr-2 h-4 w-4" />
@@ -197,7 +200,7 @@ export default function ChartControls({
               variant="ghost"
               size="sm"
               className="h-4 w-4 p-0 rounded-full hover:bg-red-100 hover:text-red-600"
-              onClick={() => onRemoveIndicator(indicator)}
+              onClick={() => onRemoveIndicator(id)}
               disabled={isLoading}
             >
               <X className="h-3 w-3" />

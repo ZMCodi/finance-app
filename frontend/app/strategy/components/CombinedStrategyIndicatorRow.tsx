@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { IndicatorType } from './IndicatorPanel';
 import { CombinedStrategyIndicator } from '../hooks/useStrategyOperations';
+import { useEffect, useState } from 'react';
 
 interface CombinedStrategyIndicatorRowProps {
   indicator: CombinedStrategyIndicator;
@@ -30,6 +31,21 @@ export default function CombinedStrategyIndicatorRow({
 }: CombinedStrategyIndicatorRowProps) {
   const { strategyId, indicatorType, weight } = indicator;
   
+  // Keep a local weight state to track changes
+  const [localWeight, setLocalWeight] = useState(weight);
+  
+  // Update local weight when the indicator's weight changes (e.g., from optimization)
+  useEffect(() => {
+    setLocalWeight(weight);
+  }, [weight]);
+  
+  // Handle local weight change
+  const handleWeightChange = (value: string) => {
+    const newWeight = parseFloat(value) || 0;
+    setLocalWeight(newWeight);
+    onWeightChange(strategyId, newWeight);
+  };
+  
   return (
     <li className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
       <div className="flex items-center gap-2 flex-1">
@@ -45,8 +61,8 @@ export default function CombinedStrategyIndicatorRow({
             min="0"
             max="1"
             step="0.01"
-            value={weight}
-            onChange={(e) => onWeightChange(strategyId, parseFloat(e.target.value) || 0)}
+            value={localWeight}
+            onChange={(e) => handleWeightChange(e.target.value)}
             disabled={isLoading || !isWeightEditable}
             className="h-8 text-sm"
           />

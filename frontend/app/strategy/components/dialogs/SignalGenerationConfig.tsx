@@ -19,7 +19,7 @@ interface SignalGenerationConfigProps {
   onParamChange: (key: string, value: any) => void;
   signalTypes: SignalInfo[];
   isLoading: boolean;
-  onOptimizeWeights?: () => Promise<Record<string, any>>;
+  onOptimizeWeights?: () => Promise<Record<string, any>>; // Remove indicator type parameter
 }
 
 export default function SignalGenerationConfig({

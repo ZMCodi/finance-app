@@ -1,4 +1,4 @@
-// app/strategy/components/ChartDisplay.tsx
+// app/strategy/components/ChartDisplay.tsx - Fixed version
 'use client';
 
 import { Tabs, TabsContent } from '@/components/ui/tabs';
@@ -15,7 +15,7 @@ const Plot = dynamic(() => import('react-plotly.js'), {
   loading: () => <div>Loading...</div>,
 });
 
-type ChartDisplayProps = {
+interface ChartDisplayProps {
   ticker: string;
   activeTab: string;
   showIndicators: boolean;
@@ -23,13 +23,14 @@ type ChartDisplayProps = {
   dailyQueryString: string;
   onFiveMinLoad: () => void;
   onDailyLoad: () => void;
-  skipFiveMinFetch: boolean;
-  skipDailyFetch: boolean;
-  activeIndicators: IndicatorType[];
-  indicatorPlots: Record<string, PlotJSON[]>;
-  strategies: Record<IndicatorType, string>;
-  signalData: Record<IndicatorType, any>;
-};
+  skipFiveMinFetch?: boolean;
+  skipDailyFetch?: boolean;
+  // Updated to use activeStrategies with ID-based approach
+  activeStrategies: Array<{ id: string; indicator: IndicatorType }>;
+  indicatorPlots: Record<string, PlotJSON>;
+  // signalData now uses strategy IDs
+  signalData: Record<string, any>;
+}
 
 export default function ChartDisplay({
   ticker,
@@ -39,11 +40,10 @@ export default function ChartDisplay({
   dailyQueryString,
   onFiveMinLoad,
   onDailyLoad,
-  skipFiveMinFetch,
-  skipDailyFetch,
-  activeIndicators,
+  skipFiveMinFetch = false,
+  skipDailyFetch = false,
+  activeStrategies,
   indicatorPlots,
-  strategies,
   signalData
 }: ChartDisplayProps) {
   // State to store main chart data
@@ -125,8 +125,11 @@ export default function ChartDisplay({
     const combinedData = [...mainPlot.data];
     
     // Count how many additional subplots we'll need
-    const rsiActive = activeIndicators.includes('RSI');
-    const macdActive = activeIndicators.includes('MACD');
+    const rsiTypes = activeStrategies.filter(s => s.indicator === 'RSI');
+    const macdTypes = activeStrategies.filter(s => s.indicator === 'MACD');
+    
+    const rsiActive = rsiTypes.length > 0;
+    const macdActive = macdTypes.length > 0;
     
     // Count the total number of subplots needed (excluding main chart)
     const numAdditionalSubplots = (rsiActive ? 1 : 0) + (macdActive ? 1 : 0);
@@ -195,10 +198,10 @@ export default function ChartDisplay({
       domain: layout.yaxis.domain // Same domain as main chart
     };
     
-    // Add signals if available for any active indicator
-    for (const indicator of activeIndicators) {
-      if (signalData[indicator]) {
-        const signalResult = signalData[indicator];
+    // Add signals if available for any active strategy
+    for (const strategy of activeStrategies) {
+      if (signalData[strategy.id]) {
+        const signalResult = signalData[strategy.id];
         
         // Convert the signals object to arrays for plotting
         const dates = Object.keys(signalResult.signals);
@@ -211,7 +214,7 @@ export default function ChartDisplay({
             y: values,
             type: 'scatter',
             mode: 'lines',
-            name: `${indicator} Signal`,
+            name: `${strategy.indicator} Signal`,
             line: {
               width: 1.5
             },
@@ -263,12 +266,21 @@ export default function ChartDisplay({
     
     // Add RSI if active
     if (rsiActive) {
-      const strategyId = strategies['RSI'];
-      const plotData = indicatorPlots[strategyId];
+      // Find all RSI strategy IDs
+      const rsiStrategyIds = activeStrategies
+        .filter(s => s.indicator === 'RSI')
+        .map(s => s.id);
       
-      if (plotData && plotData.length > 0) {
-        const rsiPlot = plotData[0];
-        
+      // Use the first available RSI plot
+      let rsiPlot = null;
+      for (const strategyId of rsiStrategyIds) {
+        if (indicatorPlots[strategyId] && indicatorPlots[strategyId].length > 0) {
+          rsiPlot = indicatorPlots[strategyId][0];
+          break;
+        }
+      }
+      
+      if (rsiPlot) {
         // Calculate domain for RSI
         const rsiDomainTop = currentPosition;
         currentPosition -= additionalSubplotHeight;
@@ -310,12 +322,21 @@ export default function ChartDisplay({
     
     // Add MACD if active
     if (macdActive) {
-      const strategyId = strategies['MACD'];
-      const plotData = indicatorPlots[strategyId];
+      // Find all MACD strategy IDs
+      const macdStrategyIds = activeStrategies
+        .filter(s => s.indicator === 'MACD')
+        .map(s => s.id);
       
-      if (plotData && plotData.length > 0) {
-        const macdPlot = plotData[0];
-        
+      // Use the first available MACD plot
+      let macdPlot = null;
+      for (const strategyId of macdStrategyIds) {
+        if (indicatorPlots[strategyId] && indicatorPlots[strategyId].length > 0) {
+          macdPlot = indicatorPlots[strategyId][0];
+          break;
+        }
+      }
+      
+      if (macdPlot) {
         // Calculate domain for MACD
         const macdDomainTop = currentPosition;
         currentPosition -= additionalSubplotHeight;
@@ -344,11 +365,10 @@ export default function ChartDisplay({
       }
     }
     
-    // Add MA and BB overlays
-    activeIndicators.forEach(indicator => {
-      if (indicator !== 'RSI' && indicator !== 'MACD') {
-        const strategyId = strategies[indicator];
-        const plotData = indicatorPlots[strategyId];
+    // Add MA and BB overlays for non-subplot indicators
+    activeStrategies.forEach(strategy => {
+      if (strategy.indicator !== 'RSI' && strategy.indicator !== 'MACD') {
+        const plotData = indicatorPlots[strategy.id];
         
         if (plotData && plotData.length > 0) {
           const indicatorPlot = plotData[0];
@@ -421,7 +441,7 @@ export default function ChartDisplay({
       <Tabs value={activeTab} className="h-full">
         <TabsContent value="5m" className="h-full">
           <div className="relative h-full">
-            {showIndicators && activeIndicators.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
+            {showIndicators && activeStrategies.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
               // If we have indicators, use the combined plot
               <div className="w-full h-full">
                 {loading ? (
@@ -446,7 +466,7 @@ export default function ChartDisplay({
 
         <TabsContent value="1d" className="h-full">
           <div className="relative h-full">
-            {showIndicators && activeIndicators.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
+            {showIndicators && activeStrategies.length > 0 && Object.keys(indicatorPlots).length > 0 ? (
               // If we have indicators, use the combined plot
               <div className="w-full h-full">
                 {loading ? (

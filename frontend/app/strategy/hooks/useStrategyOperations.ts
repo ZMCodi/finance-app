@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { strategyOperations } from '../utils/strategyOperations';
 import { IndicatorType, strategyNameMap } from '../components/IndicatorPanel';
 import { PlotJSON } from '@/src/api/index';
+import { getIndicatorTypeFromId, getStrategyTypeFromId } from '../utils/strategyIdUtils';
 
 export interface StrategyOperation {
   isLoading: boolean;
@@ -17,9 +18,13 @@ export interface CombinedStrategyIndicator {
   weight: number;
 }
 
+export interface ActiveStrategy {
+  id: string;
+  indicator: IndicatorType;
+}
+
 export interface StrategyState {
-  activeIndicators: IndicatorType[];
-  strategies: Record<IndicatorType, string>;  // Indicator type -> strategy_id
+  activeStrategies: ActiveStrategy[];
   indicatorPlots: Record<string, PlotJSON>;  // Strategy ID -> Plot data
   combinedStrategyId: string | null;
   // Track combined strategy indicators by their strategy IDs
@@ -39,8 +44,7 @@ export interface StrategyOperationState {
 
 export default function useStrategyOperations(
   initialState: StrategyState = {
-    activeIndicators: [],
-    strategies: {},
+    activeStrategies: [],
     indicatorPlots: {},
     combinedStrategyId: null,
     combinedStrategyIndicators: []
@@ -97,11 +101,7 @@ export default function useStrategyOperations(
       // Update state with new strategy
       setState(prev => ({
         ...prev,
-        activeIndicators: [...prev.activeIndicators, indicator],
-        strategies: {
-          ...prev.strategies,
-          [indicator]: strategyId
-        }
+        activeStrategies: [...prev.activeStrategies, { id: strategyId, indicator }]
       }));
       
       return strategyId;
@@ -118,7 +118,7 @@ export default function useStrategyOperations(
     endDate?: Date
   ) => {
     // Skip if no strategies
-    if (Object.keys(state.strategies).length === 0) return;
+    if (state.activeStrategies.length === 0) return;
     
     // Build query params
     const params = new URLSearchParams();
@@ -136,7 +136,7 @@ export default function useStrategyOperations(
     
     // Update each strategy plot
     const updatedPlots: Record<string, PlotJSON> = {};
-    const strategyFetches = Object.entries(state.strategies).map(async ([indicator, strategyId]) => {
+    const strategyFetches = state.activeStrategies.map(async ({ id: strategyId }) => {
       try {
         // Create a cache key
         const cacheKey = `${strategyId}-${timeframe}-${queryString}`;
@@ -151,7 +151,7 @@ export default function useStrategyOperations(
           updatedPlots[strategyId] = plotData;
         }
       } catch (error) {
-        console.error(`Error updating plot for ${indicator}:`, error);
+        console.error(`Error updating plot for strategy ${strategyId}:`, error);
       }
     });
     
@@ -166,15 +166,10 @@ export default function useStrategyOperations(
   };
 
   // Configure strategy parameters
-  const configureIndicator = async (indicator: IndicatorType, params: Record<string, any>) => {
+  const configureIndicator = async (strategyId: string, params: Record<string, any>) => {
     updateOperationState('configure', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
       const result = await strategyOperations.configureStrategy(strategyId, params);
       setConfigureResult(result);
       updateOperationState('configure', false);
@@ -191,7 +186,7 @@ export default function useStrategyOperations(
 
   // Optimize strategy parameters
   const optimizeIndicator = async (
-    indicator: IndicatorType,
+    strategyId: string,
     timeframe: string = '1d',
     startDate?: Date,
     endDate?: Date
@@ -199,11 +194,6 @@ export default function useStrategyOperations(
     updateOperationState('optimize', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
       const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
       const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
       
@@ -229,7 +219,7 @@ export default function useStrategyOperations(
 
   // Optimize weights for a combined strategy
   const optimizeStrategyWeights = async (
-    indicator: IndicatorType,
+    strategyId: string,
     timeframe: string = '1d',
     startDate?: Date,
     endDate?: Date,
@@ -238,11 +228,6 @@ export default function useStrategyOperations(
     updateOperationState('optimizeWeights', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
       const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
       const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
       
@@ -269,7 +254,7 @@ export default function useStrategyOperations(
 
   // Generate signals
   const generateSignal = async (
-    indicator: IndicatorType,
+    strategyId: string,
     timeframe: string = '1d',
     startDate?: Date,
     endDate?: Date
@@ -277,11 +262,6 @@ export default function useStrategyOperations(
     updateOperationState('generateSignal', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
       const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
       const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
       
@@ -302,13 +282,15 @@ export default function useStrategyOperations(
   };
 
   // Add to strategy
-  const addToStrategy = async (indicator: IndicatorType, weight: number = 1.0) => {
+  const addToStrategy = async (strategyId: string, weight: number = 1.0) => {
     updateOperationState('addToStrategy', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
+      // Get the indicator type for this strategy ID
+      const indicatorType = getIndicatorTypeFromId(strategyId);
+      
+      if (!indicatorType) {
+        throw new Error(`Unknown indicator type for strategy ID: ${strategyId}`);
       }
       
       // If no combined strategy exists yet, create one
@@ -320,7 +302,7 @@ export default function useStrategyOperations(
           combinedStrategyIndicators: [
             {
               strategyId,
-              indicatorType: indicator,
+              indicatorType,
               weight
             }
           ]
@@ -351,7 +333,7 @@ export default function useStrategyOperations(
             ...prev.combinedStrategyIndicators, 
             {
               strategyId,
-              indicatorType: indicator,
+              indicatorType,
               weight
             }
           ]
@@ -378,7 +360,7 @@ export default function useStrategyOperations(
         throw new Error("No combined strategy exists");
       }
       
-      // Call the API to remove the strategy
+      // Call the API to remove the strategy from the combined strategy
       await strategyOperations.removeFromCombinedStrategy(
         state.combinedStrategyId,
         strategyId
@@ -392,6 +374,19 @@ export default function useStrategyOperations(
         )
       }));
       
+      // Check if this strategy is still in the active indicators
+      const isInActiveIndicators = state.activeStrategies.some(
+        strategy => strategy.id === strategyId
+      );
+      
+      // If it's not in active indicators anymore, we can delete it from cache
+      if (!isInActiveIndicators) {
+        console.log(`Strategy ${strategyId} is not in active indicators, deleting from cache`);
+        await strategyOperations.deleteStrategy(strategyId);
+      } else {
+        console.log(`Strategy ${strategyId} is still in active indicators, keeping in cache`);
+      }
+      
       // Fetch updated parameters to get renormalized weights
       await fetchCombinedStrategyParams();
       
@@ -404,27 +399,32 @@ export default function useStrategyOperations(
 
   // Add function to fetch combined strategy parameters
   const fetchCombinedStrategyParams = async () => {
-    if (!state.combinedStrategyId) return;
+    if (!state.combinedStrategyId) return null;
     
     updateOperationState('fetchCombinedParams', true);
     
     try {
-      const response = await fetch(`${strategyOperations['baseUrl']}/api/strategies/${state.combinedStrategyId}/params`);
+      const response = await fetch(`${strategyOperations.baseUrl}/api/strategies/${state.combinedStrategyId}/params`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch combined strategy params: ${response.statusText}`);
       }
       
       const data = await response.json();
-      setCombinedStrategyParams(data.params || {});
+      const params = data.params || {};
+      setCombinedStrategyParams(params);
+      
+      console.log("Fetched combined strategy params:", params);
       
       // Update weights in combined strategy indicators
-      if (data.params?.weights) {
+      if (params.weights) {
         setState(prev => {
           const updatedIndicators = prev.combinedStrategyIndicators.map((item, index) => ({
             ...item,
-            weight: index < data.params.weights.length ? data.params.weights[index] : item.weight
+            weight: index < params.weights.length ? params.weights[index] : item.weight
           }));
+          
+          console.log("Updated indicator weights:", updatedIndicators.map(i => i.weight));
           
           return {
             ...prev,
@@ -434,7 +434,7 @@ export default function useStrategyOperations(
       }
       
       updateOperationState('fetchCombinedParams', false);
-      return data.params;
+      return params;
     } catch (error) {
       updateOperationState('fetchCombinedParams', false, error as Error);
       console.error('Error fetching combined strategy params:', error);
@@ -449,7 +449,9 @@ export default function useStrategyOperations(
     updateOperationState('configure', true);
     
     try {
-      const response = await fetch(`${strategyOperations['baseUrl']}/api/strategies/${state.combinedStrategyId}/params`, {
+      console.log("Updating combined strategy params:", params);
+      
+      const response = await fetch(`${strategyOperations.baseUrl}/api/strategies/${state.combinedStrategyId}/params`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -462,10 +464,27 @@ export default function useStrategyOperations(
       }
       
       const data = await response.json();
-      setCombinedStrategyParams(prev => ({
-        ...prev,
-        ...params
-      }));
+      
+      // Update the state with the new parameters
+      // But DON'T fetch new parameters as they might override our optimized values
+      setCombinedStrategyParams(params);
+      
+      // Update indicator weights in the UI based on the params we just sent
+      if (params.weights) {
+        setState(prev => {
+          const updatedIndicators = prev.combinedStrategyIndicators.map((item, index) => ({
+            ...item,
+            weight: index < params.weights.length ? params.weights[index] : item.weight
+          }));
+          
+          console.log("Updated indicator weights:", updatedIndicators.map(i => i.weight));
+          
+          return {
+            ...prev,
+            combinedStrategyIndicators: updatedIndicators
+          };
+        });
+      }
       
       updateOperationState('configure', false);
       return data;
@@ -492,7 +511,7 @@ export default function useStrategyOperations(
 
   // Backtest a strategy
   const backtestStrategy = async (
-    indicator: IndicatorType,
+    strategyId: string,
     timeframe: string = '1d',
     startDate?: Date,
     endDate?: Date
@@ -500,11 +519,6 @@ export default function useStrategyOperations(
     updateOperationState('backtest', true);
     
     try {
-      const strategyId = state.strategies[indicator];
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for indicator: ${indicator}`);
-      }
-      
       const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
       const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
       
@@ -525,37 +539,41 @@ export default function useStrategyOperations(
   };
 
   // Remove indicator
-
-  const removeIndicator = async (indicator: IndicatorType) => {
-    const strategyId = state.strategies[indicator];
-    if (!strategyId) return;
-    
+  const removeIndicator = async (strategyId: string) => {
     try {
-      // Call the API to delete the strategy from backend cache
-      await strategyOperations.deleteStrategy(strategyId);
+      // Check if this strategy is part of a combined strategy
+      const isInCombinedStrategy = state.combinedStrategyIndicators.some(
+        item => item.strategyId === strategyId
+      );
       
-      // Clear cache entries for this strategy
+      // Only delete from backend cache if it's not in a combined strategy
+      if (!isInCombinedStrategy) {
+        console.log(`Strategy ${strategyId} is not in combined strategy, deleting from cache`);
+        await strategyOperations.deleteStrategy(strategyId);
+      } else {
+        console.log(`Strategy ${strategyId} is in combined strategy, keeping in cache`);
+      }
+      
+      // Clear cache entries for this strategy (local frontend cache)
       clearStrategyFromCache(strategyId);
       
-      // Update state to remove indicator from active indicators and strategies
-      // but DON'T remove it from combined strategy if it exists there
+      // Update state to remove the strategy from active strategies
       setState(prev => {
-        const updatedStrategies = { ...prev.strategies };
-        delete updatedStrategies[indicator];
+        const updatedActiveStrategies = prev.activeStrategies.filter(
+          strategy => strategy.id !== strategyId
+        );
         
         const updatedPlots = { ...prev.indicatorPlots };
         delete updatedPlots[strategyId];
         
         return {
           ...prev,
-          activeIndicators: prev.activeIndicators.filter(i => i !== indicator),
-          strategies: updatedStrategies,
+          activeStrategies: updatedActiveStrategies,
           indicatorPlots: updatedPlots,
-          // Don't modify combinedStrategyIndicators here
         };
       });
     } catch (error) {
-      console.error(`Error removing strategy for indicator ${indicator}:`, error);
+      console.error(`Error removing strategy with ID ${strategyId}:`, error);
       // You might want to show an error notification here
     }
   };
@@ -572,6 +590,24 @@ export default function useStrategyOperations(
   // Clear all plot cache
   const clearPlotCache = () => {
     indicatorPlotCacheRef.current = {};
+  };
+
+  // Get indicator type from strategy ID
+  const getIndicatorType = (strategyId: string): IndicatorType | null => {
+    // First check if it's in our active strategies
+    const activeStrategy = state.activeStrategies.find(s => s.id === strategyId);
+    if (activeStrategy) {
+      return activeStrategy.indicator;
+    }
+    
+    // Next check combined strategy indicators
+    const combinedStrategy = state.combinedStrategyIndicators.find(s => s.strategyId === strategyId);
+    if (combinedStrategy) {
+      return combinedStrategy.indicatorType;
+    }
+    
+    // Finally use the utility function as fallback
+    return getIndicatorTypeFromId(strategyId);
   };
 
   return {
@@ -600,6 +636,7 @@ export default function useStrategyOperations(
       fetchCombinedStrategyParams,
       updateCombinedStrategyParams,
       updateIndicatorWeight,
+      getIndicatorType,
     }
   };
 }

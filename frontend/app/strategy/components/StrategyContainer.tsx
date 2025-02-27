@@ -52,7 +52,7 @@ export default function StrategyContainer() {
   const [activeSideTab, setActiveSideTab] = useState<string>('chart');
 
   // buy/sell signal data
-  const [signalData, setSignalData] = useState<Record<IndicatorType, any>>({});
+  const [signalData, setSignalData] = useState<Record<string, any>>({});
 
   const [combinedParams, setCombinedParams] = useState<Record<string, any>>({
     method: 'weighted',
@@ -69,7 +69,7 @@ export default function StrategyContainer() {
   } = useStrategyOperations();
 
   // Destructure strategy state for easier access
-  const { activeIndicators, strategies, indicatorPlots, combinedStrategyIndicators } = strategyState;
+  const { activeStrategies, indicatorPlots, combinedStrategyIndicators } = strategyState;
   
   // Update query strings when settings change for 5min
   useEffect(() => {
@@ -117,14 +117,14 @@ export default function StrategyContainer() {
   
   // Update indicator plots when needed
   useEffect(() => {
-    if (activeIndicators.length > 0) {
+    if (activeStrategies.length > 0) {
       const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
       const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
       const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
       actions.updateIndicatorPlots(currentTimeframe, startDate, endDate);
     }
-  }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh, activeIndicators]);
+  }, [activeTab, fiveMinNeedsRefresh, dailyNeedsRefresh, activeStrategies]);
 
   // Add effect to fetch combined parameters when needed
   useEffect(() => {
@@ -149,8 +149,8 @@ export default function StrategyContainer() {
     
     // Reset strategy state when changing tickers
     // Since we don't have a reset method in the hook, we'll just clear everything manually
-    activeIndicators.forEach(indicator => {
-      actions.removeIndicator(indicator);
+    activeStrategies.forEach(strategy => {
+      actions.removeIndicator(strategy.id);
     });
   };
   
@@ -164,9 +164,13 @@ export default function StrategyContainer() {
     setShowVolume(show);
   };
   
-  // Handle indicator selection
+  // Handle indicator selection - updated to check if an indicator type already exists
   const handleSelectIndicator = async (indicator: IndicatorType) => {
-    if (!selectedAsset || activeIndicators.includes(indicator)) return;
+    if (!selectedAsset) return;
+    
+    // Check if indicator already exists
+    const hasIndicator = activeStrategies.some(s => s.indicator === indicator);
+    if (hasIndicator) return;
     
     try {
       await actions.createStrategy(selectedAsset, indicator);
@@ -219,76 +223,129 @@ export default function StrategyContainer() {
   };
 
   // Handler for removing an indicator
-  const handleRemoveIndicator = (indicator: IndicatorType) => {
-    actions.removeIndicator(indicator);
-
-    // Also clear the signal data for this indicator from local state
+  const handleRemoveIndicator = (strategyId: string) => {
+    actions.removeIndicator(strategyId);
+  
+    // Clear signal data for this strategy
     setSignalData(prev => {
       const updated = { ...prev };
-      delete updated[indicator];
+      delete updated[strategyId];
       return updated;
     });
   };
   
   // Handler for configuring an indicator
-  const handleConfigureIndicator = async (indicator: IndicatorType) => {
-    console.log(`Configure ${indicator}`);
-    setActiveConfigIndicator(indicator);
-    setActiveConfigStrategyId(strategies[indicator]);
-    setConfigDialogOpen(true);
-  };
-
-  // Handler for configuring a combined strategy indicator
-  const handleConfigureCombinedIndicator = (indicatorType: IndicatorType, strategyId: string) => {
-    console.log(`Configure combined strategy indicator ${indicatorType} (ID: ${strategyId})`);
+  const handleConfigureIndicator = async (strategyId: string) => {
+    const indicatorType = actions.getIndicatorType(strategyId);
+    if (!indicatorType) {
+      console.error(`No indicator type found for strategy ${strategyId}`);
+      return;
+    }
     
-    // Set the active config indicator and strategy ID directly
+    console.log(`Configure ${indicatorType} (ID: ${strategyId})`);
     setActiveConfigIndicator(indicatorType);
     setActiveConfigStrategyId(strategyId);
     setConfigDialogOpen(true);
   };
-
-  // Handler for removing from combined strategy
-  const handleRemoveFromStrategy = async (strategyId: string) => {
+  
+  // Handler for configuring a combined strategy indicator
+  const handleConfigureCombinedIndicator = (indicatorType: IndicatorType, strategyId: string) => {
+    console.log(`Configure combined strategy indicator ${indicatorType} (ID: ${strategyId})`);
+    setActiveConfigIndicator(indicatorType);
+    setActiveConfigStrategyId(strategyId);
+    setConfigDialogOpen(true);
+  };
+  
+  // Handler for generating signals
+  const handleGenerateSignal = async (strategyId: string) => {
+    console.log(`Generate signal for strategy ${strategyId}`);
+    
     try {
-      console.log(`Removing strategy ${strategyId} from combined strategy`);
-      await actions.removeFromStrategy(strategyId);
+      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
-      // The state will be updated by the hook
+      const result = await actions.generateSignal(
+        strategyId,
+        currentTimeframe,
+        startDate,
+        endDate
+      );
+      
+      console.log('Signal generation result:', result);
+      
+      // Store the signal data by strategy ID
+      setSignalData(prev => ({
+        ...prev,
+        [strategyId]: result
+      }));
+      
     } catch (error) {
-      console.error(`Error removing strategy from combined strategy:`, error);
+      console.error(`Error generating signals for strategy ${strategyId}:`, error);
     }
   };
-
-  // Update the handleSaveConfig function to work with direct strategy IDs
+  
+  // Handler for adding to strategy
+  const handleAddToStrategy = async (strategyId: string) => {
+    console.log(`Add strategy ${strategyId} to combined strategy`);
+    
+    try {
+      // Default weight is 1.0
+      const result = await actions.addToStrategy(strategyId);
+      console.log('Add to strategy result:', result);
+      
+      if (activeSideTab !== 'strategy') {
+        setActiveSideTab('strategy');
+      }
+      
+    } catch (error) {
+      console.error(`Error adding strategy ${strategyId} to combined strategy:`, error);
+    }
+  };
+  
+  // Handler for optimizing params
+  const handleOptimizeParamsInDialog = async (indicator: IndicatorType) => {
+    try {
+      // Always use activeConfigStrategyId
+      if (!activeConfigStrategyId) {
+        throw new Error('No strategy ID set for optimization');
+      }
+      
+      console.log(`Optimizing parameters for ${indicator} (ID: ${activeConfigStrategyId})`);
+      
+      const timeframe = activeTab === '5m' ? '5m' : '1d';
+      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      
+      const result = await actions.optimizeIndicator(
+        activeConfigStrategyId,
+        timeframe,
+        startDate,
+        endDate
+      );
+      
+      console.log('Optimization API result:', result);
+      return result;
+    } catch (error) {
+      console.error(`Error optimizing parameters:`, error);
+      throw error;
+    }
+  };
+  
+  // Handler for saving config
   const handleSaveConfig = async (indicator: IndicatorType, params: Record<string, any>) => {
     try {
-      // Always prioritize activeConfigStrategyId, because it may be a strategy ID 
-      // from an indicator no longer in the active indicators list
-      const strategyId = activeConfigStrategyId;
-      if (!strategyId) {
-        throw new Error(`No strategy ID found for configuration`);
+      // Always use activeConfigStrategyId
+      if (!activeConfigStrategyId) {
+        throw new Error('No strategy ID set for configuration');
       }
       
-      console.log(`Configuring strategy ${strategyId} with params:`, params);
+      console.log(`Configuring strategy ${activeConfigStrategyId} with params:`, params);
       
-      // Call the API directly since we're using a specific strategy ID
-      const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/params`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to configure strategy: ${response.statusText}`);
-      }
-
-      const result = await response.json();
+      const result = await actions.configureIndicator(activeConfigStrategyId, params);
       console.log('Configuration result:', result);
       
-      // Refresh charts after configuration
+      // Refresh charts
       if (activeTab === '5m') {
         setFiveMinNeedsRefresh(true);
       } else {
@@ -298,110 +355,52 @@ export default function StrategyContainer() {
       return result;
     } catch (error) {
       console.error(`Error configuring strategy:`, error);
-      throw error; // Rethrow to be handled in the dialog
-    }
-  };
-  
-
-  const handleOptimizeParamsInDialog = async (indicator: IndicatorType) => {
-    try {
-      console.log(`Optimizing parameters for ${indicator} in dialog`);
-      
-      const timeframe = activeTab === '5m' ? '5m' : '1d';
-      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-      
-      const result = await actions.optimizeIndicator(
-        indicator,
-        timeframe,
-        startDate,
-        endDate
-      );
-      
-      console.log('Optimization API result:', result);
-      
-      // Return the result directly - it should already contain a params object
-      // based on the API response you shared
-      return result;
-    } catch (error) {
-      console.error(`Error optimizing ${indicator} parameters:`, error);
       throw error;
     }
   };
 
-  const handleOptimizeWeightsInDialog = async (indicator: IndicatorType) => {
+  const handleOptimizeWeightsInDialog = async () => {
     try {
-      console.log(`Optimizing weights for ${indicator} in dialog`);
+      // Always use activeConfigStrategyId which we've already set
+      if (!activeConfigStrategyId) {
+        throw new Error('No strategy ID set for weight optimization');
+      }
+      
+      console.log(`Optimizing weights for strategy ID ${activeConfigStrategyId}`);
       
       const timeframe = activeTab === '5m' ? '5m' : '1d';
       const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
       const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
       
       const result = await actions.optimizeStrategyWeights(
-        indicator,
+        activeConfigStrategyId,  // Use strategyId directly
         timeframe,
         startDate,
         endDate
       );
-
+  
       console.log('Optimization API result:', result);
-
+  
       return result;
     } catch (error) {
-      console.error(`Error optimizing ${indicator} weights:`, error);
+      console.error(`Error optimizing weights:`, error);
       throw error;
     }
   };
-  
-  
-  // Handler for generating signal
-  const handleGenerateSignal = async (indicator: IndicatorType) => {
-    console.log(`Generate signal for ${indicator}`);
-    
+
+  // Handler for removing from combined strategy
+  const handleRemoveFromStrategy = async (strategyId: string) => {
     try {
-      const currentTimeframe = activeTab === '5m' ? '5m' : '1d';
-      const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-      const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+      console.log(`Removing strategy ${strategyId} from combined strategy`);
+      await actions.removeFromStrategy(strategyId);
       
-      const result = await actions.generateSignal(
-        indicator,
-        currentTimeframe,
-        startDate,
-        endDate
-      );
-      
-      console.log('Signal generation result:', result);
-      
-      // Store the signal data
-      setSignalData(prev => ({
-        ...prev,
-        [indicator]: result
-      }));
-      
+      // The state will be updated by the hook's removeFromStrategy function
+      // which calls fetchCombinedStrategyParams to update weights
     } catch (error) {
-      console.error(`Error generating signals for ${indicator}:`, error);
+      console.error(`Error removing strategy from combined strategy:`, error);
     }
   };
   
-  // Handler for adding to strategy
-  const handleAddToStrategy = async (indicator: IndicatorType) => {
-    console.log(`Add ${indicator} to strategy`);
-    
-    try {
-      // Default weight is 1.0
-      const result = await actions.addToStrategy(indicator);
-      console.log('Add to strategy result:', result);
-      
-      // Here you would typically update the UI to show the strategy composition
-      // or navigate to the strategy view
-      if (activeSideTab !== 'strategy') {
-        setActiveSideTab('strategy');
-      }
-      
-    } catch (error) {
-      console.error(`Error adding ${indicator} to strategy:`, error);
-    }
-  };
 
   // Add the handler for weight changes
   const handleWeightChange = (strategyId: string, weight: number) => {
@@ -425,6 +424,68 @@ export default function StrategyContainer() {
       ...prev,
       [key]: value
     }));
+  };
+
+  // Handle optimization of weights for the combined strategy
+  const handleOptimizeCombinedWeights = async () => {
+    if (!strategyState.combinedStrategyId || combinedStrategyIndicators.length === 0) return;
+    
+    const timeframe = activeTab === '5m' ? '5m' : '1d';
+    const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
+    const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
+    
+    try {
+      // Show loading state
+      console.log("Optimizing weights for combined strategy...");
+      
+      // Use the combined strategy ID directly
+      const result = await actions.optimizeStrategyWeights(
+        strategyState.combinedStrategyId,
+        timeframe,
+        startDate,
+        endDate
+      );
+      
+      console.log("Optimization result:", result);
+      
+      // Extract optimized weights and vote_threshold directly from the result
+      if (result && result.results) {
+        const updatedParams = { ...combinedParams };
+        
+        // Update weights if they exist in the result
+        if (result.results.weights) {
+          updatedParams.weights = result.results.weights;
+          console.log("Setting optimized weights:", result.results.weights);
+          
+          // Update individual indicator weights in the UI
+          result.results.weights.forEach((weight, index) => {
+            if (index < combinedStrategyIndicators.length) {
+              const strategyId = combinedStrategyIndicators[index].strategyId;
+              actions.updateIndicatorWeight(strategyId, weight);
+            }
+          });
+        }
+        
+        // Update vote threshold if it exists in the result
+        if (result.results.vote_threshold !== undefined) {
+          updatedParams.vote_threshold = result.results.vote_threshold;
+          console.log("Setting optimized vote threshold:", result.results.vote_threshold);
+        }
+        
+        // Update the local state
+        setCombinedParams(updatedParams);
+        
+        // Apply the changes directly to the backend
+        try {
+          await actions.updateCombinedStrategyParams(updatedParams);
+          console.log("Applied optimized parameters to backend");
+        } catch (error) {
+          console.error("Error applying optimized parameters:", error);
+        }
+      }
+    } catch (error) {
+      console.error('Error optimizing weights:', error);
+    }
   };
 
   // Add handler to apply changes
@@ -481,7 +542,7 @@ export default function StrategyContainer() {
               <ChartControls 
                 activeTab={activeTab}
                 showVolume={showVolume}
-                activeIndicators={activeIndicators}
+                activeStrategies={activeStrategies}
                 startDate={getActiveStartDate()}
                 endDate={getActiveEndDate()}
                 onTabChange={handleTabChange}
@@ -507,19 +568,18 @@ export default function StrategyContainer() {
             {/* Content Based on Selected Tab */}
             <Tabs value={activeSideTab} className="h-full w-full">
               <TabsContent value="chart" className="h-full mt-0 w-full">
-                <ChartDisplay 
+              <ChartDisplay 
                   ticker={selectedAsset}
                   activeTab={activeTab}
-                  showIndicators={activeIndicators.length > 0}
+                  showIndicators={activeStrategies.length > 0}
                   fiveMinQueryString={fiveMinQueryString}
                   dailyQueryString={dailyQueryString}
                   onFiveMinLoad={handleFiveMinLoad}
                   onDailyLoad={handleDailyLoad}
                   skipFiveMinFetch={!fiveMinNeedsRefresh}
                   skipDailyFetch={!dailyNeedsRefresh}
-                  activeIndicators={activeIndicators}
+                  activeStrategies={activeStrategies}
                   indicatorPlots={indicatorPlots}
-                  strategies={strategies}
                   signalData={signalData}
                 />
               </TabsContent>
@@ -543,29 +603,7 @@ export default function StrategyContainer() {
                           operationState.optimizeWeights.isLoading || 
                           operationState.fetchCombinedParams.isLoading
                         }
-                        onOptimizeWeights={async () => {
-                          if (!selectedAsset || combinedStrategyIndicators.length === 0) return;
-                          
-                          const timeframe = activeTab === '5m' ? '5m' : '1d';
-                          const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                          const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                          
-                          // Use first indicator as reference for the combined strategy
-                          const firstIndicator = combinedStrategyIndicators[0];
-                          try {
-                            await actions.optimizeStrategyWeights(
-                              firstIndicator.indicatorType,
-                              timeframe,
-                              startDate,
-                              endDate
-                            );
-                            
-                            // Refresh combined params after optimization
-                            await actions.fetchCombinedStrategyParams();
-                          } catch (error) {
-                            console.error('Error optimizing weights:', error);
-                          }
-                        }}
+                        onOptimizeWeights={handleOptimizeCombinedWeights}
                         onApplyChanges={handleApplyCombinedChanges}
                       />
                       
@@ -617,12 +655,12 @@ export default function StrategyContainer() {
                     <div className="flex flex-col items-center justify-center h-full">
                       <p className="text-gray-500 mb-4">Add indicators to your strategy using the "Add to Strategy" option</p>
                       
-                      {activeIndicators.length > 0 ? (
+                      {activeStrategies.length > 0 ? (
                         <div className="flex flex-col items-center">
                           <p className="text-gray-600 mb-2">Select an indicator to add:</p>
                           <div className="flex flex-wrap gap-2 justify-center">
-                            {activeIndicators.map(indicator => {
-                              const strategyId = strategies[indicator];
+                            {activeStrategies.map(strategy => {
+                              const strategyId = strategy.id;
                               // Check if this indicator is already in the combined strategy
                               const isAlreadyInStrategy = combinedStrategyIndicators.some(
                                 item => item.strategyId === strategyId
@@ -636,16 +674,16 @@ export default function StrategyContainer() {
                                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
                                       : 'bg-blue-500 text-white hover:bg-blue-600'
                                   }`}
-                                  onClick={() => !isAlreadyInStrategy && handleAddToStrategy(indicator)}
+                                  onClick={() => !isAlreadyInStrategy && handleAddToStrategy(strategyId)}
                                   disabled={isAlreadyInStrategy}
                                 >
                                   {isAlreadyInStrategy ? (
                                     <>
-                                      <span>{indicator}</span>
+                                      <span>{strategy.indicator}</span>
                                       <span className="text-xs">(Already Added)</span>
                                     </>
                                   ) : (
-                                    <>Add {indicator}</>
+                                    <>Add {strategy.indicator}</>
                                   )}
                                 </button>
                               );

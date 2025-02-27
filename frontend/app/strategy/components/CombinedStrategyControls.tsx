@@ -23,10 +23,32 @@ export default function CombinedStrategyControls({
   onOptimizeWeights,
   onApplyChanges
 }: CombinedStrategyControlsProps) {
+  // Success message state
+  const [optimizeSuccess, setOptimizeSuccess] = useState(false);
+  
   // Handle number input change (convert string to number)
   const handleNumberChange = (key: string, value: string) => {
     const numValue = value === '' ? '' : Number(value);
     onParamChange(key, numValue);
+  };
+
+  // Enhance optimize weights to show success message
+  const handleOptimizeWeights = async () => {
+    if (!onOptimizeWeights) return;
+    
+    try {
+      await onOptimizeWeights();
+      
+      // Show success message
+      setOptimizeSuccess(true);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setOptimizeSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error optimizing weights:', error);
+    }
   };
 
   return (
@@ -39,7 +61,7 @@ export default function CombinedStrategyControls({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onOptimizeWeights}
+              onClick={handleOptimizeWeights}
               disabled={isLoading}
               className="h-8 flex items-center gap-1"
             >
@@ -58,6 +80,13 @@ export default function CombinedStrategyControls({
           </Button>
         </div>
       </div>
+      
+      {/* Success Message */}
+      {optimizeSuccess && (
+        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-green-600 text-sm">
+          Weights optimized successfully!
+        </div>
+      )}
       
       {/* Voting Method & Threshold */}
       <div className="grid grid-cols-8 items-center gap-4">
