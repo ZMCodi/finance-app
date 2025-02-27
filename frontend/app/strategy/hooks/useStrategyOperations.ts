@@ -1,10 +1,9 @@
 // app/strategy/hooks/useStrategyOperations.ts
 import { useState, useRef } from 'react';
-import { format } from 'date-fns';
 import { strategyOperations } from '../utils/strategyOperations';
 import { IndicatorType, strategyNameMap } from '../components/IndicatorPanel';
 import { PlotJSON } from '@/src/api/index';
-import { getIndicatorTypeFromId, getStrategyTypeFromId } from '../utils/strategyIdUtils';
+import { getIndicatorTypeFromId } from '../utils/strategyIdUtils';
 
 export interface StrategyOperation {
   isLoading: boolean;
@@ -115,54 +114,33 @@ export default function useStrategyOperations(
   const updateIndicatorPlots = async (
     timeframe: string = '1d',
     startDate?: Date,
-    endDate?: Date
+    endDate?: Date,
+    showVolume: boolean = true
   ) => {
     // Skip if no strategies
     if (state.activeStrategies.length === 0) return;
     
-    // Build query params
-    const params = new URLSearchParams();
-    params.append('timeframe', timeframe);
+    // Get all strategy IDs
+    const strategyIds = state.activeStrategies.map(s => s.id);
     
-    if (startDate) {
-      params.append('start_date', format(startDate, 'yyyy-MM-dd'));
+    try {
+      // Use the new method from strategyOperations
+      const plots = await strategyOperations.getIndicatorPlots(
+        strategyIds,
+        timeframe,
+        startDate,
+        endDate,
+        showVolume
+      );
+      
+      // Update state with new plots
+      setState(prev => ({
+        ...prev,
+        indicatorPlots: plots
+      }));
+    } catch (error) {
+      console.error("Error updating indicator plots:", error);
     }
-    
-    if (endDate) {
-      params.append('end_date', format(endDate, 'yyyy-MM-dd'));
-    }
-    
-    const queryString = params.toString();
-    
-    // Update each strategy plot
-    const updatedPlots: Record<string, PlotJSON> = {};
-    const strategyFetches = state.activeStrategies.map(async ({ id: strategyId }) => {
-      try {
-        // Create a cache key
-        const cacheKey = `${strategyId}-${timeframe}-${queryString}`;
-        
-        // Check if we have this in cache
-        if (indicatorPlotCacheRef.current[cacheKey]) {
-          updatedPlots[strategyId] = indicatorPlotCacheRef.current[cacheKey];
-        } else {
-          // Fetch new data
-          const plotData = await strategyOperations.getIndicatorPlot(strategyId, queryString);
-          indicatorPlotCacheRef.current[cacheKey] = plotData;
-          updatedPlots[strategyId] = plotData;
-        }
-      } catch (error) {
-        console.error(`Error updating plot for strategy ${strategyId}:`, error);
-      }
-    });
-    
-    // Wait for all fetches to complete
-    await Promise.all(strategyFetches);
-    
-    // Update state with new plots
-    setState(prev => ({
-      ...prev,
-      indicatorPlots: updatedPlots
-    }));
   };
 
   // Configure strategy parameters
@@ -194,14 +172,11 @@ export default function useStrategyOperations(
     updateOperationState('optimize', true);
     
     try {
-      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-      
       const result = await strategyOperations.optimizeStrategy(
         strategyId,
         timeframe,
-        startDateStr,
-        endDateStr
+        startDate,
+        endDate
       );
       
       setOptimizeResult(result);
@@ -228,14 +203,11 @@ export default function useStrategyOperations(
     updateOperationState('optimizeWeights', true);
     
     try {
-      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-      
       const result = await strategyOperations.optimizeWeights(
         strategyId,
         timeframe,
-        startDateStr,
-        endDateStr,
+        startDate,
+        endDate,
         runs
       );
       
@@ -262,14 +234,11 @@ export default function useStrategyOperations(
     updateOperationState('generateSignal', true);
     
     try {
-      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-      
       const result = await strategyOperations.generateSignals(
         strategyId,
         timeframe,
-        startDateStr,
-        endDateStr
+        startDate,
+        endDate
       );
       
       setSignalResult(result);
@@ -397,40 +366,33 @@ export default function useStrategyOperations(
     }
   };
 
-  // Add function to fetch combined strategy parameters
+  // Fetch combined strategy parameters
   const fetchCombinedStrategyParams = async () => {
     if (!state.combinedStrategyId) return null;
     
     updateOperationState('fetchCombinedParams', true);
     
     try {
-      const response = await fetch(`${strategyOperations.baseUrl}/api/strategies/${state.combinedStrategyId}/params`);
+      const params = await strategyOperations.fetchCombinedStrategyParams(state.combinedStrategyId);
+      if (params) {
+        setCombinedStrategyParams(params);
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch combined strategy params: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      const params = data.params || {};
-      setCombinedStrategyParams(params);
-      
-      console.log("Fetched combined strategy params:", params);
-      
-      // Update weights in combined strategy indicators
-      if (params.weights) {
-        setState(prev => {
-          const updatedIndicators = prev.combinedStrategyIndicators.map((item, index) => ({
-            ...item,
-            weight: index < params.weights.length ? params.weights[index] : item.weight
-          }));
-          
-          console.log("Updated indicator weights:", updatedIndicators.map(i => i.weight));
-          
-          return {
-            ...prev,
-            combinedStrategyIndicators: updatedIndicators
-          };
-        });
+        // Update weights in combined strategy indicators
+        if (params.weights) {
+          setState(prev => {
+            const updatedIndicators = prev.combinedStrategyIndicators.map((item, index) => ({
+              ...item,
+              weight: index < params.weights.length ? params.weights[index] : item.weight
+            }));
+            
+            console.log("Updated indicator weights:", updatedIndicators.map(i => i.weight));
+            
+            return {
+              ...prev,
+              combinedStrategyIndicators: updatedIndicators
+            };
+          });
+        }
       }
       
       updateOperationState('fetchCombinedParams', false);
@@ -442,7 +404,7 @@ export default function useStrategyOperations(
     }
   };
 
-  // Add function to update combined strategy parameters
+  // Update combined strategy parameters
   const updateCombinedStrategyParams = async (params: Record<string, any>) => {
     if (!state.combinedStrategyId) return;
     
@@ -451,19 +413,10 @@ export default function useStrategyOperations(
     try {
       console.log("Updating combined strategy params:", params);
       
-      const response = await fetch(`${strategyOperations.baseUrl}/api/strategies/${state.combinedStrategyId}/params`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to update combined strategy params: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+      const data = await strategyOperations.updateCombinedStrategyParams(
+        state.combinedStrategyId, 
+        params
+      );
       
       // Update the state with the new parameters
       // But DON'T fetch new parameters as they might override our optimized values
@@ -495,7 +448,7 @@ export default function useStrategyOperations(
     }
   };
 
-  // Add function to update a specific indicator weight
+  // Update a specific indicator weight
   const updateIndicatorWeight = (strategyId: string, weight: number) => {
     setState(prev => {
       const updatedIndicators = prev.combinedStrategyIndicators.map(item => 
@@ -519,14 +472,11 @@ export default function useStrategyOperations(
     updateOperationState('backtest', true);
     
     try {
-      const startDateStr = startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
-      const endDateStr = endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
-      
       const result = await strategyOperations.backtestStrategy(
         strategyId,
         timeframe,
-        startDateStr,
-        endDateStr
+        startDate,
+        endDate
       );
       
       setBacktestResult(result);
@@ -538,7 +488,7 @@ export default function useStrategyOperations(
     }
   };
 
-  // Remove indicator
+  // Remove indicator from active strategies
   const removeIndicator = async (strategyId: string) => {
     try {
       // Check if this strategy is part of a combined strategy
@@ -574,7 +524,6 @@ export default function useStrategyOperations(
       });
     } catch (error) {
       console.error(`Error removing strategy with ID ${strategyId}:`, error);
-      // You might want to show an error notification here
     }
   };
 

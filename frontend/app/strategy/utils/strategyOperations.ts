@@ -1,6 +1,8 @@
 // app/strategy/utils/strategyOperations.ts
 import { IndicatorType, strategyNameMap } from '../components/IndicatorPanel';
 import { StrategyParams, StrategyOptimize, StrategyPlot, PlotJSON } from '@/src/api/index';
+import { format } from 'date-fns';
+import { getIndicatorTypeFromId } from './strategyIdUtils';
 
 export interface StrategyOperationsConfig {
   baseUrl: string;
@@ -47,20 +49,28 @@ export class StrategyOperations {
   async optimizeStrategy(
     strategyId: string,
     timeframe: string = '1d',
-    startDate?: string,
-    endDate?: string
+    startDate?: Date | string,
+    endDate?: Date | string
   ): Promise<StrategyOptimize> {
     try {
       const params = new URLSearchParams();
       params.append('timeframe', timeframe);
       
-      if (startDate) {
-        params.append('start_date', startDate);
+      // Convert Date objects to strings if needed
+      const startDateStr = typeof startDate === 'string' ? startDate : 
+                          startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+      
+      const endDateStr = typeof endDate === 'string' ? endDate : 
+                         endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+      
+      if (startDateStr) {
+        params.append('start_date', startDateStr);
       }
       
-      if (endDate) {
-        params.append('end_date', endDate);
+      if (endDateStr) {
+        params.append('end_date', endDateStr);
       }
+      
       console.log("Optimizing strategy using utils:", strategyId, params.toString());
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/optimize/params?${params.toString()}`);
       
@@ -76,13 +86,13 @@ export class StrategyOperations {
   }
 
   /**
- * Optimize weights for a strategy
- */
+   * Optimize weights for a strategy
+   */
   async optimizeWeights(
     strategyId: string,
     timeframe: string = '1d',
-    startDate?: string,
-    endDate?: string,
+    startDate?: Date | string,
+    endDate?: Date | string,
     runs: number = 20
   ): Promise<StrategyOptimize> {
     try {
@@ -90,14 +100,22 @@ export class StrategyOperations {
       params.append('timeframe', timeframe);
       params.append('runs', runs.toString());
       
-      if (startDate) {
-        params.append('start_date', startDate);
+      // Convert Date objects to strings if needed
+      const startDateStr = typeof startDate === 'string' ? startDate : 
+                          startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+      
+      const endDateStr = typeof endDate === 'string' ? endDate : 
+                         endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+      
+      if (startDateStr) {
+        params.append('start_date', startDateStr);
       }
       
-      if (endDate) {
-        params.append('end_date', endDate);
+      if (endDateStr) {
+        params.append('end_date', endDateStr);
       }
-      console.log("Optimizing weights using utils:", strategyId, params.toString());  // make sure this is printed
+      
+      console.log("Optimizing weights using utils:", strategyId, params.toString());
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/optimize/weights?${params.toString()}`);
       
       if (!response.ok) {
@@ -117,19 +135,26 @@ export class StrategyOperations {
   async generateSignals(
     strategyId: string,
     timeframe: string = '1d',
-    startDate?: string,
-    endDate?: string
+    startDate?: Date | string,
+    endDate?: Date | string
   ): Promise<any> {
     try {
       const params = new URLSearchParams();
       params.append('timeframe', timeframe);
       
-      if (startDate) {
-        params.append('start_date', startDate);
+      // Convert Date objects to strings if needed
+      const startDateStr = typeof startDate === 'string' ? startDate : 
+                          startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+      
+      const endDateStr = typeof endDate === 'string' ? endDate : 
+                         endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+      
+      if (startDateStr) {
+        params.append('start_date', startDateStr);
       }
       
-      if (endDate) {
-        params.append('end_date', endDate);
+      if (endDateStr) {
+        params.append('end_date', endDateStr);
       }
       
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/signals?${params.toString()}`);
@@ -229,19 +254,26 @@ export class StrategyOperations {
   async backtestStrategy(
     strategyId: string,
     timeframe: string = '1d',
-    startDate?: string,
-    endDate?: string
+    startDate?: Date | string,
+    endDate?: Date | string
   ): Promise<StrategyPlot> {
     try {
       const params = new URLSearchParams();
       params.append('timeframe', timeframe);
       
-      if (startDate) {
-        params.append('start_date', startDate);
+      // Convert Date objects to strings if needed
+      const startDateStr = typeof startDate === 'string' ? startDate : 
+                          startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+      
+      const endDateStr = typeof endDate === 'string' ? endDate : 
+                         endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+      
+      if (startDateStr) {
+        params.append('start_date', startDateStr);
       }
       
-      if (endDate) {
-        params.append('end_date', endDate);
+      if (endDateStr) {
+        params.append('end_date', endDateStr);
       }
       
       const response = await fetch(`${this.baseUrl}/api/strategies/${strategyId}/backtest?${params.toString()}`);
@@ -257,8 +289,9 @@ export class StrategyOperations {
     }
   }
 
-
-  // Utility function to create a new strategy
+  /**
+   * Utility function to create a new strategy
+   */
   async createStrategy(ticker: string, strategyName: string): Promise<string> {
     try {
       console.log("Creating strategy using utils:", ticker, strategyName);
@@ -278,7 +311,9 @@ export class StrategyOperations {
     }
   }
 
-  // Utility function to delete strategy
+  /**
+   * Utility function to delete strategy
+   */
   async deleteStrategy(strategyId: string): Promise<void> {
     try {
       console.log("Deleting strategy using utils:", strategyId);
@@ -295,7 +330,9 @@ export class StrategyOperations {
     }
   }
 
-  // Utility function to get indicator plot data
+  /**
+   * Utility function to get indicator plot data
+   */
   async getIndicatorPlot(strategyId: string, queryParams: string): Promise<PlotJSON[]> {
     try {
       console.log("Fetching indicator plot using utils:", strategyId, queryParams);
@@ -311,6 +348,109 @@ export class StrategyOperations {
       console.error("Error fetching indicator plot:", error);
       throw error;
     }
+  }
+
+  /**
+   * Fetch combined strategy parameters
+   */
+  async fetchCombinedStrategyParams(combinedStrategyId: string): Promise<Record<string, any> | null> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/strategies/${combinedStrategyId}/params`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch combined strategy params: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const params = data.params || {};
+      console.log("Fetched combined strategy params:", params);
+      
+      return params;
+    } catch (error) {
+      console.error('Error fetching combined strategy params:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update combined strategy parameters
+   */
+  async updateCombinedStrategyParams(
+    combinedStrategyId: string, 
+    params: Record<string, any>
+  ): Promise<any> {
+    try {
+      console.log("Updating combined strategy params:", params);
+      
+      const response = await fetch(`${this.baseUrl}/api/strategies/${combinedStrategyId}/params`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update combined strategy params: ${response.statusText}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating combined strategy params:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get indicator plots for active strategies
+   */
+  async getIndicatorPlots(
+    strategyIds: string[],
+    timeframe: string = '1d',
+    startDate?: Date | string,
+    endDate?: Date | string,
+    showVolume: boolean = true
+  ): Promise<Record<string, PlotJSON>> {
+    if (strategyIds.length === 0) return {};
+    
+    // Build query params
+    const params = new URLSearchParams();
+    params.append('timeframe', timeframe);
+    
+    // Convert Date objects to strings if needed
+    const startDateStr = typeof startDate === 'string' ? startDate : 
+                        startDate ? format(startDate, 'yyyy-MM-dd') : undefined;
+    
+    const endDateStr = typeof endDate === 'string' ? endDate : 
+                        endDate ? format(endDate, 'yyyy-MM-dd') : undefined;
+    
+    if (startDateStr) {
+      params.append('start_date', startDateStr);
+    }
+    
+    if (endDateStr) {
+      params.append('end_date', endDateStr);
+    }
+    
+    params.append('volume', showVolume.toString());
+    
+    const queryString = params.toString();
+    
+    // Fetch plots for each strategy
+    const updatedPlots: Record<string, PlotJSON> = {};
+    const fetchPromises = strategyIds.map(async (strategyId) => {
+      try {
+        const plotData = await this.getIndicatorPlot(strategyId, queryString);
+        updatedPlots[strategyId] = plotData;
+      } catch (error) {
+        console.error(`Error updating plot for strategy ${strategyId}:`, error);
+      }
+    });
+    
+    // Wait for all fetches to complete
+    await Promise.all(fetchPromises);
+    
+    return updatedPlots;
   }
 }
 
