@@ -1,15 +1,20 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import AssetChart from "@/components/AssetChart";
 import { useRouter } from "next/navigation";
+import MiniStrategyChart from "./MiniStrategyChart";
 
 export default function StrategyHome() {
   const router = useRouter();
   const handleTitleClick = () => {
     router.push('/strategy');
   };
+  
+  // Use the same date logic as the original component
   const formattedDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  // Create query string for the chart
+  const queryString = `timeframe=5m&start_date=${formattedDate}&volume=false`;
 
   return (
     <div className="flex-1">
@@ -20,16 +25,16 @@ export default function StrategyHome() {
               <span className="underline">Use technical indicators</span>
             </button>
           </CardTitle>
-          <CardDescription>build and test trading strategies</CardDescription>
+          <CardDescription>build and backtest trading strategies</CardDescription>
         </CardHeader>
         <CardContent className="flex-1">
           <div className="h-full">
-          <AssetChart 
-          ticker='BTC-USD' 
-          plot_type="candlestick" 
-          queryString={`timeframe=5m&start_date=${formattedDate}`}
-          nticks={3}
-          />
+            <MiniStrategyChart 
+              ticker="BTC-USD"
+              queryString={queryString}
+              strategy="bb"
+              // height={300}
+            />
           </div>
         </CardContent>
       </Card>

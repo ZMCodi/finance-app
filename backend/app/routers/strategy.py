@@ -107,9 +107,7 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
             param_updates[k] = v.value
         elif k == 'signal_type':
             param_updates[k] = [x.value for x in v]
-    print(param_updates)
     strategy.change_params(**param_updates)
-    print(strategy.parameters)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,

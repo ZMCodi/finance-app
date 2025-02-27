@@ -134,7 +134,7 @@ class Asset():
             currency = 'GBP'
             in_pence = True
         start_date = pd.to_datetime('today').date()
-        timezone = ticker.info['timeZoneShortName']
+        timezone = ticker.info['exchangeTimezoneShortName']
         asset_type = ticker.info['quoteType']
         if asset_type == 'MUTUALFUND':
             asset_type = 'Mutual Fund'
@@ -148,6 +148,7 @@ class Asset():
             'NGM': 'NASDAQ',
             'PCX': 'NYSE',
             'PNK': 'stock',
+            'FGI': 'LSE',
         }
         exchange = exchange_mapping.get(exchange, exchange)
 

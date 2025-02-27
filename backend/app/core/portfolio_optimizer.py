@@ -3,12 +3,12 @@ import numpy as np
 import plotly.graph_objects as go
 import math
 import pandas as pd
-from portfolio import Portfolio
+from app.core.portfolio import Portfolio
 
 
 class PortfolioOptimizer():
 
-    def __init__(self, portfolio: Portfolio, min_alloc: float | None = 0., max_alloc: float | None = 1.):
+    def __init__(self, portfolio: Portfolio, min_alloc: float = 0., max_alloc: float = 1.):
 
         self.data = pd.DataFrame({asset: asset.daily['adj_close'] for asset in portfolio.assets}).dropna()
         self.rets = pd.DataFrame({asset: asset.daily['log_rets'] for asset in portfolio.assets}).dropna()
@@ -45,7 +45,7 @@ class PortfolioOptimizer():
     def optimal_sharpe_portfolio(self):
         weights_array = np.array(list(self.opt_sharpe_weight.values()))
         return {
-            'return': round(float(self.port_rets(weights_array)), 3),
+            'returns': round(float(self.port_rets(weights_array)), 3),
             'volatility': round(float(self.port_vols(weights_array)), 3),
             'sharpe_ratio': round(float(self.opt_sharpe_ratio), 3),
             'weights': self.opt_sharpe_weight
@@ -154,7 +154,7 @@ class PortfolioOptimizer():
         return volatility, returns
 
 
-    def efficient_frontier(self, plot=True, I=10000, show_cml=True):
+    def efficient_frontier(self, plot=True, I=10000, show_cml=True, points=50):
         eweights = np.array(self.num_of_assets * (1. / self.num_of_assets,))
 
         def min_vol(weights):
@@ -162,7 +162,7 @@ class PortfolioOptimizer():
 
         scatter_vols, scatter_rets = self.mcs_port_diagram(I=I, plot=False)
 
-        t_rets = np.linspace(min(scatter_rets), max(scatter_rets), 50)
+        t_rets = np.linspace(min(scatter_rets), max(scatter_rets), points)
         t_vols = []
         weights = []
         for t_ret in t_rets:
@@ -176,7 +176,7 @@ class PortfolioOptimizer():
             res = sco.minimize(min_vol, eweights, method='SLSQP',
                             bounds=bnds, constraints=cons)
             t_vols.append(res['fun'])
-            weights.append(res.x)
+            weights.append([float(x) for x in res.x])
 
         t_vols = np.array(t_vols)
 
@@ -260,8 +260,8 @@ class PortfolioOptimizer():
             )
 
             # fig.show()
-
         self.t_vols, self.t_rets, self.t_weights = t_vols, t_rets, weights
+
 
         if show_cml:
             opt_weights = np.array(list(self.opt_sharpe_weight.values()))
@@ -291,9 +291,13 @@ class PortfolioOptimizer():
                 yaxis_range=[min(scatter_rets) * 0.9, max(scatter_rets) * 1.1]
             )
 
-            fig.show()
-
-        return t_vols, t_rets, weights
+        res = {
+            'returns': [float(x) for x in self.t_rets],  # this is sorted
+            'volatility': [float(x) for x in self.t_vols],
+            'sharpe_ratio': [(r - self.r) / v for r, v in zip(self.t_rets, self.t_vols)],
+            'weights': weights
+        }
+        return fig, res
 
     def find_nearest(self, array, value):
         idx = np.searchsorted(array, value, side="left")
@@ -334,6 +338,8 @@ class PortfolioOptimizer():
 
     @property
     def min_volatility_portfolio(self):
+        if self.t_vols is None:
+            self.efficient_frontier(plot=False)
         min_volatility = min(self.t_vols)
         return self.portfolio_for_volatility(min_volatility)
 

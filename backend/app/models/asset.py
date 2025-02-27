@@ -8,6 +8,7 @@ class AssetType(str, Enum):
     CRYPTO = 'Cryptocurrency'
     ETF = 'ETF'
     MUTUAL_FUND = 'Mutual Fund'
+    INDEX = 'Index'
 
 class PlotType(str, Enum):
     CANDLESTICK = 'candlestick'
