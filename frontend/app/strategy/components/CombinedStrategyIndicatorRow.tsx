@@ -47,60 +47,65 @@ export default function CombinedStrategyIndicatorRow({
   };
   
   return (
-    <li className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-      <div className="flex items-center gap-2 flex-1">
-        <span className="font-medium">{indicatorType}</span>
-        <span className="text-xs text-gray-500">ID: {strategyId.substring(0, 8)}...</span>
-      </div>
+    <div className="inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-md p-1.5 m-1">
+      <span className="font-medium text-xs">{indicatorType}</span>
       
-      <div className="flex items-center gap-2">
-        {/* Weight Input */}
-        <div className="w-20">
-          <Input
-            type="number"
-            min="0"
-            max="1"
-            step="0.01"
-            value={localWeight}
-            onChange={(e) => handleWeightChange(e.target.value)}
-            disabled={isLoading || !isWeightEditable}
-            className="h-8 text-sm"
-          />
-        </div>
+      {/* Weight Input */}
+      <Input
+        type="number"
+        min="0"
+        max="1"
+        step="0.01"
+        value={localWeight}
+        onChange={(e) => handleWeightChange(e.target.value)}
+        disabled={isLoading || !isWeightEditable}
+        className="h-6 w-14 text-xs px-1 py-0.5 mx-1"
+      />
+      
+      {/* Actions Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-5 w-5 p-0"
+            disabled={isLoading}
+          >
+            <ChevronDown className="h-3 w-3" />
+          </Button>
+        </DropdownMenuTrigger>
         
-        {/* Actions Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 w-8 p-0"
-              disabled={isLoading}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => onConfigure(indicatorType, strategyId)}
+            disabled={isLoading}
+            className="text-xs py-1.5"
+          >
+            <Settings className="mr-1.5 h-3 w-3" />
+            <span>Configure</span>
+          </DropdownMenuItem>
           
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => onConfigure(indicatorType, strategyId)}
-              disabled={isLoading}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Configure</span>
-            </DropdownMenuItem>
-            
-            <DropdownMenuItem
-              onClick={() => onRemove(strategyId)}
-              className="text-red-600 focus:text-red-600"
-              disabled={isLoading}
-            >
-              <X className="mr-2 h-4 w-4" />
-              <span>Remove from Strategy</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </li>
+          <DropdownMenuItem
+            onClick={() => onRemove(strategyId)}
+            className="text-red-600 focus:text-red-600 text-xs py-1.5"
+            disabled={isLoading}
+          >
+            <X className="mr-1.5 h-3 w-3" />
+            <span>Remove</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      
+      {/* Remove Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-5 w-5 p-0 rounded-full hover:bg-red-100 hover:text-red-600"
+        onClick={() => onRemove(strategyId)}
+        disabled={isLoading}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    </div>
   );
 }

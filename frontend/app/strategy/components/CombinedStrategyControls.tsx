@@ -52,10 +52,54 @@ export default function CombinedStrategyControls({
   };
 
   return (
-    <div className="mb-4 pb-4 border-b">
-      {/* Title with buttons */}
+    <div className="mb-3 pb-3 border-b">
+      {/* Title and controls in one line */}
       <div className="flex justify-between items-center mb-3">
-        <h4 className="font-medium">Strategy Parameters</h4>
+        <div className="flex items-center space-x-4">
+          <h4 className="font-medium text-sm">Strategy Parameters</h4>
+          
+          <div className="flex items-center gap-2">
+            <Label htmlFor="method" className="text-xs">Method</Label>
+            <Select
+              disabled={isLoading}
+              value={params.method || 'weighted'}
+              onValueChange={(value) => onParamChange('method', value)}
+            >
+              <SelectTrigger className="h-7 w-28 text-xs">
+                <SelectValue placeholder="Method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weighted">Weighted</SelectItem>
+                <SelectItem value="unanimous">Unanimous</SelectItem>
+                <SelectItem value="majority">Majority</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label htmlFor="vote_threshold" className="text-xs">Threshold</Label>
+            <Input
+              id="vote_threshold"
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              className="w-16 h-7 text-xs"
+              value={
+                // Convert threshold to percentage of signals that must agree
+                Math.round(((params.vote_threshold ?? 0) + 1) / 2 * 100)
+              }
+              onChange={(e) => {
+                // Convert percentage back to -1 to 1 scale threshold
+                const percentValue = Number(e.target.value);
+                const thresholdValue = (percentValue / 100 * 2) - 1;
+                handleNumberChange('vote_threshold', thresholdValue);
+              }}
+              disabled={isLoading || params.method === 'unanimous'}
+            />
+          </div>
+        </div>
+        
         <div className="flex gap-2">
           {onOptimizeWeights && (
             <Button 
@@ -63,10 +107,10 @@ export default function CombinedStrategyControls({
               size="sm" 
               onClick={handleOptimizeWeights}
               disabled={isLoading}
-              className="h-8 flex items-center gap-1"
+              className="h-7 text-xs px-2"
             >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span className="text-xs">Optimize Weights</span>
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Optimize
             </Button>
           )}
           <Button 
@@ -74,67 +118,19 @@ export default function CombinedStrategyControls({
             size="sm" 
             onClick={onApplyChanges}
             disabled={isLoading}
-            className="h-8"
+            className="h-7 text-xs px-2"
           >
-            Apply Changes
+            Apply
           </Button>
         </div>
       </div>
       
       {/* Success Message */}
       {optimizeSuccess && (
-        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-green-600 text-sm">
+        <div className="mb-2 p-1.5 bg-green-50 border border-green-200 rounded text-green-600 text-xs">
           Weights optimized successfully!
         </div>
       )}
-      
-      {/* Voting Method & Threshold */}
-      <div className="grid grid-cols-8 items-center gap-4">
-        <Label htmlFor="method" className="text-right col-span-2">
-          Voting Method
-        </Label>
-        <div className="col-span-2">
-          <Select
-            disabled={isLoading}
-            value={params.method || 'weighted'}
-            onValueChange={(value) => onParamChange('method', value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Method" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weighted">Weighted</SelectItem>
-              <SelectItem value="unanimous">Unanimous</SelectItem>
-              <SelectItem value="majority">Majority</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <Label htmlFor="vote_threshold" className="text-right col-span-2">
-          Vote Threshold
-        </Label>
-        <div className="col-span-2">
-        <Input
-          id="vote_threshold"
-          type="number"
-          min="0"
-          max="100"
-          step="1"
-          className="w-full"
-          value={
-            // Convert threshold to percentage of signals that must agree
-            Math.round(((params.vote_threshold ?? 0) + 1) / 2 * 100)
-          }
-          onChange={(e) => {
-            // Convert percentage back to -1 to 1 scale threshold
-            const percentValue = Number(e.target.value);
-            const thresholdValue = (percentValue / 100 * 2) - 1;
-            handleNumberChange('vote_threshold', thresholdValue);
-          }}
-          disabled={isLoading || params.method === 'unanimous'}
-        />
-        </div>
-      </div>
     </div>
   );
 }

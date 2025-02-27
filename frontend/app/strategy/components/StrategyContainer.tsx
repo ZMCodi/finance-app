@@ -590,27 +590,19 @@ export default function StrategyContainer() {
                   
                   {strategyState.combinedStrategyId ? (
                     <div className="space-y-4">
-                      <p className="text-sm">
-                        Combined Strategy ID: <span className="font-mono">{strategyState.combinedStrategyId}</span>
-                      </p>
-                      
                       {/* Combined Strategy Controls */}
                       <CombinedStrategyControls
                         params={combinedParams}
                         onParamChange={handleCombinedParamChange}
-                        isLoading={
-                          operationState.configure.isLoading || 
-                          operationState.optimizeWeights.isLoading || 
-                          operationState.fetchCombinedParams.isLoading
-                        }
+                        isLoading={operationState.optimize.isLoading}
                         onOptimizeWeights={handleOptimizeCombinedWeights}
                         onApplyChanges={handleApplyCombinedChanges}
                       />
                       
-                      <div className="border p-4 rounded-lg">
-                        <h4 className="font-medium mb-2">Strategy Components</h4>
+                      <div className="border p-2 rounded-lg">
+                        <h4 className="font-medium text-sm mb-2">Strategy Components</h4>
                         {combinedStrategyIndicators.length > 0 ? (
-                          <ul className="space-y-2">
+                          <div className="flex flex-wrap">
                             {combinedStrategyIndicators.map((indicator) => (
                               <CombinedStrategyIndicatorRow
                                 key={indicator.strategyId}
@@ -625,30 +617,21 @@ export default function StrategyContainer() {
                                 }
                               />
                             ))}
-                          </ul>
+                          </div>
                         ) : (
-                          <p className="text-gray-500 text-sm">No indicators added to strategy yet</p>
+                          <p className="text-gray-500 text-xs">No indicators added to strategy yet</p>
                         )}
                       </div>
                       
                       <div className="flex space-x-2">
-                        <button 
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        <Button 
+                          className="px-3 py-1"
                           onClick={() => {
-                            if (!selectedAsset) return;
-                            const timeframe = activeTab === '5m' ? '5m' : '1d';
-                            const startDate = activeTab === '5m' ? fiveMinStartDate : dailyStartDate;
-                            const endDate = activeTab === '5m' ? fiveMinEndDate : dailyEndDate;
-                            
-                            // We need to backtest the combined strategy
-                            if (strategyState.combinedStrategyId) {
-                              // Need to implement this
-                              console.log('Backtest combined strategy');
-                            }
+                            // ...backtest function...
                           }}
                         >
                           Backtest
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
@@ -667,12 +650,12 @@ export default function StrategyContainer() {
                               );
                               
                               return (
-                                <button
+                                <Button
                                   key={strategyId}
                                   className={`px-3 py-1 rounded flex items-center gap-1 ${
                                     isAlreadyInStrategy 
-                                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                                      ? 'bg-gray-200 text-gray cursor-not-allowed' 
+                                      : ''
                                   }`}
                                   onClick={() => !isAlreadyInStrategy && handleAddToStrategy(strategyId)}
                                   disabled={isAlreadyInStrategy}
@@ -685,18 +668,18 @@ export default function StrategyContainer() {
                                   ) : (
                                     <>Add {strategy.indicator}</>
                                   )}
-                                </button>
+                                </Button>
                               );
                             })}
                           </div>
                         </div>
                       ) : (
-                        <button 
+                        <Button 
                           className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
                           disabled
                         >
                           No Indicators Available
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
