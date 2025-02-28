@@ -5,12 +5,25 @@
 import type { AssetPlot } from '../models/AssetPlot';
 import type { AssetResponse } from '../models/AssetResponse';
 import type { AssetStats } from '../models/AssetStats';
+import type { Body_upload_portfolio_api_portfolio__portfolio_id__load_patch } from '../models/Body_upload_portfolio_api_portfolio__portfolio_id__load_patch';
+import type { CashflowResponse } from '../models/CashflowResponse';
+import type { HoldingsStats } from '../models/HoldingsStats';
+import type { PortfolioCreate } from '../models/PortfolioCreate';
+import type { PortfolioCreatePost } from '../models/PortfolioCreatePost';
+import type { PortfolioEfficientFrontier } from '../models/PortfolioEfficientFrontier';
+import type { PortfolioOptimize } from '../models/PortfolioOptimize';
+import type { PortfolioPlots } from '../models/PortfolioPlots';
+import type { PortfolioStats } from '../models/PortfolioStats';
+import type { PortfolioTransactions_Input } from '../models/PortfolioTransactions_Input';
+import type { PortfolioTransactions_Output } from '../models/PortfolioTransactions_Output';
+import type { StrategyBase } from '../models/StrategyBase';
 import type { StrategyCreate } from '../models/StrategyCreate';
 import type { StrategyOptimize } from '../models/StrategyOptimize';
 import type { StrategyParams } from '../models/StrategyParams';
 import type { StrategyPlot } from '../models/StrategyPlot';
 import type { StrategySignal } from '../models/StrategySignal';
 import type { StrategyUpdateParams } from '../models/StrategyUpdateParams';
+import type { TradeResponse } from '../models/TradeResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -174,6 +187,26 @@ export class DefaultService {
             path: {
                 'strategy_name': strategyName,
                 'asset_ticker': assetTicker,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Delete Strategy
+     * @param strategyKey
+     * @returns StrategyBase Successful Response
+     * @throws ApiError
+     */
+    public static deleteStrategyApiStrategiesStrategyKeyDeleteDelete(
+        strategyKey: string,
+    ): CancelablePromise<StrategyBase> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/strategies/{strategy_key}/delete',
+            path: {
+                'strategy_key': strategyKey,
             },
             errors: {
                 422: `Validation Error`,
@@ -459,6 +492,372 @@ export class DefaultService {
                 'end_date': endDate,
                 'runs': runs,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Create Portfolio
+     * @param requestBody
+     * @returns PortfolioCreate Successful Response
+     * @throws ApiError
+     */
+    public static createPortfolioApiPortfolioCreatePost(
+        requestBody: PortfolioCreatePost,
+    ): CancelablePromise<PortfolioCreate> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/portfolio/create',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Upload Portfolio
+     * @param portfolioId
+     * @param formData
+     * @returns PortfolioTransactions_Output Successful Response
+     * @throws ApiError
+     */
+    public static uploadPortfolioApiPortfolioPortfolioIdLoadPatch(
+        portfolioId: string,
+        formData: Body_upload_portfolio_api_portfolio__portfolio_id__load_patch,
+    ): CancelablePromise<PortfolioTransactions_Output> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/load',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            formData: formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Deposit
+     * @param portfolioId
+     * @param value
+     * @param currency
+     * @param date
+     * @returns CashflowResponse Successful Response
+     * @throws ApiError
+     */
+    public static depositApiPortfolioPortfolioIdDepositPatch(
+        portfolioId: string,
+        value: number,
+        currency?: string,
+        date?: string,
+    ): CancelablePromise<CashflowResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/deposit',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'value': value,
+                'currency': currency,
+                'date': date,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Withdraw
+     * @param portfolioId
+     * @param value
+     * @param currency
+     * @param date
+     * @returns CashflowResponse Successful Response
+     * @throws ApiError
+     */
+    public static withdrawApiPortfolioPortfolioIdWithdrawPatch(
+        portfolioId: string,
+        value: number,
+        currency?: string,
+        date?: string,
+    ): CancelablePromise<CashflowResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/withdraw',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'value': value,
+                'currency': currency,
+                'date': date,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Buy
+     * @param portfolioId
+     * @param assetTicker
+     * @param shares
+     * @param value
+     * @param date
+     * @param currency
+     * @returns TradeResponse Successful Response
+     * @throws ApiError
+     */
+    public static buyApiPortfolioPortfolioIdBuyPatch(
+        portfolioId: string,
+        assetTicker: string,
+        shares?: number,
+        value?: number,
+        date?: string,
+        currency?: string,
+    ): CancelablePromise<TradeResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/buy',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'shares': shares,
+                'value': value,
+                'date': date,
+                'currency': currency,
+                'asset_ticker': assetTicker,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Sell
+     * @param portfolioId
+     * @param assetTicker
+     * @param shares
+     * @param value
+     * @param date
+     * @param currency
+     * @returns TradeResponse Successful Response
+     * @throws ApiError
+     */
+    public static sellApiPortfolioPortfolioIdSellPatch(
+        portfolioId: string,
+        assetTicker: string,
+        shares?: number,
+        value?: number,
+        date?: string,
+        currency?: string,
+    ): CancelablePromise<TradeResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/sell',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'shares': shares,
+                'value': value,
+                'date': date,
+                'currency': currency,
+                'asset_ticker': assetTicker,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Portfolio Stats
+     * @param portfolioId
+     * @returns PortfolioStats Successful Response
+     * @throws ApiError
+     */
+    public static portfolioStatsApiPortfolioPortfolioIdStatsGet(
+        portfolioId: string,
+    ): CancelablePromise<PortfolioStats> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/stats',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Holdings Stats
+     * @param portfolioId
+     * @returns HoldingsStats Successful Response
+     * @throws ApiError
+     */
+    public static holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(
+        portfolioId: string,
+    ): CancelablePromise<HoldingsStats> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/holdings_stats',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Portfolio Plots
+     * @param portfolioId
+     * @returns PortfolioPlots Successful Response
+     * @throws ApiError
+     */
+    public static portfolioPlotsApiPortfolioPortfolioIdPlotsGet(
+        portfolioId: string,
+    ): CancelablePromise<PortfolioPlots> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/plots',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Portfolio Transactions
+     * @param portfolioId
+     * @returns PortfolioTransactions_Output Successful Response
+     * @throws ApiError
+     */
+    public static portfolioTransactionsApiPortfolioPortfolioIdTransactionsGet(
+        portfolioId: string,
+    ): CancelablePromise<PortfolioTransactions_Output> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/transactions',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Optimize Portfolio
+     * @param portfolioId
+     * @param minAlloc
+     * @param maxAlloc
+     * @returns PortfolioOptimize Successful Response
+     * @throws ApiError
+     */
+    public static optimizePortfolioApiPortfolioPortfolioIdOptimizeGet(
+        portfolioId: string,
+        minAlloc?: number,
+        maxAlloc: number = 1,
+    ): CancelablePromise<PortfolioOptimize> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/optimize',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'min_alloc': minAlloc,
+                'max_alloc': maxAlloc,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Efficient Frontier
+     * @param portfolioId
+     * @param minAlloc
+     * @param maxAlloc
+     * @param points
+     * @returns PortfolioEfficientFrontier Successful Response
+     * @throws ApiError
+     */
+    public static efficientFrontierApiPortfolioPortfolioIdEfficientFrontierGet(
+        portfolioId: string,
+        minAlloc?: number,
+        maxAlloc: number = 1,
+        points: number = 50,
+    ): CancelablePromise<PortfolioEfficientFrontier> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/{portfolio_id}/efficient_frontier',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            query: {
+                'min_alloc': minAlloc,
+                'max_alloc': maxAlloc,
+                'points': points,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Rebalance
+     * @param portfolioId
+     * @param requestBody
+     * @returns PortfolioTransactions_Output Successful Response
+     * @throws ApiError
+     */
+    public static rebalanceApiPortfolioPortfolioIdRebalancePost(
+        portfolioId: string,
+        requestBody: Record<string, number>,
+    ): CancelablePromise<PortfolioTransactions_Output> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/portfolio/{portfolio_id}/rebalance',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Parse Transactions
+     * @param portfolioId
+     * @param requestBody
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static parseTransactionsApiPortfolioPortfolioIdParseTransactionsPatch(
+        portfolioId: string,
+        requestBody: PortfolioTransactions_Input,
+    ): CancelablePromise<Record<string, string>> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/portfolio/{portfolio_id}/parse_transactions',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

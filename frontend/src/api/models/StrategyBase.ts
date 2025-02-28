@@ -3,8 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { StrategyType } from './StrategyType';
-import type { StrategyUpdateParams } from './StrategyUpdateParams';
-export type StrategyParams = {
+export type StrategyBase = {
     /**
      * The asset ticker according to Yahoo Finance
      */
@@ -13,9 +12,5 @@ export type StrategyParams = {
      * The strategy name
      */
     strategy: StrategyType;
-    /**
-     * The parameters of the strategy
-     */
-    params: StrategyUpdateParams;
 };
 

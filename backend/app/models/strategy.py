@@ -67,9 +67,6 @@ class StrategyPlot(StrategyBase):
     results: Optional[Dict[str, float]] = Field(None, title='Results', description='The results of the backtest')
     json_data: List[PlotJSON] = Field(..., title='JSON', description='The JSON representation of the plot')
 
-class StrategyParams(StrategyBase):
-    params: Dict[str, float | str | List] = Field(..., title='Parameters', description='The parameters of the strategy')
-
 class StrategySignal(StrategyBase):
     signals: Dict[str, float] = Field(..., title='Signals', description='The buy/sell signals of the strategy')
 
@@ -77,7 +74,7 @@ class StrategyUpdateParams(BaseModel):
     # MA Crossover
     short: Optional[int | float] = Field(None, title='Short', description='The short moving average period')
     long: Optional[int | float] = Field(None, title='Long', description='The long moving average period')
-    param_type: Optional[MA_ParamType] = Field(None, title='Param Type', description='The type of parameter to update')
+    param_type: Optional[MA_ParamType] = Field(None, title='Param Type', description='The type of parameter to update', alias='ptype')
     ewm: Optional[bool] = Field(None, title='Exponential Weighted Moving Average', description='Whether to use exponential weighted moving average')
 
     # RSI
@@ -104,3 +101,6 @@ class StrategyUpdateParams(BaseModel):
 
 class StrategyOptimize(StrategyBase):
     results: OptimizeParamsResults | OptimizeWeightResults = Field(..., title='Results', description='The results of the optimization')
+
+class StrategyParams(StrategyBase):
+    params: StrategyUpdateParams = Field(..., title='Parameters', description='The parameters of the strategy')

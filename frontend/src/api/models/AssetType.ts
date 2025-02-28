@@ -7,4 +7,5 @@ export enum AssetType {
     CRYPTOCURRENCY = 'Cryptocurrency',
     ETF = 'ETF',
     MUTUAL_FUND = 'Mutual Fund',
+    INDEX = 'Index',
 }

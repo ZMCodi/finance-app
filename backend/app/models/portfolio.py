@@ -3,9 +3,23 @@ from typing import Dict, List, Optional
 from enum import Enum
 from app.models.common import PlotJSON
 
+class PortfolioInitialHoldings(BaseModel):
+    asset: str = Field(..., title='Asset', description='The asset ticker according to Yahoo Finance')
+    shares: float = Field(..., title='Shares', description='The number of shares held')
+    avg_price: float = Field(..., title='Average Price', description='The average buying price of the holding')
+
+class PortfolioCreatePost(BaseModel):
+    assets: List[PortfolioInitialHoldings] = Field(None, title='Initial Holdings', description='The initial holdings of the portfolio')
+    cash: float = Field(0, title='Cash', description='The initial cash in the portfolio')
+    currency: Optional[str] = Field(None, title='Currency', description='The currency of the portfolio')
+    r: float = Field(0.02, title='Risk-Free Rate', description='The risk-free rate for the portfolio')
+    name: Optional[str] = Field(None, title='Name', description='The name of the portfolio')
+
 class PortfolioCreate(BaseModel):
     portfolio_id: str = Field(..., title='Portfolio ID', description='The unique identifier for the portfolio')
     currency: str = Field(..., title='Currency', description='The currency of the portfolio')
+    cash: float = Field(..., title='Cash', description='The current cash in the portfolio')
+    holdings: Dict[str, float] = Field(..., title='Holdings', description='The current holdings in the portfolio')
 
 class CashflowResponse(BaseModel):
     cashflow: float = Field(..., title='Cashflow', description='The cashflow value')
@@ -141,4 +155,4 @@ class PortfolioEfficientFrontier(BaseModel):
     returns: List[float] = Field(..., title='Returns', description='The (sorted) expected returns of the portfolios on the efficient frontier')
     volatilities: List[float] = Field(..., title='Volatilities', description='The expected volatilities of the portfolios on the efficient frontier')
     sharpe_ratios: List[float] = Field(..., title='Sharpe Ratios', description='The expected Sharpe ratios of the portfolios on the efficient frontier')
-    weights: List[List[float]] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolios on the efficient frontier (in order)')
+    weights: List[Dict[str, float]] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolios on the efficient frontier')

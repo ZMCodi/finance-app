@@ -26,6 +26,7 @@ DateLike = str | datetime.datetime | datetime.date | pd.Timestamp
 # store how many shares e.g. NVDA 30 shares
 # buy/sell: give date and either shares or price
 # Portfolio({AAPL: {'shares': 20, 'avg_price': 100}, NVDA: {'shares': 15, 'avg_price': 20}})
+# Portfolio([{'asset': 'AAPL', 'shares': 20, 'avg_price': 100}, {'asset': 'NVDA', 'shares': 15, 'avg_price': 20}])
 # store total money invested and num of shares for each asset
 
 
@@ -33,7 +34,7 @@ class Portfolio:
 
     transaction = namedtuple('transaction', ['type', 'asset', 'shares', 'value', 'profit', 'date', 'id'])
 
-    def __init__(self, assets: dict | None = None, currency: str | None = None, r: float = 0.02):
+    def __init__(self, assets: list[dict[str, str | float]] | None = None, cash: float | None = None, currency: str | None = None, r: float = 0.02):
         self.holdings = defaultdict(float)
         self.currency = 'USD' if currency is None else currency
         self.cost_bases = defaultdict(float)
@@ -46,10 +47,10 @@ class Portfolio:
         self.id = 0
 
         if assets:  # Only process if assets provided
-            self.assets.extend([Asset(ast.ticker) for ast in assets.keys()])  # store copy of assets
+            self.assets.extend([Asset(holdings['asset']) for holdings in assets])  # store copy of assets
 
             if currency is None:
-                self.currency = Counter((ast.currency for ast in assets)).most_common()[0][0]
+                self.currency = Counter((ast.currency for ast in self.assets)).most_common()[0][0]
             else:
                 self.currency = currency
 
@@ -58,15 +59,16 @@ class Portfolio:
                 if ast.currency != self.currency:
                     self._convert_ast(ast)
 
-            for ast in self.assets:
-                self.holdings[ast] = assets[ast]['shares']
+            for i, ast in enumerate(self.assets):
+                self.holdings[ast] = assets[i]['shares']
                 if ast.currency != self.currency:
-                    avg_price = self._convert_price(assets[ast]['avg_price'], ast.currency)
+                    avg_price = self._convert_price(assets[i]['avg_price'], ast.currency)
                 else:
-                    avg_price = assets[ast]['avg_price']
+                    avg_price = assets[i]['avg_price']
 
                 self.cost_bases[ast] = avg_price
-            self.cash = assets.get('Cash', 0)
+            if cash is not None:
+                self.cash = cash
 
         self.market = Asset('SPY')
         self._convert_ast(self.market)
@@ -421,7 +423,7 @@ class Portfolio:
             elif t.type == 'SELL':
                 self.sell(t.asset, shares=t.shares, value=t.value, date=t.date, currency=self.currency)
 
-    def from_212(self, filename: str):
+    def from_212(self, filename: str) -> list[transaction]:
         df = pd.read_csv(filename)
         df = df[['Action', 'Time', 'Ticker', 'No. of shares', 'Currency (Price / share)', 'Total']]
         df.rename(columns={'Action': 'action', 'Time': 'time', 'Ticker': 'ticker', 'No. of shares': 'shares', 'Currency (Price / share)': 'currency', 'Total': 'value'}, inplace=True)
@@ -438,6 +440,7 @@ class Portfolio:
         df.loc[df['currency'] == 'GBP', 'ticker'] += '.L'
         tickers = list(df['ticker'].dropna().unique())
         asset_mapping = {ticker: Asset(ticker) for ticker in tickers}
+        last_transaction = len(self.transactions)
 
         for _, row in df.iterrows():
             if row['action'] == 'buy':
@@ -447,7 +450,9 @@ class Portfolio:
             elif row['action'] == 'deposit':
                 self.deposit(row['value'], currency=self.currency, date=row['time'])
 
-    def from_vanguard(self, filename: str):
+        return self.transactions[last_transaction:]
+
+    def from_vanguard(self, filename: str) -> list[transaction]:
         df = pd.read_excel(filename, sheet_name=1)
 
         # Get cash transactions
@@ -494,6 +499,7 @@ class Portfolio:
         df = pd.concat([cash, inv]).sort_values('Date')
         tickers = list(df['Ticker'].dropna().unique())
         asset_mapping = {ticker: Asset(ticker) for ticker in tickers}
+        last_transaction = len(self.transactions)
 
         for _, row in df.iterrows():
             if row['Action'] == 'Deposit':
@@ -504,6 +510,8 @@ class Portfolio:
                 self.buy(asset_mapping[row['Ticker']], shares=row['Quantity'], value=row['Cost'], date=row['Date'], currency=self.currency)
             elif row['Action'] == 'Sell':
                 self.sell(asset_mapping[row['Ticker']], shares=-row['Quantity'], value=-row['Cost'], date=row['Date'], currency=self.currency)
+
+        return self.transactions[last_transaction:]
 
     @property
     def stats(self) -> dict:

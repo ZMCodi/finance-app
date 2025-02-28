@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile, File, Form
+from fastapi.responses import JSONResponse
+import os
+import tempfile
 from app.core.portfolio import Portfolio
 from app.core.portfolio_optimizer import PortfolioOptimizer
 from app.core.asset import Asset
@@ -6,7 +9,7 @@ from functools import lru_cache
 from plotly.utils import PlotlyJSONEncoder
 import json
 from typing import Dict
-from app.models.portfolio import (PortfolioCreate, CashflowResponse, TradeResponse,
+from app.models.portfolio import (PortfolioCreate, PortfolioCreatePost, CashflowResponse, TradeResponse,
                                   PortfolioStats, HoldingsStats, PortfolioPlots,
                                   PortfolioTransactions, PortfolioOptimize, PortfolioEfficientFrontier)
 
@@ -18,18 +21,56 @@ def get_asset(asset_ticker: str):
 
 test_portfolio = Portfolio.load('my_portfolio')
 
-portfolio_cache = {'test': test_portfolio}
+portfolio_cache = {'test': test_portfolio, 'empty': Portfolio()}
+_id = 0
+
+@router.get('/cache')
+def get_cache():
+    return str(portfolio_cache)
 
 @router.post('/create', response_model=PortfolioCreate)
-def create_portfolio(assets: dict = None, currency: str = 'USD', r: float = 0.02, name: str = None):
-    if name is None:
-        name = 'my_portfolio'
-
-    portfolio = Portfolio(assets=assets, currency=currency, r=r)
+def create_portfolio(request: PortfolioCreatePost):
+    global _id
+    if request.name is None:
+        name = f'my_portfolio_{_id}'
+        _id += 1
+    else:
+        name = request.name
+    print(request.model_dump(exclude_none=True, exclude={'name'}))
+    portfolio = Portfolio(**request.model_dump(exclude_none=True, exclude={'name'}))
     portfolio_cache[name] = portfolio
     return {
         'portfolio_id': name,
-        'currency': currency,
+        'currency': portfolio.currency,
+        'cash': portfolio.cash,
+        'holdings': {a.ticker: v for a, v in portfolio.holdings.items()},
+    }
+
+@router.patch('/{portfolio_id}/load', response_model=PortfolioTransactions)
+async def upload_portfolio(portfolio_id: str, file: UploadFile = File(...), source: str = Form(...)):
+    suffix = '.csv' if source == 'trading212' else '.xlsx'
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_name = tmp.name
+
+    portfolio: Portfolio = portfolio_cache[portfolio_id]
+    if source == 'trading212':
+        transactions = portfolio.from_212(tmp_name)
+    else:
+        transactions = portfolio.from_vanguard(tmp_name)
+
+    os.unlink(tmp_name)
+
+    return {
+        t.id: {
+            'type': t.type,
+            'asset': t.asset.ticker if isinstance(t.asset, Asset) else t.asset,
+            'shares': t.shares,
+            'value': t.value,
+            'profit': t.profit,
+            'date': t.date,
+        } for t in transactions
     }
 
 @router.patch('/{portfolio_id}/deposit', response_model=CashflowResponse)
@@ -211,3 +252,5 @@ def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     }
 
 # optimizing flow: optimize: weights -> rebalance: transactions -> parse_transactions
+# rebalancing flow: rebalance: transactions -> parse_transactions
+# portfolio for volatility/returns/sharpe ratio: efficient_frontier: weights -> rebalance: transactions -> parse_transactions

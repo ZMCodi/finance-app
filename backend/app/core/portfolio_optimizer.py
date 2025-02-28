@@ -291,6 +291,10 @@ class PortfolioOptimizer():
                 yaxis_range=[min(scatter_rets) * 0.9, max(scatter_rets) * 1.1]
             )
 
+        weights = [
+            {ast.ticker: w for ast, w in zip(self.rets.columns, w)} for w in self.t_weights
+        ]
+
         res = {
             'returns': [float(x) for x in self.t_rets],  # this is sorted
             'volatility': [float(x) for x in self.t_vols],

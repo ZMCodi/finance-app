@@ -18,7 +18,7 @@ export type StrategyUpdateParams = {
     /**
      * The type of parameter to update
      */
-    param_type?: (MA_ParamType | null);
+    ptype?: (MA_ParamType | null);
     /**
      * Whether to use exponential weighted moving average
      */
