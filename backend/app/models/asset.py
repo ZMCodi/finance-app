@@ -51,4 +51,5 @@ class AssetStats(BaseModel):
     returns: ReturnsStats = Field(..., title='Returns', description='The returns statistics of the asset')
     price: PriceStats = Field(..., title='Price', description='The price statistics of the asset')
     distribution: DistributionStats = Field(..., title='Distribution', description='The returns distribution statistics of the asset')
+    currency: str = Field(..., title='Currency', min_length=3, max_length=3, description='The currency the asset is traded in')
 

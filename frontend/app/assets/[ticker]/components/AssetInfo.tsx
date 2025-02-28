@@ -30,7 +30,13 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
   if (!stats) return <div>No stats available</div>;
 
   const formatPercent = (value: number) => (value * 100).toFixed(2) + '%';
-  const formatPrice = (value: number) => '$' + value.toFixed(2);
+  const currSymbolMap: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+  }
+  const formatPrice = (currency: string, value: number) => currSymbolMap[currency] + value.toFixed(2);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full pt-4">
@@ -42,15 +48,15 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt>Current</dt>
-              <dd>{formatPrice(stats.price.current)}</dd>
+              <dd>{formatPrice(stats.currency, stats.price.current)}</dd>
             </div>
             <div className="flex justify-between">
               <dt>52 Week High</dt>
-              <dd>{formatPrice(stats.price['52w_high'])}</dd>
+              <dd>{formatPrice(stats.currency, stats.price['52w_high'])}</dd>
             </div>
             <div className="flex justify-between">
               <dt>52 Week Low</dt>
-              <dd>{formatPrice(stats.price['52w_low'])}</dd>
+              <dd>{formatPrice(stats.currency, stats.price['52w_low'])}</dd>
             </div>
           </dl>
         </CardContent>

@@ -1,9 +1,16 @@
 import React from 'react';
+import PortfolioPageClient from './components/PortfolioPageClient';
 
-export default function PortfolioView() {
-    return (
-        <div>
-        <h1>Portfolio View</h1>
-        </div>
-    );
+interface PortfolioPageProps {
+  params: {
+    id: string;
+  };
 }
+
+const PortfolioPage = ({ params }: PortfolioPageProps) => {
+  const { id } = params;
+  
+  return <PortfolioPageClient portfolioId={id} />;
+};
+
+export default PortfolioPage;

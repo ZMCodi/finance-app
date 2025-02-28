@@ -1,6 +1,7 @@
+// app/assets/[ticker]/components/ChartControls.tsx
 'use client';
 /* eslint-disable  @typescript-eslint/no-explicit-any */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -31,6 +32,15 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
   // Returns distribution settings
   const [useLogReturns, setUseLogReturns] = useState(false);
   const [numBins, setNumBins] = useState('100');
+
+  // Set default start date when timeframe changes to 5m
+  useEffect(() => {
+    if (timeframe === '5m') {
+      // Set default start date to 15 days ago for 5m data
+      const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+      setStartDate(defaultFiveMinStart);
+    }
+  }, [timeframe]);
 
   const buildQueryString = (settings: any) => {
     const params = new URLSearchParams();
@@ -80,13 +90,24 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
     onApply(queryString); // Now passing the query string instead of settings object
   };
 
+  // Handle timeframe change
+  const handleTimeframeChange = (value: string) => {
+    setTimeframe(value);
+    
+    // If changing to 5m, set the default start date to 15 days ago
+    if (value === '5m') {
+      const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+      setStartDate(defaultFiveMinStart);
+    }
+  };
+
   if (chartType === 'returns_distribution') {
     return (
       <Card>
         <CardContent className="space-y-4 pt-6">
         <div className="space-y-2">
           <Label>Timeframe</Label>
-          <Select value={timeframe} onValueChange={setTimeframe}>
+          <Select value={timeframe} onValueChange={handleTimeframeChange}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -129,7 +150,7 @@ export default function ChartControls({ chartType, onApply }: ChartControlsProps
       <CardContent className="space-y-4 pt-6">
         <div className="space-y-2">
           <Label>Timeframe</Label>
-          <Select value={timeframe} onValueChange={setTimeframe}>
+          <Select value={timeframe} onValueChange={handleTimeframeChange}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

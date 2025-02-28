@@ -74,6 +74,9 @@ const CreatePortfolioDialog: React.FC<CreatePortfolioDialogProps> = ({ onPortfol
       const portfolio = await DefaultService.createPortfolioApiPortfolioCreatePost(createRequest);
 
       if (portfolio.portfolio_id) {
+        // Store currency in localStorage for future reference
+        localStorage.setItem(`portfolio_${portfolio.portfolio_id}_currency`, currency);
+        
         onPortfolioCreated(portfolio.portfolio_id);
         setOpen(false);
       }

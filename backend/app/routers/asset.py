@@ -50,8 +50,5 @@ def read_asset_returns_distribution(asset: Asset = Depends(get_asset), timeframe
 @router.get("/{asset_ticker}/stats", response_model=AssetStats)
 def read_asset_stats(asset: Asset = Depends(get_asset)):
     stats = asset.stats
-    return {
-        'returns': stats['returns'],
-        'price': stats['price'],
-        'distribution': stats['distribution'],
-    }
+    stats.update({'currency': asset.currency})
+    return stats

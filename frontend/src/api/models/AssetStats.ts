@@ -18,5 +18,9 @@ export type AssetStats = {
      * The returns distribution statistics of the asset
      */
     distribution: DistributionStats;
+    /**
+     * The currency the asset is traded in
+     */
+    currency: string;
 };
 

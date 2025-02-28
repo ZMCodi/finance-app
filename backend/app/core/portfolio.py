@@ -662,7 +662,7 @@ class Portfolio:
         log_returns = self.log_returns
         if log_returns.empty:
             return 0
-        return float(np.exp(log_returns.sum() - 1))
+        return float(np.exp(log_returns.sum()) - 1)
 
     @property
     def trading_returns(self) -> float:

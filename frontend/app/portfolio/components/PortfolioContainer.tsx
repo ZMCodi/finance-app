@@ -3,15 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import CreatePortfolioDialog from './CreatePortfolioDialog';
-import { PlusCircle, View } from 'lucide-react';
+import { View } from 'lucide-react';
 
 const PortfolioContainer = () => {
   const [hasPortfolio, setHasPortfolio] = useState(false);
   const [portfolioId, setPortfolioId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -30,9 +28,6 @@ const PortfolioContainer = () => {
   };
 
   const handleViewPortfolio = () => {
-    // In the future, you can navigate to a details page
-    // For now, perhaps just reload the page or implement a toast notification
-    // console.log(`Viewing portfolio: ${portfolioId}`);
     router.push(`/portfolio/${portfolioId}`);
   };
 
