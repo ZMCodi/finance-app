@@ -7,14 +7,14 @@ export type RiskPlots = {
     /**
      * The pie chart representing the risk decomposition for each asset in the portfolio
      */
-    risk_decomposition: PlotJSON;
+    risk_decomposition?: (PlotJSON | null);
     /**
      * The line chart representing the drawdowns
      */
-    drawdown_plot: PlotJSON;
+    drawdown_plot?: (PlotJSON | null);
     /**
      * The histogram representing the drawdown frequency
      */
-    drawdown_frequency: PlotJSON;
+    drawdown_frequency?: (PlotJSON | null);
 };
 

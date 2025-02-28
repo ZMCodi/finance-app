@@ -3,13 +3,13 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { TransactionType } from './TransactionType';
-export type TransactionData = {
+export type BaseTransaction = {
     /**
      * The type of transaction
      */
     type: TransactionType;
     /**
-     * The asset ticker or cash
+     * The asset ticker according to Yahoo Finance or Cash
      */
     asset: string;
     /**
@@ -28,5 +28,9 @@ export type TransactionData = {
      * The date of the trade
      */
     date: string;
+    /**
+     * The unique identifier for the transaction
+     */
+    id: number;
 };
 

@@ -6,11 +6,9 @@ import type { AssetPlot } from '../models/AssetPlot';
 import type { AssetResponse } from '../models/AssetResponse';
 import type { AssetStats } from '../models/AssetStats';
 import type { Body_upload_portfolio_api_portfolio__portfolio_id__load_patch } from '../models/Body_upload_portfolio_api_portfolio__portfolio_id__load_patch';
-import type { CashflowResponse } from '../models/CashflowResponse';
 import type { HoldingsStats } from '../models/HoldingsStats';
 import type { PortfolioCreate } from '../models/PortfolioCreate';
 import type { PortfolioCreatePost } from '../models/PortfolioCreatePost';
-import type { PortfolioEfficientFrontier } from '../models/PortfolioEfficientFrontier';
 import type { PortfolioOptimize } from '../models/PortfolioOptimize';
 import type { PortfolioPlots } from '../models/PortfolioPlots';
 import type { PortfolioStats } from '../models/PortfolioStats';
@@ -23,7 +21,7 @@ import type { StrategyParams } from '../models/StrategyParams';
 import type { StrategyPlot } from '../models/StrategyPlot';
 import type { StrategySignal } from '../models/StrategySignal';
 import type { StrategyUpdateParams } from '../models/StrategyUpdateParams';
-import type { TradeResponse } from '../models/TradeResponse';
+import type { TransactionResponse } from '../models/TransactionResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -498,6 +496,17 @@ export class DefaultService {
         });
     }
     /**
+     * Get Cache
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static getCacheApiPortfolioCacheGet(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/portfolio/cache',
+        });
+    }
+    /**
      * Create Portfolio
      * @param requestBody
      * @returns PortfolioCreate Successful Response
@@ -546,7 +555,7 @@ export class DefaultService {
      * @param value
      * @param currency
      * @param date
-     * @returns CashflowResponse Successful Response
+     * @returns TransactionResponse Successful Response
      * @throws ApiError
      */
     public static depositApiPortfolioPortfolioIdDepositPatch(
@@ -554,7 +563,7 @@ export class DefaultService {
         value: number,
         currency?: string,
         date?: string,
-    ): CancelablePromise<CashflowResponse> {
+    ): CancelablePromise<TransactionResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/portfolio/{portfolio_id}/deposit',
@@ -577,7 +586,7 @@ export class DefaultService {
      * @param value
      * @param currency
      * @param date
-     * @returns CashflowResponse Successful Response
+     * @returns TransactionResponse Successful Response
      * @throws ApiError
      */
     public static withdrawApiPortfolioPortfolioIdWithdrawPatch(
@@ -585,7 +594,7 @@ export class DefaultService {
         value: number,
         currency?: string,
         date?: string,
-    ): CancelablePromise<CashflowResponse> {
+    ): CancelablePromise<TransactionResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/portfolio/{portfolio_id}/withdraw',
@@ -610,7 +619,7 @@ export class DefaultService {
      * @param value
      * @param date
      * @param currency
-     * @returns TradeResponse Successful Response
+     * @returns TransactionResponse Successful Response
      * @throws ApiError
      */
     public static buyApiPortfolioPortfolioIdBuyPatch(
@@ -620,7 +629,7 @@ export class DefaultService {
         value?: number,
         date?: string,
         currency?: string,
-    ): CancelablePromise<TradeResponse> {
+    ): CancelablePromise<TransactionResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/portfolio/{portfolio_id}/buy',
@@ -647,7 +656,7 @@ export class DefaultService {
      * @param value
      * @param date
      * @param currency
-     * @returns TradeResponse Successful Response
+     * @returns TransactionResponse Successful Response
      * @throws ApiError
      */
     public static sellApiPortfolioPortfolioIdSellPatch(
@@ -657,7 +666,7 @@ export class DefaultService {
         value?: number,
         date?: string,
         currency?: string,
-    ): CancelablePromise<TradeResponse> {
+    ): CancelablePromise<TransactionResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
             url: '/api/portfolio/{portfolio_id}/sell',
@@ -761,6 +770,7 @@ export class DefaultService {
      * @param portfolioId
      * @param minAlloc
      * @param maxAlloc
+     * @param points
      * @returns PortfolioOptimize Successful Response
      * @throws ApiError
      */
@@ -768,40 +778,11 @@ export class DefaultService {
         portfolioId: string,
         minAlloc?: number,
         maxAlloc: number = 1,
+        points: number = 50,
     ): CancelablePromise<PortfolioOptimize> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/portfolio/{portfolio_id}/optimize',
-            path: {
-                'portfolio_id': portfolioId,
-            },
-            query: {
-                'min_alloc': minAlloc,
-                'max_alloc': maxAlloc,
-            },
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
-    /**
-     * Efficient Frontier
-     * @param portfolioId
-     * @param minAlloc
-     * @param maxAlloc
-     * @param points
-     * @returns PortfolioEfficientFrontier Successful Response
-     * @throws ApiError
-     */
-    public static efficientFrontierApiPortfolioPortfolioIdEfficientFrontierGet(
-        portfolioId: string,
-        minAlloc?: number,
-        maxAlloc: number = 1,
-        points: number = 50,
-    ): CancelablePromise<PortfolioEfficientFrontier> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/portfolio/{portfolio_id}/efficient_frontier',
             path: {
                 'portfolio_id': portfolioId,
             },

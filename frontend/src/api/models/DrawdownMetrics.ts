@@ -10,7 +10,7 @@ export type DrawdownMetrics = {
     /**
      * The start, end date and duration of the longest drawdown
      */
-    longest_drawdown_duration: Record<string, (string | number)>;
+    longest_drawdown_duration: Record<string, (string | number | null)>;
     /**
      * The average drawdown value of the portfolio
      */

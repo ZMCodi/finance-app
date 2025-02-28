@@ -7,14 +7,14 @@ export type ReturnsPlots = {
     /**
      * The line chart representing the daily returns
      */
-    returns_chart: PlotJSON;
+    returns_chart?: (PlotJSON | null);
     /**
      * The histogram representing the returns distribution
      */
-    returns_dist: PlotJSON;
+    returns_dist?: (PlotJSON | null);
     /**
      * The line chart representing the profit and loss
      */
-    pnl_chart: PlotJSON;
+    pnl_chart?: (PlotJSON | null);
 };
 

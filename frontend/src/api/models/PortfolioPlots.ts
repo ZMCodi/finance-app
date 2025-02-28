@@ -2,14 +2,14 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { HoldingPlots } from './HoldingPlots';
+import type { HoldingsPlots } from './HoldingsPlots';
 import type { ReturnsPlots } from './ReturnsPlots';
 import type { RiskPlots } from './RiskPlots';
 export type PortfolioPlots = {
     /**
      * The holdings plots of the portfolio
      */
-    holdings: HoldingPlots;
+    holdings: HoldingsPlots;
     /**
      * The returns plots of the portfolio
      */

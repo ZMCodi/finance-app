@@ -2,22 +2,27 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { PortfolioEfficientFrontier } from './PortfolioEfficientFrontier';
 export type PortfolioOptimize = {
     /**
      * The expected returns of the optimal portfolio
      */
-    returns: number;
+    opt_returns: number;
     /**
      * The expected volatility of the optimal portfolio
      */
-    volatility: number;
+    opt_volatility: number;
     /**
      * The expected Sharpe ratio of the optimal portfolio
      */
-    sharpe_ratio: number;
+    opt_sharpe_ratio: number;
     /**
      * The optimal weights for each asset in the portfolio
      */
-    weights: Record<string, number>;
+    opt_weights: Record<string, number>;
+    /**
+     * The efficient frontier results of the portfolio
+     */
+    ef_results: PortfolioEfficientFrontier;
 };
 

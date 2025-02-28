@@ -9,7 +9,7 @@ from functools import lru_cache
 from plotly.utils import PlotlyJSONEncoder
 import json
 from typing import Dict
-from app.models.portfolio import (PortfolioCreate, PortfolioCreatePost, CashflowResponse, TradeResponse,
+from app.models.portfolio import (PortfolioCreate, PortfolioCreatePost, TransactionResponse,
                                   PortfolioStats, HoldingsStats, PortfolioPlots,
                                   PortfolioTransactions, PortfolioOptimize, PortfolioEfficientFrontier)
 
@@ -73,46 +73,64 @@ async def upload_portfolio(portfolio_id: str, file: UploadFile = File(...), sour
         } for t in transactions
     }
 
-@router.patch('/{portfolio_id}/deposit', response_model=CashflowResponse)
+@router.patch('/{portfolio_id}/deposit', response_model=TransactionResponse)
 def deposit(portfolio_id: str, value: float, currency: str = None, date: str = None):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
-    portfolio.deposit(value, currency, date)
+    t, cash = portfolio.deposit(value, currency, date)
     return {
-        'cashflow': value,
-        'current_cash': portfolio.cash,
+        'type': t.type,
+        'asset': t.asset,
+        'shares': t.shares,
+        'value': t.value,
+        'profit': t.profit,
+        'date': t.date,
+        'id': t.id,
+        'current_cash': cash,
     }
 
-@router.patch('/{portfolio_id}/withdraw', response_model=CashflowResponse)
+@router.patch('/{portfolio_id}/withdraw', response_model=TransactionResponse)
 def withdraw(portfolio_id: str, value: float, currency: str = None, date: str = None):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
-    portfolio.withdraw(value, currency, date)
+    t, cash = portfolio.withdraw(value, currency, date)
     return {
-        'cashflow': -value,
-        'current_cash': portfolio.cash,
+        'type': t.type,
+        'asset': t.asset,
+        'shares': t.shares,
+        'value': t.value,
+        'profit': t.profit,
+        'date': t.date,
+        'id': t.id,
+        'current_cash': cash
     }
 
-@router.patch('/{portfolio_id}/buy', response_model=TradeResponse)
+@router.patch('/{portfolio_id}/buy', response_model=TransactionResponse)
 def buy(portfolio_id: str, shares: float = None, value: float = None, date: str = None, currency: str = None, asset: Asset = Depends(get_asset)):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
-    shares, value, date, cash = portfolio.buy(asset=asset, shares=shares, value=value, date=date, currency=currency)
+    t, cash = portfolio.buy(asset=asset, shares=shares, value=value, date=date, currency=currency)
     return {
-        'asset_ticker': asset.ticker,
-        'shares': shares,
-        'value': value,
-        'date': date,
-        'current_cash': cash,
+        'type': t.type,
+        'asset': t.asset,
+        'shares': t.shares,
+        'value': t.value,
+        'profit': t.profit,
+        'date': t.date,
+        'id': t.id,
+        'current_cash': cash
     }
 
-@router.patch('/{portfolio_id}/sell', response_model=TradeResponse)
+@router.patch('/{portfolio_id}/sell', response_model=TransactionResponse)
 def sell(portfolio_id: str, shares: float = None, value: float = None, date: str = None, currency: str = None, asset: Asset = Depends(get_asset)):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
-    shares, value, date, cash = portfolio.sell(asset=asset, shares=shares, value=value, date=date, currency=currency)
+    t, cash = portfolio.sell(asset=asset, shares=shares, value=value, date=date, currency=currency)
     return {
-        'asset_ticker': asset.ticker,
-        'shares': shares,
-        'value': value,
-        'date': date,
-        'current_cash': cash,
+        'type': t.type,
+        'asset': t.asset,
+        'shares': t.shares,
+        'value': t.value,
+        'profit': t.profit,
+        'date': t.date,
+        'id': t.id,
+        'current_cash': cash
     }
 
 @router.get('/{portfolio_id}/stats', response_model=PortfolioStats)
@@ -174,40 +192,38 @@ def portfolio_plots(portfolio_id: str):
 def portfolio_transactions(portfolio_id: str):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
     return {
-        t.id: {
-            'type': t.type,
-            'asset': t.asset.ticker if isinstance(t.asset, Asset) else t.asset,
-            'shares': t.shares,
-            'value': t.value,
-            'profit': t.profit,
-            'date': t.date,
-        }
-        for t in portfolio.transactions
+        'transactions': [
+            {
+                'type': t.type,
+                'asset': t.asset.ticker if isinstance(t.asset, Asset) else t.asset,
+                'shares': t.shares,
+                'value': t.value,
+                'profit': t.profit,
+                'date': t.date,
+                'id': t.id,
+            }
+            for t in portfolio.transactions
+        ]
     }
 
 @router.get('/{portfolio_id}/optimize', response_model=PortfolioOptimize)
-def optimize_portfolio(portfolio_id: str, min_alloc: float = 0., max_alloc: float = 1.):
+def optimize_portfolio(portfolio_id: str, min_alloc: float = 0., max_alloc: float = 1., points: int = 50):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
     optimizer = PortfolioOptimizer(portfolio, min_alloc=min_alloc, max_alloc=max_alloc)
     opt = optimizer.optimal_sharpe_portfolio
-    return {
-        'returns': opt['returns'],
-        'volatility': opt['volatility'],
-        'sharpe_ratio': opt['sharpe_ratio'],
-        'weights': {k.ticker: v for k, v in opt['weights'].items()},
-    }
-
-@router.get('/{portfolio_id}/efficient_frontier', response_model=PortfolioEfficientFrontier)
-def efficient_frontier(portfolio_id: str, min_alloc: float = 0., max_alloc: float = 1., points: int = 50):
-    portfolio: Portfolio = portfolio_cache[portfolio_id]
-    optimizer = PortfolioOptimizer(portfolio, min_alloc=min_alloc, max_alloc=max_alloc)
     fig, res = optimizer.efficient_frontier(points=points)
     return {
-        'efficient_frontier': json.loads(json.dumps(fig, cls=PlotlyJSONEncoder)),
-        'returns': res['returns'],
-        'volatilities': res['volatility'],
-        'sharpe_ratios': res['sharpe_ratio'],
-        'weights': res['weights'],  # order is exactly as in portfolio.assets
+        'opt_returns': opt['returns'],
+        'opt_volatility': opt['volatility'],
+        'opt_sharpe_ratio': opt['sharpe_ratio'],
+        'opt_weights': {k.ticker: v for k, v in opt['weights'].items()},
+        'ef_results': {
+            'efficient_frontier': json.loads(json.dumps(fig, cls=PlotlyJSONEncoder)),
+            'returns': res['returns'],
+            'volatilities': res['volatility'],
+            'sharpe_ratios': res['sharpe_ratio'],
+            'weights': res['weights'],
+        } 
     }
 
 @router.post('/{portfolio_id}/rebalance', response_model=PortfolioTransactions)
@@ -217,32 +233,35 @@ def rebalance(portfolio_id: str, target_weights: Dict[str, float]):
     target_weights = {asset_mapping[k]: v for k, v in target_weights.items()}
     transactions = portfolio.rebalance(target_weights, inplace=False)
     return {
-        t.id: {
-            'type': t.type,
-            'asset': t.asset.ticker if isinstance(t.asset, Asset) else t.asset,
-            'shares': t.shares,
-            'value': t.value,
-            'profit': t.profit,
-            'date': t.date,
-        }
-        for t in transactions
+        'transactions': [
+            {
+                'type': t.type,
+                'asset': t.asset.ticker if isinstance(t.asset, Asset) else t.asset,
+                'shares': t.shares,
+                'value': t.value,
+                'profit': t.profit,
+                'date': t.date,
+                'id': t.id,
+            }
+            for t in transactions
+        ]
     }
 
 @router.patch('/{portfolio_id}/parse_transactions', response_model=Dict[str, str])
 def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     portfolio: Portfolio = portfolio_cache[portfolio_id]
-    asset_mapping = {a.ticker: a for a in portfolio.cost_bases}
-
+    asset_mapping = {a.ticker: a for a in portfolio.cost_bases}  # use cost bases bcs the method is only for rebalancing
+    print(transactions)
     t_list = [
         Portfolio.transaction(
-            v.type,
-            asset_mapping.get(v.asset, 'Cash'),
-            v.shares,
-            v.value,
-            v.profit,
-            v.date,
-            k
-        ) for k, v in transactions.root.items()
+            t.type,
+            asset_mapping.get(t.asset, 'Cash'),
+            t.shares,
+            t.value,
+            t.profit,
+            t.date,
+            t.id
+        ) for t in transactions.transactions
     ]
 
     portfolio.from_transactions(t_list)

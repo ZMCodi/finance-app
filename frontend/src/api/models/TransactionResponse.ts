@@ -2,11 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type TradeResponse = {
+import type { TransactionType } from './TransactionType';
+export type TransactionResponse = {
     /**
-     * The asset ticker according to Yahoo Finance
+     * The type of transaction
      */
-    asset_ticker: string;
+    type: TransactionType;
+    /**
+     * The asset ticker according to Yahoo Finance or Cash
+     */
+    asset: string;
     /**
      * The number of shares traded
      */
@@ -16,9 +21,17 @@ export type TradeResponse = {
      */
     value: number;
     /**
+     * The profit of the trade
+     */
+    profit: number;
+    /**
      * The date of the trade
      */
     date: string;
+    /**
+     * The unique identifier for the transaction
+     */
+    id: number;
     /**
      * The remaining cash in the portfolio
      */

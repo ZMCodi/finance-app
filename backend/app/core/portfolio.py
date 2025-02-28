@@ -143,7 +143,7 @@ class Portfolio:
                 date_obj -= datetime.timedelta(days=1)
                 date = date_obj.strftime('%Y-%m-%d')
 
-    def deposit(self, value: float, currency: str | None = None, date: DateLike | None = None):
+    def deposit(self, value: float, currency: str | None = None, date: DateLike | None = None) -> tuple[transaction, float]:
         date = self._parse_date(date)
 
         if currency is None:
@@ -153,11 +153,13 @@ class Portfolio:
             value = self._convert_price(value, currency, date)
         value = round(float(value), 2)
 
-        self.transactions.append(self.transaction('DEPOSIT', 'Cash', 0.0, value, 0., date, self.id))
+        transaction = self.transaction('DEPOSIT', 'Cash', 0.0, value, 0., date, self.id)
+        self.transactions.append(transaction)
         self.cash += value
         self.id += 1
+        return transaction, self.cash
 
-    def withdraw(self, value: float, currency: str | None = None, date: DateLike | None = None):
+    def withdraw(self, value: float, currency: str | None = None, date: DateLike | None = None) -> tuple[transaction, float]:
         date = self._parse_date(date)
 
         if currency is None:
@@ -170,12 +172,14 @@ class Portfolio:
         if self.cash - value < 0:
             raise ValueError('Not enough money')
 
-        self.transactions.append(self.transaction('WITHDRAW', 'Cash', 0.0, value, 0., date, self.id))
+        transaction = self.transaction('WITHDRAW', 'Cash', 0.0, value, 0., date, self.id)
+        self.transactions.append(transaction)
         self.cash -= value
         self.id += 1
+        return transaction, self.cash
 
     def buy(self, asset: Asset, *, shares: float | None = None, value: float | None = None, 
-            date: DateLike | None = None, currency: str | None = None) -> None:
+            date: DateLike | None = None, currency: str | None = None) -> tuple[transaction, float]:
 
         date = self._parse_date(date)
 
@@ -212,16 +216,17 @@ class Portfolio:
         if self.cash - value < -0.01:
             raise ValueError('Not enough money')
 
-        self.transactions.append(self.transaction('BUY', ast, round(float(shares), 5), value, 0., date, self.id))
+        transaction = self.transaction('BUY', ast, round(float(shares), 5), value, 0., date, self.id)
+        self.transactions.append(transaction)
         old_cost_basis = self.cost_bases[ast] * self.holdings[ast]
         self.holdings[ast] += float(shares)
         self.cost_bases[ast] = (old_cost_basis + value) / self.holdings[ast]
         self.cash -= value
         self.id += 1
-        return shares, value, date, self.cash
+        return transaction, self.cash
 
     def sell(self, asset: Asset, *, shares: float | None = None, value: float | None = None, 
-            date: DateLike | None = None, currency: str | None = None) -> None:
+            date: DateLike | None = None, currency: str | None = None) -> tuple[transaction, float]:
 
         date = self._parse_date(date)
 
@@ -248,7 +253,8 @@ class Portfolio:
 
         value = round(float(value), 2)
         profit = (value - (self.cost_bases[ast] * shares))
-        self.transactions.append(self.transaction('SELL', ast, round(float(shares), 5), value, round(float(profit), 2), date, self.id))
+        transaction = self.transaction('SELL', ast, round(float(shares), 5), value, round(float(profit), 2), date, self.id)
+        self.transactions.append(transaction)
 
         self.holdings[ast] -= float(shares)
         self.cash += value
@@ -256,7 +262,7 @@ class Portfolio:
             del self.holdings[ast]
             del self.assets[idx]
         self.id += 1
-        return shares, value, date, self.cash
+        return transaction, self.cash
 
     def pie_chart(self, data: dict, title: str) -> go.Figure:
         fig = go.Figure()
@@ -388,7 +394,8 @@ class Portfolio:
 
         if not inplace:
             new_port = Portfolio(
-                assets={ast: {'shares': self.holdings[ast], 'avg_price': self.cost_bases[ast]} for ast in self.assets},
+                assets=[{'asset': ast.ticker, 'shares': self.holdings[ast], 'avg_price': self.cost_bases[ast]} for ast in self.assets],
+                cash=self.cash,
                 currency=self.currency,
                 r=self.r
                 )

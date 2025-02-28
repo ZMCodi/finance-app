@@ -2,8 +2,11 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { TransactionData } from './TransactionData';
-/**
- * The transaction data for each transaction in the portfolio/rebalance transactions to be made
- */
-export type PortfolioTransactions_Output = Record<string, TransactionData>;
+import type { BaseTransaction } from './BaseTransaction';
+export type PortfolioTransactions_Output = {
+    /**
+     * The transaction data for each transaction in the portfolio/rebalance transactions to be made
+     */
+    transactions: Array<BaseTransaction>;
+};
+

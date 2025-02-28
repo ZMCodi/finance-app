@@ -21,17 +21,6 @@ class PortfolioCreate(BaseModel):
     cash: float = Field(..., title='Cash', description='The current cash in the portfolio')
     holdings: Dict[str, float] = Field(..., title='Holdings', description='The current holdings in the portfolio')
 
-class CashflowResponse(BaseModel):
-    cashflow: float = Field(..., title='Cashflow', description='The cashflow value')
-    current_cash: float = Field(..., title='Current Cash', description='The current cash in the portfolio')
-
-class TradeResponse(BaseModel):
-    asset_ticker: str = Field(..., title='Asset Ticker', description='The asset ticker according to Yahoo Finance')
-    shares: float = Field(..., title='Shares', description='The number of shares traded')
-    value: float = Field(..., title='Value', description='The value of the trade')
-    date: str = Field(..., title='Date', description='The date of the trade')
-    current_cash: float = Field(..., title='Remaining Cash', description='The remaining cash in the portfolio')
-
 class DailyReturnsMetrics(BaseModel):
     mean: float = Field(..., title='Mean', description='The mean daily returns')
     median: float = Field(..., title='Median', description='The median daily returns')
@@ -133,22 +122,20 @@ class TransactionType(str, Enum):
     DEPOSIT = 'DEPOSIT'
     WITHDRAW = 'WITHDRAW'
 
-class TransactionData(BaseModel):
+class BaseTransaction(BaseModel):
     type: TransactionType = Field(..., title='Type', description='The type of transaction')
-    asset: str = Field(..., title='Asset', description='The asset ticker or cash')
+    asset: str = Field(..., title='Asset', description='The asset ticker according to Yahoo Finance or Cash')
     shares: float = Field(..., title='Shares', description='The number of shares traded')
     value: float = Field(..., title='Value', description='The value of the trade')
     profit: float = Field(..., title='Profit', description='The profit of the trade')
     date: str = Field(..., title='Date', description='The date of the trade')
+    id: int = Field(..., title='ID', description='The unique identifier for the transaction')
 
-class PortfolioTransactions(RootModel):
-    root: Dict[float, TransactionData] = Field(..., title='Transactions', description='The transaction data for each transaction in the portfolio/rebalance transactions to be made')
+class TransactionResponse(BaseTransaction):
+    current_cash: float = Field(..., title='Remaining Cash', description='The remaining cash in the portfolio')
 
-class PortfolioOptimize(BaseModel):
-    returns: float = Field(..., title='Returns', description='The expected returns of the optimal portfolio')
-    volatility: float = Field(..., title='Volatility', description='The expected volatility of the optimal portfolio')
-    sharpe_ratio: float = Field(..., title='Sharpe Ratio', description='The expected Sharpe ratio of the optimal portfolio')
-    weights: Dict[str, float] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolio')
+class PortfolioTransactions(BaseModel):
+    transactions: List[BaseTransaction] = Field(..., title='Transactions', description='The transaction data for each transaction in the portfolio/rebalance transactions to be made')
 
 class PortfolioEfficientFrontier(BaseModel):
     efficient_frontier: PlotJSON = Field(..., title='Efficient Frontier', description='The efficient frontier plot of the portfolio')
@@ -156,3 +143,11 @@ class PortfolioEfficientFrontier(BaseModel):
     volatilities: List[float] = Field(..., title='Volatilities', description='The expected volatilities of the portfolios on the efficient frontier')
     sharpe_ratios: List[float] = Field(..., title='Sharpe Ratios', description='The expected Sharpe ratios of the portfolios on the efficient frontier')
     weights: List[Dict[str, float]] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolios on the efficient frontier')
+
+class PortfolioOptimize(BaseModel):
+    opt_returns: float = Field(..., title='Returns', description='The expected returns of the optimal portfolio')
+    opt_volatility: float = Field(..., title='Volatility', description='The expected volatility of the optimal portfolio')
+    opt_sharpe_ratio: float = Field(..., title='Sharpe Ratio', description='The expected Sharpe ratio of the optimal portfolio')
+    opt_weights: Dict[str, float] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolio')
+    ef_results: PortfolioEfficientFrontier = Field(..., title='Efficient Frontier', description='The efficient frontier results of the portfolio')
+
