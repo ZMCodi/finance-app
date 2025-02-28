@@ -288,22 +288,28 @@ class Portfolio:
         
         return fig
 
-    def holdings_chart(self) -> go.Figure:
+    def holdings_chart(self) -> go.Figure | None:
         weights = self.weights
+        if not weights:
+            return None
         data = {k.ticker: v for k, v in weights.items()}
         return self.pie_chart(data, 'Portfolio Holdings')
 
-    def asset_type_exposure(self) -> go.Figure:
+    def asset_type_exposure(self) -> go.Figure | None:
         data = defaultdict(float)
         weights = self.weights
+        if not weights:
+            return None
         for ast, weight in weights.items():
             data[ast.asset_type] += weight
 
         return self.pie_chart(data, 'Asset Type Exposure')
 
-    def sector_exposure(self) -> go.Figure:
+    def sector_exposure(self) -> go.Figure | None:
         data = defaultdict(float)
         weights = self.weights
+        if not weights:
+            return None
         for ast, weight in weights.items():
             if ast.sector is not None:
                 data[ast.sector] += weight
@@ -312,8 +318,10 @@ class Portfolio:
 
         return self.pie_chart(data, 'Sector Exposure')
 
-    def returns_dist(self, bins: int = 100, show_stats: bool = True) -> go.Figure:
+    def returns_dist(self, bins: int = 100, show_stats: bool = True) -> go.Figure | None:
         data = self.returns.dropna()
+        if data.empty:
+            return None
         fig = go.Figure()
 
         # Calculate statistics
@@ -534,10 +542,12 @@ class Portfolio:
                 'std': round_number(self.returns.std()),
                 'skewness': round_number(stats.skew(self.returns.dropna())),
                 'kurtosis': round_number(stats.kurtosis(self.returns.dropna())),
+            } if self.returns.any() else {
+                'mean': 0, 'median': 0, 'std': 0, 'skewness': 0, 'kurtosis': 0
             },
-            'best_day': round_number(self.returns.max()),
-            'worst_day': round_number(self.returns.min()),
-            'positive_days': round_number((self.returns > 0).sum() / len(self.returns)),
+            'best_day': round_number(self.returns.max()) if self.returns.any() else 0,
+            'worst_day': round_number(self.returns.min()) if self.returns.any() else 0,
+            'positive_days': round_number((self.returns > 0).sum() / len(self.returns)) if self.returns.any() else 0,
         }
 
         # Risk Metrics
@@ -567,7 +577,7 @@ class Portfolio:
         position_metrics = {
             'total_value': round_number(self.get_value(), True),
             'cash': round_number(self.cash, True),
-            'cash_weight': round_number(self.cash / self.get_value()),
+            'cash_weight': round_number(self.cash / self.get_value()) if self.get_value() != 0 else 0,
             'number_of_positions': len(self.holdings),
             'largest_position': round_number(max(self.weights.values()) if self.weights else 0),
             'smallest_position': round_number(min(self.weights.values()) if self.weights else 0),
@@ -617,15 +627,21 @@ class Portfolio:
 
     @property
     def treynor_ratio(self) -> float:
+        returns = self.returns
+        if returns.empty:
+            return 0
         daily_rf = self.r / self.ann_factor
-        excess_returns = self.returns - daily_rf
+        excess_returns = returns - daily_rf
         mean_excess_returns = excess_returns.mean() * self.ann_factor
         return float(mean_excess_returns / self.beta) if self.beta != 0 else 0
 
     @property
     def tracking_error(self) -> float:
+        returns = self.returns
+        if returns.empty:
+            return 0
         market = self.market.daily['rets'].reindex(self.returns.index)
-        return round(float(np.std(self.returns - market)), 3)
+        return round(float(np.std(returns - market)), 3)
 
     @property
     def win_rate(self) -> float:
@@ -636,7 +652,10 @@ class Portfolio:
 
     @property
     def total_returns(self) -> float:
-        return float(np.exp(self.log_returns.sum() - 1))
+        log_returns = self.log_returns
+        if log_returns.empty:
+            return 0
+        return float(np.exp(log_returns.sum() - 1))
 
     @property
     def trading_returns(self) -> float:
@@ -719,16 +738,20 @@ class Portfolio:
         rets = self.returns
         return np.log1p(rets)
     
-    def pnl_chart(self) -> go.Figure:
+    def pnl_chart(self) -> go.Figure | None:
         pnl = self.pnls
+        if pnl.empty:
+            return None
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=pnl.index, y=pnl.cumsum(), mode='lines', name='PnL'))
         fig.update_layout(title='Portfolio PnL', xaxis_title='Date', yaxis_title='PnL')
         
         return fig
     
-    def returns_chart(self) -> go.Figure:
+    def returns_chart(self) -> go.Figure | None:
         rets = self.log_returns
+        if rets.empty:
+            return None
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=rets.index, y=np.exp(rets.cumsum()), mode='lines', name='Returns'))
         fig.update_layout(title='Portfolio Returns', xaxis_title='Date', yaxis_title='Returns')
@@ -796,25 +819,31 @@ class Portfolio:
 
     @property
     def volatility(self) -> float:
-        if not self.weights:
+        if not self.holdings:
             return 0
-
-        daily_vol = self.returns.std()
+        returns = self.returns
+        if returns.empty:
+            return 0
+        daily_vol = returns.std()
         return float(daily_vol * np.sqrt(self.ann_factor))
 
     @property
     def annualized_returns(self) -> float:
-
-        return float((1 + self.returns.mean()) ** self.ann_factor - 1)
+        returns = self.returns
+        if returns.empty:
+            return 0
+        return float((1 + returns.mean()) ** self.ann_factor - 1)
 
     @property
     def downside_deviation(self) -> float:
         returns = self.returns
+        if returns.empty:
+            return 0
         return float(np.sqrt(np.mean(np.minimum(returns, 0) ** 2)))
 
     @property
     def sortino_ratio(self) -> float:
-        if not self.weights:
+        if not self.holdings:
             return 0
 
         downside_deviation = self.downside_deviation
@@ -889,9 +918,14 @@ class Portfolio:
         return sum(weights[ast] * betas[ast] for ast in self.assets)
 
     def VaR(self, confidence: float = 0.95) -> float:
-        return float(np.abs(self.returns.quantile(1 - confidence) * self.get_value()))
+        returns = self.returns
+        if returns.empty:
+            return 0
+        return float(np.abs(returns.quantile(1 - confidence) * self.get_value()))
 
-    def correlation_matrix(self) -> go.Figure:
+    def correlation_matrix(self) -> go.Figure | None:
+        if len(self.assets) < 2:
+            return None
         df = pd.DataFrame()
         for ast in self.assets:
             df[ast.ticker] = ast.daily['rets']
@@ -925,7 +959,9 @@ class Portfolio:
         
         return fig
 
-    def risk_decomposition(self) -> go.Figure:
+    def risk_decomposition(self)  -> go.Figure | None:
+        if len(self.assets) < 2:
+            return None
         df = pd.DataFrame()
         port_weights = self.weights
         weights = []
@@ -1041,7 +1077,10 @@ class Portfolio:
 
     @property
     def max_drawdown(self) -> float:
-        cum_rets = (1 + self.returns).cumprod()
+        returns = self.returns
+        if returns.empty:
+            return 0
+        cum_rets = (1 + returns).cumprod()
         max_dd = (cum_rets / cum_rets.cummax() - 1).min()
         return float(max_dd)
 
@@ -1054,6 +1093,8 @@ class Portfolio:
     @property
     def longest_drawdown_duration(self) -> dict:
         drawdown = self.drawdowns
+        if drawdown.empty:
+            return {'start': None, 'end': None, 'duration': 0}
         drawdown_peaks = drawdown[drawdown == 0]
         end_idx = pd.Series(drawdown_peaks.index.diff()).idxmax()
         longest_end = drawdown_peaks.index[end_idx].date()
@@ -1064,24 +1105,30 @@ class Portfolio:
     @property
     def average_drawdown(self) -> float:
         drawdown = self.drawdowns[self.drawdowns < 0]
-        return float(drawdown.mean())
+        return float(drawdown.mean()) if not drawdown.empty else 0
     
     @property
     def drawdown_ratio(self) -> float:
-        return self.max_drawdown / self.average_drawdown
+        return (self.max_drawdown / self.average_drawdown) if self.average_drawdown != 0 else 0
 
     def time_to_recovery(self, min_duration: int = 3, significance: float = 0.05) -> float:
         df = self.drawdown_df.dropna()
+        if df.empty:
+            return 0
         min_depth = df['depth'].quantile(1-significance)
         return float(df[(df['duration'] >= min_duration) & (-df['depth'] >= np.abs(min_depth))]['time_to_recovery'].mean())
 
     def average_drawdown_duration(self, min_duration: int = 3, significance: float = 0.05) -> float:
         df = self.drawdown_df
+        if df.empty:
+            return 0
         min_depth = df['depth'].quantile(1-significance)
         return float(df[(df['duration'] >= min_duration) & (-df['depth'] >= np.abs(min_depth))]['duration'].mean())
 
-    def drawdown_frequency(self, bins: int = 20) -> go.Figure:
+    def drawdown_frequency(self, bins: int = 20) -> go.Figure | None:
         df = self.drawdown_df
+        if df.empty:
+            return None
         troughs = df['depth']
         bins = np.linspace(troughs.min(), troughs.max(), bins + 1)
 
@@ -1165,7 +1212,7 @@ class Portfolio:
 
     @property
     def calmar_ratio(self) -> float:
-        return float(self.annualized_returns / np.abs(self.max_drawdown))
+        return float(self.annualized_returns / np.abs(self.max_drawdown)) if self.max_drawdown != 0 else 0
 
     @property
     def drawdown_metrics(self) -> dict:
@@ -1182,8 +1229,10 @@ class Portfolio:
 
         return metrics
     
-    def drawdown_plot(self) -> go.Figure:
+    def drawdown_plot(self) -> go.Figure | None:
         dd = self.drawdowns
+        if dd.empty:
+            return None
 
         fig = go.Figure()
 

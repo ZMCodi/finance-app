@@ -60,9 +60,9 @@ class RiskMetrics(BaseModel):
 
 class DrawdownMetrics(BaseModel):
     max_drawdown: float = Field(..., title='Max Drawdown', description='The maximum drawdown value of the portfolio')
-    longest_drawdown_duration: Dict[str, str | int] = Field(..., title='Longest Drawdown Duration', description='The start, end date and duration of the longest drawdown')
+    longest_drawdown_duration: Dict[str, str | int | None] = Field(..., title='Longest Drawdown Duration', description='The start, end date and duration of the longest drawdown')
     average_drawdown: float = Field(..., title='Average Drawdown', description='The average drawdown value of the portfolio')
-    average_drawdown_duration: int = Field(..., title='Average Drawdown Duration', description='The average duration of a drawdown')
+    average_drawdown_duration: float = Field(..., title='Average Drawdown Duration', description='The average duration of a drawdown')
     time_to_recovery: float = Field(..., title='Time to Recovery', description='The average time to recover from a drawdown')
     drawdown_ratio: float = Field(..., title='Drawdown Ratio', description='The drawdown ratio of the portfolio')
     calmar_ratio: float = Field(..., title='Calmar Ratio', description='The Calmar ratio of the portfolio')
@@ -106,24 +106,24 @@ class HoldingsMetrics(BaseModel):
 class HoldingsStats(RootModel):
     root: Dict[str, HoldingsMetrics] = Field(..., title='Holdings', description='The holdings metrics for each asset in the portfolio')
 
-class HoldingPlots(BaseModel):
-    holdings_chart: PlotJSON = Field(..., title='Holdings Chart', description='The pie chart representing the weights of each asset')
-    asset_type_exposure: PlotJSON = Field(..., title='Asset Type Exposure', description='The pie chart representing the exposure to each asset type')
-    sector_exposure: PlotJSON = Field(..., title='Sector Exposure', description='The pie chart representing the exposure to each sector')
-    correlation_matrix: PlotJSON = Field(..., title='Correlation Matrix', description='The correlation matrix of the assets')
+class HoldingsPlots(BaseModel):
+    holdings_chart: Optional[PlotJSON] = Field(None, title='Holdings Chart', description='The pie chart representing the weights of each asset')
+    asset_type_exposure: Optional[PlotJSON] = Field(None, title='Asset Type Exposure', description='The pie chart representing the exposure to each asset type')
+    sector_exposure: Optional[PlotJSON] = Field(None, title='Sector Exposure', description='The pie chart representing the exposure to each sector')
+    correlation_matrix: Optional[PlotJSON] = Field(None, title='Correlation Matrix', description='The correlation matrix of the assets')
 
 class ReturnsPlots(BaseModel):
-    returns_chart: PlotJSON = Field(..., title='Returns Chart', description='The line chart representing the daily returns')
-    returns_dist: PlotJSON = Field(..., title='Returns Distribution', description='The histogram representing the returns distribution')
-    pnl_chart: PlotJSON = Field(..., title='PnL Chart', description='The line chart representing the profit and loss')
+    returns_chart: Optional[PlotJSON] = Field(None, title='Returns Chart', description='The line chart representing the daily returns')
+    returns_dist: Optional[PlotJSON] = Field(None, title='Returns Distribution', description='The histogram representing the returns distribution')
+    pnl_chart: Optional[PlotJSON] = Field(None, title='PnL Chart', description='The line chart representing the profit and loss')
 
 class RiskPlots(BaseModel):
-    risk_decomposition: PlotJSON = Field(..., title='Risk Decomposition', description='The pie chart representing the risk decomposition for each asset in the portfolio')
-    drawdown_plot: PlotJSON = Field(..., title='Drawdown Plot', description='The line chart representing the drawdowns')
-    drawdown_frequency: PlotJSON = Field(..., title='Drawdown Frequency', description='The histogram representing the drawdown frequency')
+    risk_decomposition: Optional[PlotJSON] = Field(None, title='Risk Decomposition', description='The pie chart representing the risk decomposition for each asset in the portfolio')
+    drawdown_plot: Optional[PlotJSON] = Field(None, title='Drawdown Plot', description='The line chart representing the drawdowns')
+    drawdown_frequency: Optional[PlotJSON] = Field(None, title='Drawdown Frequency', description='The histogram representing the drawdown frequency')
 
 class PortfolioPlots(BaseModel):
-    holdings: HoldingPlots = Field(..., title='Holdings', description='The holdings plots of the portfolio')
+    holdings: HoldingsPlots = Field(..., title='Holdings', description='The holdings plots of the portfolio')
     returns: ReturnsPlots = Field(..., title='Returns', description='The returns plots of the portfolio')
     risk: RiskPlots = Field(..., title='Risk', description='The risk plots of the portfolio')
 
