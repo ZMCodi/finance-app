@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, AlertCircle } from "lucide-react";
-import { DefaultService, PortfolioTransactions_Output } from '@/src/api';
+import { AlertCircle, Loader2 } from "lucide-react";
+import { DefaultService } from '@/src/api';
+import ReviewTransactionsDialog from './ReviewTransactionsDialog';
 
 interface RebalanceDialogProps {
   open: boolean;
@@ -53,8 +54,8 @@ const RebalanceDialog = ({
     isValid: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [transactions, setTransactions] = useState<PortfolioTransactions_Output | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<any[] | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 
   // Initialize target weights when dialog opens or holdings change
   useEffect(() => {
@@ -67,7 +68,6 @@ const RebalanceDialog = ({
       setTargetWeights(initialWeights);
       setValidation({ error: null, isValid: true });
       setTransactions(null);
-      setSuccessMessage(null);
     }
   }, [open, holdings]);
 
@@ -82,7 +82,7 @@ const RebalanceDialog = ({
   // Validate that weights sum to 100%
   const validateWeights = (weights: Record<string, number>) => {
     const sum = Object.values(weights).reduce((acc, val) => acc + val, 0);
-    const isValid = Math.abs(sum - 100) < 0.5; // Allow some small rounding error
+    const isValid = Math.abs(sum - 100) < 0.01; // Allow some small rounding error
     
     setValidation({
       isValid,
@@ -98,7 +98,6 @@ const RebalanceDialog = ({
     
     setIsSubmitting(true);
     setTransactions(null);
-    setSuccessMessage(null);
     
     try {
       // Convert percentages back to decimals
@@ -113,7 +112,8 @@ const RebalanceDialog = ({
         decimalWeights
       );
       
-      setTransactions(result);
+      setTransactions(result.transactions);
+      setReviewDialogOpen(true);
     } catch (error) {
       console.error('Rebalance error:', error);
       setValidation({
@@ -125,33 +125,13 @@ const RebalanceDialog = ({
     }
   };
 
-  // Execute the rebalance by applying the transactions
-  const executeRebalance = async () => {
-    if (!transactions) return;
-    
-    setIsSubmitting(true);
-    
-    try {
-      await DefaultService.parseTransactionsApiPortfolioPortfolioIdParseTransactionsPatch(
-        portfolioId,
-        { transactions: transactions.transactions }
-      );
-      
-      setSuccessMessage('Portfolio successfully rebalanced');
-      
-      // Close dialog after a delay
-      setTimeout(() => {
-        onOpenChange(false);
-      }, 2000);
-    } catch (error) {
-      console.error('Execute rebalance error:', error);
-      setValidation({
-        isValid: false,
-        error: 'Failed to execute rebalance transactions'
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  // Handle successful rebalance
+  const handleRebalanceSuccess = () => {
+    // Close both dialogs after a successful rebalance
+    setReviewDialogOpen(false);
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 500);
   };
 
   // Get currency symbol
@@ -184,57 +164,7 @@ const RebalanceDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        {successMessage ? (
-          <div className="py-10 text-center">
-            <div className="text-green-500 text-lg mb-2">{successMessage}</div>
-            <p className="text-slate-400">Closing dialog...</p>
-          </div>
-        ) : transactions ? (
-          <div className="space-y-4">
-            <div className="text-sm font-medium">Review Rebalance Transactions</div>
-            
-            <div className="overflow-y-auto max-h-[400px]">
-              <Table>
-                <TableHeader className="sticky top-0 bg-slate-950">
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Asset</TableHead>
-                    <TableHead className="text-right">Shares</TableHead>
-                    <TableHead className="text-right">Value</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.transactions.map((t, i) => (
-                    <TableRow key={i}>
-                      <TableCell className={t.type === 'BUY' ? 'text-green-500' : 'text-red-500'}>
-                        {t.type}
-                      </TableCell>
-                      <TableCell>{t.asset}</TableCell>
-                      <TableCell className="text-right">{Math.abs(t.shares).toFixed(4)}</TableCell>
-                      <TableCell className="text-right">{currencySymbol}{Math.abs(t.value).toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setTransactions(null)}>
-                Back to Weights
-              </Button>
-              <Button onClick={executeRebalance} disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Executing...
-                  </>
-                ) : (
-                  'Execute Rebalance'
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
+        {(
           <div className="space-y-4">
             <div className="overflow-y-auto max-h-[400px]">
               <Table>
@@ -292,7 +222,7 @@ const RebalanceDialog = ({
               <div className="flex items-center">
                 <span className="text-sm font-medium mr-2">Total:</span>
                 <span className={
-                  Math.abs(totalWeight - 100) < 0.5
+                  Math.abs(totalWeight - 100) < 0.01
                     ? 'font-medium text-green-500'
                     : 'font-medium text-red-500'
                 }>
@@ -329,6 +259,23 @@ const RebalanceDialog = ({
           </div>
         )}
       </DialogContent>
+      {/* Review Transactions Dialog */}
+      {transactions && (
+        <ReviewTransactionsDialog
+          open={reviewDialogOpen}
+          onOpenChange={setReviewDialogOpen}
+          portfolioId={portfolioId}
+          currency={currency}
+          transactions={transactions}
+          title="Review Rebalance Transactions"
+          description="The following transactions will be executed to rebalance your portfolio"
+          onBack={() => {
+            setReviewDialogOpen(false);
+            setTransactions(null);
+          }}
+          onSuccess={handleRebalanceSuccess}
+        />
+      )}
     </Dialog>
   );
 };

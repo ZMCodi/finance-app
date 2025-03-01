@@ -266,7 +266,6 @@ class Portfolio:
         return transaction, self.cash
 
     def pie_chart(self, data: dict, title: str) -> go.Figure:
-        fig = go.Figure()
 
         sorted_by_weight = sorted(data, key=data.get, reverse=True)
         sorted_dict = {k: data[k] for k in sorted_by_weight}

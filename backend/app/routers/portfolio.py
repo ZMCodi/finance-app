@@ -109,7 +109,7 @@ def buy(portfolio_id: str, shares: float = None, value: float = None, date: str 
     t, cash = portfolio.buy(asset=asset, shares=shares, value=value, date=date, currency=currency)
     return {
         'type': t.type,
-        'asset': t.asset,
+        'asset': t.asset.ticker,
         'shares': t.shares,
         'value': t.value,
         'profit': t.profit,
@@ -124,7 +124,7 @@ def sell(portfolio_id: str, shares: float = None, value: float = None, date: str
     t, cash = portfolio.sell(asset=asset, shares=shares, value=value, date=date, currency=currency)
     return {
         'type': t.type,
-        'asset': t.asset,
+        'asset': t.asset.ticker,
         'shares': t.shares,
         'value': t.value,
         'profit': t.profit,

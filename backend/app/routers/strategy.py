@@ -101,7 +101,7 @@ def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: s
 def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
     print(params)
     strategy: Strategy = strategy_cache.get(strategy_key)
-    param_updates = params.model_dump(exclude_unset=True)
+    param_updates = params.model_dump(exclude_none=True)
     for k, v in param_updates.items():
         if isinstance(v, Enum):
             param_updates[k] = v.value

@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ReviewTransactionsDialog from './dialogs/ReviewTransactionsDialog';
 
 const Plot = dynamic(() => import("react-plotly.js"), {
     ssr: false,
@@ -42,6 +43,8 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
   // Dialog states
   const [returnsDialogOpen, setReturnsDialogOpen] = useState(false);
   const [volatilityDialogOpen, setVolatilityDialogOpen] = useState(false);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [transactions, setTransactions] = useState<any[] | null>(null);
   const [targetReturns, setTargetReturns] = useState<string>('');
   const [targetVolatility, setTargetVolatility] = useState<string>('');
   
@@ -98,25 +101,29 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
         weights = optimizationResults.opt_weights;
       }
       
-      // Call API to rebalance portfolio based on selected weights
+      // Call API to get rebalance transactions
       const rebalanceResponse = await DefaultService.rebalanceApiPortfolioPortfolioIdRebalancePost(
         portfolioId,
         weights
       );
       
-      // After rebalance, we should parse these transactions
-      if (rebalanceResponse) {
-        await DefaultService.parseTransactionsApiPortfolioPortfolioIdParseTransactionsPatch(
-          portfolioId,
-          { transactions: rebalanceResponse.transactions }
-        );
-        
-        alert('Portfolio successfully rebalanced to selected weights');
+      if (rebalanceResponse && rebalanceResponse.transactions.length > 0) {
+        // Open the review dialog with the transactions
+        setTransactions(rebalanceResponse.transactions);
+        setReviewDialogOpen(true);
+      } else {
+        alert('No rebalance transactions needed');
       }
     } catch (error) {
-      console.error('Error rebalancing portfolio:', error);
-      alert('Failed to rebalance portfolio. Please try again.');
+      console.error('Error calculating rebalance transactions:', error);
+      alert('Failed to calculate rebalance transactions. Please try again.');
     }
+  };
+  
+  // Handle successful rebalance
+  const handleRebalanceSuccess = () => {
+    alert('Portfolio successfully rebalanced to selected weights');
+    setReviewDialogOpen(false);
   };
 
   // Find the closest value in an array to the target value
@@ -469,6 +476,20 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Review Transactions Dialog */}
+      {transactions && (
+        <ReviewTransactionsDialog
+          open={reviewDialogOpen}
+          onOpenChange={setReviewDialogOpen}
+          portfolioId={portfolioId}
+          currency={currency}
+          transactions={transactions}
+          title="Review Optimal Portfolio Transactions"
+          description="The following transactions will be executed to rebalance your portfolio to the optimal weights"
+          onSuccess={handleRebalanceSuccess}
+        />
+      )}
     </div>
   );
 };
