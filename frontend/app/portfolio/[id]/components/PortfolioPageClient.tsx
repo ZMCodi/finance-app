@@ -105,7 +105,7 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                     </TabsContent>
                     
                     <TabsContent value="optimize">
-                      <OptimizeTab portfolioId={portfolioId} currency={currency} />
+                      <OptimizeTab portfolioId={portfolioId} />
                     </TabsContent>
                   </>
                 )}
