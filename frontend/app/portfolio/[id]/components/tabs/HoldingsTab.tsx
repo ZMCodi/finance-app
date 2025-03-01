@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { HoldingsStats, PortfolioStats, HoldingsPlots, PlotJSON } from '@/src/api/index';
 import {
   Table,
@@ -13,7 +13,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import dynamic from 'next/dynamic';
+import TransactionDialog from './dialogs/TransactionDialog';
+import TransactionHistoryDialog from './dialogs/TransactionHistoryDialog';
+import RebalanceDialog from './dialogs/RebalanceDialog';
 
 interface HoldingsTabProps {
   portfolioId: string;
@@ -43,6 +52,11 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
   const [holdings, setHoldings] = useState<HoldingData[]>([]);
   const [plots, setPlots] = useState<Record<string, PlotJSON | null | undefined> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Dialog states
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [rebalanceDialogOpen, setRebalanceDialogOpen] = useState(false);
 
   useEffect(() => {
     const processHoldingsData = async () => {
@@ -112,10 +126,24 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Portfolio Holdings</h2>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Position
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setTransactionDialogOpen(true)}>
+              Make Transaction
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
+              Transaction History
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRebalanceDialogOpen(true)}>
+              Rebalance Portfolio
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       
       {/* Holdings Chart */}
@@ -360,6 +388,29 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
               </div>
             </div>
       </div>
+      
+      {/* Dialog Components */}
+      <TransactionDialog 
+        open={transactionDialogOpen}
+        onOpenChange={setTransactionDialogOpen}
+        portfolioId={portfolioId}
+        currency={currency}
+      />
+      
+      <TransactionHistoryDialog
+        open={historyDialogOpen}
+        onOpenChange={setHistoryDialogOpen}
+        portfolioId={portfolioId}
+        currency={currency}
+      />
+      
+      <RebalanceDialog
+        open={rebalanceDialogOpen}
+        onOpenChange={setRebalanceDialogOpen}
+        portfolioId={portfolioId}
+        currency={currency}
+        holdings={holdings}
+      />
     </div>
   );
 };
