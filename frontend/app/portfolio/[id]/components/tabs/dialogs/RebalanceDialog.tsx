@@ -27,6 +27,7 @@ interface RebalanceDialogProps {
   portfolioId: string;
   currency: string;
   holdings: HoldingData[];
+  onSuccess?: () => void;
 }
 
 interface HoldingData {
@@ -45,7 +46,8 @@ const RebalanceDialog = ({
   onOpenChange, 
   portfolioId, 
   currency,
-  holdings 
+  holdings,
+  onSuccess
 }: RebalanceDialogProps) => {
   // State for target weights
   const [targetWeights, setTargetWeights] = useState<Record<string, number>>({});
@@ -127,6 +129,11 @@ const RebalanceDialog = ({
 
   // Handle successful rebalance
   const handleRebalanceSuccess = () => {
+    // Trigger parent's onSuccess callback if provided
+    if (onSuccess) {
+      onSuccess();
+    }
+    
     // Close both dialogs after a successful rebalance
     setReviewDialogOpen(false);
     setTimeout(() => {

@@ -29,9 +29,11 @@ type PortfolioType = 'optimal' | 'target-returns' | 'target-volatility' | 'min-v
 interface OptimizeTabProps {
   portfolioId: string;
   currency: string;
+  numOfAssets: number;
+  onDataChange?: () => void;
 }
 
-const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
+const OptimizeTab = ({ portfolioId, numOfAssets, currency, onDataChange }: OptimizeTabProps) => {
   const [minAllocation, setMinAllocation] = useState<number[]>([0]);
   const [maxAllocation, setMaxAllocation] = useState<number[]>([100]);
   const [points, setPoints] = useState<number[]>([50]);
@@ -109,7 +111,12 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
   
   // Handle successful rebalance
   const handleRebalanceSuccess = () => {
-    alert('Portfolio successfully rebalanced to selected weights');
+    // Call the parent's onDataChange callback if provided
+    if (onDataChange) {
+      onDataChange();
+    }
+    
+    // Close the review dialog
     setReviewDialogOpen(false);
   };
 
@@ -251,7 +258,7 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
                 <Slider
                   value={minAllocation}
                   min={0}
-                  max={50}
+                  max={Math.floor(100 / numOfAssets)}
                   step={1}
                   onValueChange={setMinAllocation}
                 />
@@ -264,7 +271,7 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
                 </div>
                 <Slider
                   value={maxAllocation}
-                  min={10}
+                  min={Math.ceil(100 / numOfAssets)}
                   max={100}
                   step={1}
                   onValueChange={setMaxAllocation}

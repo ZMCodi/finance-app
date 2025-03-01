@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import HoldingsTab from './tabs/HoldingsTab';
@@ -21,38 +21,45 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
   const [holdingsData, setHoldingsData] = useState<HoldingsStats | null>(null);
   const [plotData, setPlotData] = useState<PortfolioPlots | null>(null);
   const [currency, setCurrency] = useState('USD');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Define the fetchPortfolioData function with useCallback to avoid recreating it on every render
+  const fetchPortfolioData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Try to get currency from localStorage first (set during portfolio creation)
+      const storedCurrency = localStorage.getItem(`portfolio_${portfolioId}_currency`);
+      if (storedCurrency) {
+        setCurrency(storedCurrency);
+      }
+      
+      // Fetch portfolio stats and holdings data in parallel
+      const [stats, holdings, plots] = await Promise.all([
+        DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId),
+        DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(portfolioId),
+        DefaultService.portfolioPlotsApiPortfolioPortfolioIdPlotsGet(portfolioId),
+      ]);
+      
+      setPortfolioData(stats);
+      setHoldingsData(holdings);
+      setPlotData(plots);
+      
+    } catch (error) {
+      console.error('Error fetching portfolio data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [portfolioId]);
+
+  // Function to refresh data - can be called after transactions or rebalancing
+  const refreshData = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   useEffect(() => {
-    const fetchPortfolioData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Try to get currency from localStorage first (set during portfolio creation)
-        const storedCurrency = localStorage.getItem(`portfolio_${portfolioId}_currency`);
-        if (storedCurrency) {
-          setCurrency(storedCurrency);
-        }
-        
-        // Fetch portfolio stats and holdings data in parallel
-        const [stats, holdings, plots] = await Promise.all([
-          DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId),
-          DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(portfolioId),
-          DefaultService.portfolioPlotsApiPortfolioPortfolioIdPlotsGet(portfolioId),
-        ]);
-        
-        setPortfolioData(stats);
-        setHoldingsData(holdings);
-        setPlotData(plots);
-        
-      } catch (error) {
-        console.error('Error fetching portfolio data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchPortfolioData();
-  }, [portfolioId]);
+  }, [fetchPortfolioData, refreshTrigger]);
 
   return (
     <div className="flex flex-col min-h-screen p-4">
@@ -84,30 +91,33 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                         portfolioData={portfolioData}
                         holdingsData={holdingsData}
                         plotData={plotData?.holdings}
+                        onDataChange={refreshData}
                       />
                     </TabsContent>
                     
                     <TabsContent value="returns">
                       <ReturnsTab 
-                      portfolioId={portfolioId} 
-                      portfolioData={portfolioData}
-                      plotData={plotData?.returns}
+                        portfolioId={portfolioId} 
+                        portfolioData={portfolioData}
+                        plotData={plotData?.returns}
                       />
                     </TabsContent>
                     
                     <TabsContent value="risk">
                       <RiskTab 
-                      portfolioId={portfolioId} 
-                      currency={currency} 
-                      portfolioData={portfolioData}
-                      plotData={plotData?.risk}
+                        portfolioId={portfolioId} 
+                        currency={currency} 
+                        portfolioData={portfolioData}
+                        plotData={plotData?.risk}
                       />
                     </TabsContent>
                     
                     <TabsContent value="optimize">
                       <OptimizeTab 
-                      portfolioId={portfolioId}
-                      currency={currency}
+                        portfolioId={portfolioId}
+                        currency={currency}
+                        numOfAssets={portfolioData?.position.number_of_positions}
+                        onDataChange={refreshData}
                       />
                     </TabsContent>
                   </>

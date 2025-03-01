@@ -14,7 +14,7 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover-dialog';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,12 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   portfolioId: string;
   currency: string;
+  onSuccess?: () => void;
 }
 
 type TransactionType = 'buy' | 'sell' | 'deposit' | 'withdraw';
 
-const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: TransactionDialogProps) => {
+const TransactionDialog = ({ open, onOpenChange, portfolioId, currency, onSuccess }: TransactionDialogProps) => {
   const [transactionType, setTransactionType] = useState<TransactionType>('buy');
   const [assetTicker, setAssetTicker] = useState<string>('');
   const [value, setValue] = useState<string>('');
@@ -114,8 +115,15 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
           break;
       }
 
-      // Success: Close dialog and reset form
-      onOpenChange(false);
+      // Success: Call the success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        // Otherwise, just close the dialog
+        onOpenChange(false);
+      }
+      
+      // Reset the form
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred while processing the transaction');
@@ -188,7 +196,7 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
               <Input
                 id="asset-ticker"
                 value={assetTicker}
-                onChange={(e) => setAssetTicker(e.target.value)}
+                onChange={(e) => setAssetTicker(e.target.value.toUpperCase())}
                 placeholder="e.g. AAPL, MSFT"
                 className="col-span-3"
               />

@@ -30,6 +30,7 @@ interface HoldingsTabProps {
   portfolioData?: PortfolioStats | null;
   holdingsData?: HoldingsStats | null;
   plotData?: HoldingsPlots | null;
+  onDataChange?: () => void;
 }
 
 interface HoldingData {
@@ -48,7 +49,7 @@ const Plot = dynamic(() => import("react-plotly.js"), {
     loading: () => <div>Loading...</div>, 
 });
 
-const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotData }: HoldingsTabProps) => {
+const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotData, onDataChange }: HoldingsTabProps) => {
   const [holdings, setHoldings] = useState<HoldingData[]>([]);
   const [plots, setPlots] = useState<Record<string, PlotJSON | null | undefined> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +95,27 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
   };
     processHoldingsData();
   }, [portfolioId, holdingsData, portfolioData, plotData]);
+
+  // Handlers for dialog data changes
+  const handleTransactionSuccess = () => {
+    // Close the dialog
+    setTransactionDialogOpen(false);
+    
+    // Trigger data refresh
+    if (onDataChange) {
+      onDataChange();
+    }
+  };
+  
+  const handleRebalanceSuccess = () => {
+    // Close the dialog
+    setRebalanceDialogOpen(false);
+    
+    // Trigger data refresh
+    if (onDataChange) {
+      onDataChange();
+    }
+  };
 
   // Get currency symbol
   const getCurrencySymbol = (currencyCode: string): string => {
@@ -294,7 +316,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Concentration</span>
                   <span className="font-semibold">
-                    {portfolioData?.position?.concentration.toFixed(2)}%
+                    {(portfolioData?.position?.concentration * 100).toFixed(2)}%
                   </span>
                 </div>
               </div>
@@ -312,7 +334,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                   <span className="text-slate-400">Realized P&L</span>
                   <span className={`font-semibold ${portfolioData?.activity?.realized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                     {portfolioData?.activity?.realized_pnl >= 0 ? '+' : '-'}
-                    {currencySymbol}{(portfolioData?.activity?.realized_pnl || 0).toFixed(2)}
+                    {currencySymbol}{Math.abs((portfolioData?.activity?.realized_pnl || 0).toFixed(2))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -401,6 +423,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
         onOpenChange={setTransactionDialogOpen}
         portfolioId={portfolioId}
         currency={currency}
+        onSuccess={handleTransactionSuccess}
       />
       
       <TransactionHistoryDialog
@@ -416,6 +439,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
         portfolioId={portfolioId}
         currency={currency}
         holdings={holdings}
+        onSuccess={handleRebalanceSuccess}
       />
     </div>
   );
