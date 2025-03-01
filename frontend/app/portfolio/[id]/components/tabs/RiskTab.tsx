@@ -2,18 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DefaultService } from '@/src/api';
+import { DefaultService, PortfolioStats, RiskPlots } from '@/src/api';
+import dynamic from 'next/dynamic';
 
 interface RiskTabProps {
   portfolioId: string;
   currency: string;
-  portfolioData?: any;
+  portfolioData?: PortfolioStats;
+  plotData?: RiskPlots | null;
 }
 
-const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
+const Plot = dynamic(() => import("react-plotly.js"), {
+    ssr: false,
+    loading: () => <div>Loading...</div>, 
+});
+
+const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [riskMetrics, setRiskMetrics] = useState<any>(null);
   const [drawdownMetrics, setDrawdownMetrics] = useState<any>(null);
+  const [riskPlots, setRiskPlots] = useState<RiskPlots | null>(null);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -24,60 +32,33 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
         if (portfolioData && portfolioData.risk && portfolioData.drawdown) {
           setRiskMetrics(portfolioData.risk);
           setDrawdownMetrics(portfolioData.drawdown);
+          
+          if (plotData) {
+            setRiskPlots(plotData);
+          }
         } else {
           // Otherwise fetch it
           const stats = await DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId);
+          
+          // Fetch plot data
+          const plots = await DefaultService.portfolioPlotsApiPortfolioPortfolioIdPlotsGet(portfolioId);
+          
           if (stats && stats.risk && stats.drawdown) {
             setRiskMetrics(stats.risk);
             setDrawdownMetrics(stats.drawdown);
-          } else {
-            // Fallback to placeholder data
-            setRiskMetrics({
-              volatility: 0.1658,
-              sharpe_ratio: 1.42,
-              sortino_ratio: 1.85,
-              beta: 0.93,
-              value_at_risk: 0.0245,
-              information_ratio: 0.78,
-              treynor_ratio: 0.14
-            });
-            setDrawdownMetrics({
-              max_drawdown: 0.1234,
-              calmar_ratio: 0.95,
-              average_drawdown: 0.056,
-              average_drawdown_duration: 15,
-              time_to_recovery: 22,
-              drawdown_ratio: 0.452
-            });
+          } if (plots && plots.risk) {
+            setRiskPlots(plots.risk);
           }
         }
       } catch (error) {
         console.error('Error fetching risk data:', error);
-        // Fallback to placeholder data
-        setRiskMetrics({
-          volatility: 0.1658,
-          sharpe_ratio: 1.42,
-          sortino_ratio: 1.85,
-          beta: 0.93,
-          value_at_risk: 0.0245,
-          information_ratio: 0.78,
-          treynor_ratio: 0.14
-        });
-        setDrawdownMetrics({
-          max_drawdown: 0.1234,
-          calmar_ratio: 0.95,
-          average_drawdown: 0.056,
-          average_drawdown_duration: 15,
-          time_to_recovery: 22,
-          drawdown_ratio: 0.452
-        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchData();
-  }, [portfolioId, portfolioData]);
+  }, [portfolioId, portfolioData, plotData]);
   
   // Get currency symbol
   const getCurrencySymbol = (currencyCode: string): string => {
@@ -115,8 +96,29 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
           <CardTitle>Risk Decomposition</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-slate-800 h-64 rounded-md flex items-center justify-center">
-            <p className="text-slate-400">Risk Decomposition Chart will appear here</p>
+          <div className="h-64">
+        {riskPlots?.risk_decomposition ? (
+          <Plot 
+            data={riskPlots.risk_decomposition.data}
+            layout={{
+          ...riskPlots.risk_decomposition.layout,
+          autosize: true,
+          margin: { t: 0, r: 0, b: 0, l: 0 },
+            }}
+            config={{
+          responsive: true,
+          displaylogo: false,
+          displayModeBar: false,
+          logging: 0
+            }}
+            useResizeHandler={true}
+            style={{ width: '100%', height: '100%' }}
+          />
+        ) : (
+          <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+            <p className="text-slate-400">No risk decomposition data available</p>
+          </div>
+        )}
           </div>
         </CardContent>
       </Card>
@@ -233,18 +235,64 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
             </div>
           </CardContent>
         </Card>
+        
         {/* Drawdown Charts */}
         <Card className='col-span-2'>
           <CardHeader>
-            <CardTitle>Drawdown Chart</CardTitle>
+            <CardTitle>Drawdown Analysis</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='flex flex-col'>
-              <div className="bg-slate-800 h-[150px] mb-4 rounded-md flex items-center justify-center">
-                <p className="text-slate-400">Drawdown Chart will appear here</p>
+            <div className='flex flex-col gap-4'>
+              {/* Drawdown Plot */}
+              <div className="h-[150px]">
+                {riskPlots?.drawdown_plot ? (
+                  <Plot 
+                    data={riskPlots.drawdown_plot.data}
+                    layout={{
+                      ...riskPlots.drawdown_plot.layout,
+                      autosize: true,
+                      margin: { t: 0, r: 0, b: 0, l: 0 },
+                    }}
+                    config={{
+                      responsive: true,
+                      displaylogo: false,
+                      displayModeBar: false,
+                      logging: 0
+                    }}
+                    useResizeHandler={true}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+                    <p className="text-slate-400">No drawdown data available</p>
+                  </div>
+                )}
               </div>
-              <div className="bg-slate-800 h-[150px] rounded-md flex items-center justify-center">
-                <p className="text-slate-400">Drawdown Chart will appear here</p>
+              
+              {/* Drawdown Frequency */}
+              <div className="h-[150px]">
+                {riskPlots?.drawdown_frequency ? (
+                  <Plot 
+                    data={riskPlots.drawdown_frequency.data}
+                    layout={{
+                      ...riskPlots.drawdown_frequency.layout,
+                      autosize: true,
+                      margin: { t: 0, r: 0, b: 0, l: 0 },
+                    }}
+                    config={{
+                      responsive: true,
+                      displaylogo: false,
+                      displayModeBar: false,
+                      logging: 0
+                    }}
+                    useResizeHandler={true}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                ) : (
+                  <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+                    <p className="text-slate-400">No frequency data available</p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

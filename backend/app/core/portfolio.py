@@ -270,7 +270,6 @@ class Portfolio:
 
         sorted_by_weight = sorted(data, key=data.get, reverse=True)
         sorted_dict = {k: data[k] for k in sorted_by_weight}
-        sorted_dict
 
         fig = go.Figure()
 
@@ -1059,14 +1058,14 @@ class Portfolio:
         risk_decomp = risk_decomp.sort_values('Weight', ascending=False)
 
         fig = make_subplots(
-            rows=2, cols=1,
+            rows=1, cols=2,
             subplot_titles=('Portfolio Weight vs Risk Contribution', 'Marginal Risk'),
-            vertical_spacing=0.2,
-            row_heights=[0.7, 0.3]
+            # vertical_spacing=0.2,
+            # row_heights=[0.7, 0.3]
         )
 
         # Create a color map for assets
-        colors = px.colors.qualitative.Set2
+        colors = px.colors.sequential.RdBu_r
         asset_colors = {ast.ticker: colors[i % len(colors)] for i, ast in enumerate(risk_decomp.index)}
 
         # Add traces for top subplot (stacked)
@@ -1123,23 +1122,39 @@ class Portfolio:
                         "<extra></extra>"
                     ])
                 ),
-                row=2, col=1
+                row=1, col=2
             )
 
         # Update layout
         fig.update_layout(
             barmode='stack',
-            showlegend=True,
-            height=800,
-            title_text="Portfolio Risk Analysis"
+            showlegend=False,
+            # height=800,
+            # title_text="Portfolio Risk Analysis",
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            yaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                range=[0, 105],
+                title='Percentage (%)'
+            ),
+            yaxis2=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                title='Marginal Risk'
+            ),
+            xaxis2=dict(
+                tickangle=-90
+            )
+
         )
 
         # Update y-axes labels
-        fig.update_yaxes(title_text="Percentage (%)", range=[0, 105], row=1, col=1)
-        fig.update_yaxes(title_text="Marginal Risk", row=2, col=1)
+        # fig.update_yaxes(title_text="Percentage (%)", range=[0, 105], row=1, col=1)
+        # fig.update_yaxes(title_text="Marginal Risk", row=1, col=2)
 
         # Update x-axis for bottom subplot
-        fig.update_xaxes(title_text="Assets", row=2, col=1)
+        # fig.update_xaxes(title_text="Assets", row=1, col=1)
 
         
 
@@ -1162,14 +1177,13 @@ class Portfolio:
 
     @property
     def longest_drawdown_duration(self) -> dict:
-        drawdown = self.drawdowns
-        if drawdown.empty:
+        df = self.drawdown_df
+        if df.empty:
             return {'start': None, 'end': None, 'duration': 0}
-        drawdown_peaks = drawdown[drawdown == 0]
-        end_idx = pd.Series(drawdown_peaks.index.diff()).idxmax()
-        longest_end = drawdown_peaks.index[end_idx].date()
-        longest_start = drawdown_peaks.index[end_idx - 1].date()
-        longest_duration = (longest_end - longest_start).days
+        longest = df['duration'].idxmax()
+        longest_start = df.loc[longest, 'start']
+        longest_end = df.loc[longest, 'recovery'] if pd.notna(df.loc[longest, 'recovery']) else pd.Timestamp.today()
+        longest_duration = int(df.loc[longest, 'duration'])
         return {'start': longest_start.strftime('%d-%m-%Y'), 'end': longest_end.strftime('%d-%m-%Y'), 'duration': longest_duration}
 
     @property
@@ -1216,14 +1230,17 @@ class Portfolio:
         )
 
         fig.update_layout(
-            title='Drawdown Frequency',
             xaxis_title='Drawdown Depth',
             yaxis_title='Frequency',
             yaxis=dict(
                     range=[0, None],
-                    rangemode='nonnegative'
+                    rangemode='nonnegative',
+                    gridcolor='rgba(128, 128, 128, 0.2)',
                 ),
-            bargap=0.05
+            bargap=0.05,
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
         )
         
 
@@ -1316,10 +1333,20 @@ class Portfolio:
         )
 
         fig.update_layout(
-            title='Drawdown',
-            xaxis_title='Date',
-            yaxis_title='Drawdown',
-            showlegend=False
+            xaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                zeroline=False,
+            ),
+            yaxis=dict(
+                title='Drawdown',
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                zeroline=False,
+            ),
+            showlegend=False,
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            hovermode='x'
         )
 
         return fig
