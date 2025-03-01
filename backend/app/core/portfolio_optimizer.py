@@ -229,34 +229,41 @@ class PortfolioOptimizer():
                 )
             )
 
-            fig.add_annotation(
-                text=(f'Optimal Sharpe Ratio: {round(self.opt_sharpe_ratio, 3)}<br>'
-                    f'Expected Return: {round(self.port_rets(optimal_weights), 3)}<br>'
-                    f'Expected Volatility: {round(self.port_vols(optimal_weights), 3)}<br>'
-                    ),
-                xref='paper', yref='paper',
-                x=0.05, y=0.95,
-                showarrow=False,
-                font=dict(
-                    size=10,
-                    color='black'
-                ),
-                align='left',
-                bgcolor='white',
-                bordercolor='black',
-                borderwidth=1,
-                xanchor='left',
-                yanchor='top'
+            # fig.add_annotation(
+            #     text=(f'Optimal Sharpe Ratio: {round(self.opt_sharpe_ratio, 3)}<br>'
+            #         f'Expected Return: {round(self.port_rets(optimal_weights), 3)}<br>'
+            #         f'Expected Volatility: {round(self.port_vols(optimal_weights), 3)}<br>'
+            #         ),
+            #     xref='paper', yref='paper',
+            #     x=0.05, y=0.95,
+            #     showarrow=False,
+            #     font=dict(
+            #         size=10,
+            #         color='black'
+            #     ),
+            #     align='left',
+            #     bgcolor='white',
+            #     bordercolor='black',
+            #     borderwidth=1,
+            #     xanchor='left',
+            #     yanchor='top'
 
-            )
+            # )
 
             fig.update_layout(
-                title='Efficient Frontier',
-                xaxis_title='Expected Volatility',
-                yaxis_title='Expected Return',
+                # title='Efficient Frontier',
+                # xaxis_title='Expected Volatility',
+                xaxis=dict(
+                    title='Expected Volatility',
+                    gridcolor='rgba(128,128,128,0.2)',
+                ),
+                yaxis=dict(
+                    title='Expected Return',
+                    gridcolor='rgba(128,128,128,0.2)',
+                ),
                 coloraxis_colorbar=dict(title='Sharpe Ratio'),
                 hovermode='closest',
-                height=800
+                # height=800
             )
 
             # fig.show()
@@ -288,7 +295,10 @@ class PortfolioOptimizer():
 
             fig.update_layout(
                 xaxis_range=[min(scatter_vols) * 0.9, max(scatter_vols) * 1.1],
-                yaxis_range=[min(scatter_rets) * 0.9, max(scatter_rets) * 1.1]
+                yaxis_range=[min(scatter_rets) * 0.9, max(scatter_rets) * 1.1],
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white')
             )
 
         weights = [

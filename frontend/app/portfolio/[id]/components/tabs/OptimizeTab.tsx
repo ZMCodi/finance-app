@@ -12,6 +12,12 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { RotateCw } from 'lucide-react';
 import { DefaultService } from '@/src/api';
+import dynamic from 'next/dynamic';
+
+const Plot = dynamic(() => import("react-plotly.js"), {
+    ssr: false,
+    loading: () => <div>Loading...</div>, 
+});
 
 interface OptimizeTabProps {
   portfolioId: string;
@@ -106,130 +112,155 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Portfolio Optimization</h2>
       
-      {/* Optimization Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Optimization Parameters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <label className="text-sm text-slate-400">Minimum Allocation</label>
-                <span>{minAllocation[0]}%</span>
-              </div>
-              <Slider
-                value={minAllocation}
-                min={0}
-                max={50}
-                step={1}
-                onValueChange={setMinAllocation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <label className="text-sm text-slate-400">Maximum Allocation</label>
-                <span>{maxAllocation[0]}%</span>
-              </div>
-              <Slider
-                value={maxAllocation}
-                min={10}
-                max={100}
-                step={1}
-                onValueChange={setMaxAllocation}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <label className="text-sm text-slate-400">Efficient Frontier Points</label>
-                <span>{points[0]}</span>
-              </div>
-              <Slider
-                value={points}
-                min={10}
-                max={100}
-                step={5}
-                onValueChange={setPoints}
-              />
-            </div>
-            
-            <Button 
-              className="w-full" 
-              onClick={handleOptimize}
-              disabled={optimizing}
-            >
-              {optimizing ? (
-                <>
-                  <RotateCw className="mr-2 h-4 w-4 animate-spin" /> 
-                  Optimizing...
-                </>
-              ) : 'Optimize Portfolio'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Optimization Results */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className='col-span-3'>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+        {/* Left column - Efficient Frontier */}
+        <Card className="md:col-span-8 md:row-span-2 h-full">
           <CardHeader>
             <CardTitle>Efficient Frontier</CardTitle>
           </CardHeader>
+          <CardContent className="h-[90%]">
+            {optimizationResults?.ef_results?.efficient_frontier ? (
+              <Plot 
+                data={optimizationResults.ef_results.efficient_frontier.data}
+                layout={{
+                  ...optimizationResults.ef_results.efficient_frontier.layout,
+                  autosize: true,
+                  margin: { t: 10, r: 10, b: 50, l: 60 },
+                }}
+                useResizeHandler={true}
+                style={{ width: '100%', height: '100%' }}
+                config={{
+                  responsive: true,
+                  displaylogo: false,
+                  modeBarButtonsToRemove: ['resetScale2d', 'toImage', 'zoomIn2d', 'autoScale2d', 'select2d', 'lasso2d'],
+                  logging: 0
+                }}
+              />
+            ) : (
+              <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+                <p className="text-slate-400">Run optimization to see Efficient Frontier</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        {/* Right column top - Optimization Parameters */}
+        <Card className="md:col-span-4">
+          <CardHeader>
+            <CardTitle>Optimization Parameters</CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="bg-slate-800 h-[450px] rounded-md flex items-center justify-center">
-              <p className="text-slate-400">Efficient Frontier Chart will appear here</p>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <label className="text-sm text-slate-400">Minimum Allocation</label>
+                  <span>{minAllocation[0]}%</span>
+                </div>
+                <Slider
+                  value={minAllocation}
+                  min={0}
+                  max={50}
+                  step={1}
+                  onValueChange={setMinAllocation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <label className="text-sm text-slate-400">Maximum Allocation</label>
+                  <span>{maxAllocation[0]}%</span>
+                </div>
+                <Slider
+                  value={maxAllocation}
+                  min={10}
+                  max={100}
+                  step={1}
+                  onValueChange={setMaxAllocation}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <label className="text-sm text-slate-400">Efficient Frontier Points</label>
+                  <span>{points[0]}</span>
+                </div>
+                <Slider
+                  value={points}
+                  min={10}
+                  max={100}
+                  step={5}
+                  onValueChange={setPoints}
+                />
+              </div>
+              
+              <Button 
+                className="w-full" 
+                onClick={handleOptimize}
+                disabled={optimizing}
+              >
+                {optimizing ? (
+                  <>
+                    <RotateCw className="mr-2 h-4 w-4 animate-spin" /> 
+                    Optimizing...
+                  </>
+                ) : 'Optimize Portfolio'}
+              </Button>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        {/* Right column bottom - Optimal Portfolio */}
+        <Card className="md:col-span-4">
           <CardHeader>
             <CardTitle>Optimal Portfolio</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[400px] overflow-hidden">
             {optimizationResults ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Expected Returns</span>
-                  <span className="text-green-500 font-semibold">
-                    {(optimizationResults.opt_returns * 100).toFixed(2)}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Expected Volatility</span>
-                  <span className="text-red-500 font-semibold">
-                    {(optimizationResults.opt_volatility * 100).toFixed(2)}%
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-slate-400">Sharpe Ratio</span>
-                  <span className="font-semibold">
-                    {optimizationResults.opt_sharpe_ratio.toFixed(2)}
-                  </span>
+              <div className="flex flex-col h-full">
+                {/* Portfolio Metrics */}
+                <div className="space-y-4 mb-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Expected Returns</span>
+                    <span className="text-green-500 font-semibold">
+                      {(optimizationResults.opt_returns * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Expected Volatility</span>
+                    <span className="text-red-500 font-semibold">
+                      {(optimizationResults.opt_volatility * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Sharpe Ratio</span>
+                    <span className="font-semibold">
+                      {optimizationResults.opt_sharpe_ratio.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
                 
-                <div className="pt-4">
+                {/* Weights Table */}
+                <div className="flex-grow overflow-hidden flex flex-col">
                   <h4 className="text-sm font-medium mb-2 text-slate-400">Optimal Weights</h4>
-                    <div className="max-h-60 overflow-y-auto">
-                      <Table>
+                  <div className="flex-grow overflow-y-auto">
+                    <Table>
                       <TableBody>
                         {Object.entries(optimizationResults.opt_weights)
                         .sort(([, a], [, b]) => b - a)
                         .map(([asset, weight]) => (
                           <TableRow key={asset}>
-                          <TableCell>{asset}</TableCell>
-                          <TableCell className="text-right">
-                            {(weight * 100).toFixed(1)}%
-                          </TableCell>
+                            <TableCell>{asset}</TableCell>
+                            <TableCell className="text-right">
+                              {(weight * 100).toFixed(1)}%
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
-                      </Table>
-                    </div>
+                    </Table>
+                  </div>
                 </div>
                 
+                {/* Button */}
                 <Button 
                   className="w-full mt-4" 
                   variant="outline"
@@ -239,7 +270,7 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-64 text-slate-400">
+              <div className="flex items-center justify-center h-full text-slate-400">
                 Run optimization to see results
               </div>
             )}
