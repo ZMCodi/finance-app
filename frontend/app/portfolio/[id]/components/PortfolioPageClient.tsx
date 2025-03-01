@@ -8,6 +8,7 @@ import ReturnsTab from './tabs/ReturnsTab';
 import RiskTab from './tabs/RiskTab';
 import OptimizeTab from './tabs/OptimizeTab';
 import { DefaultService } from '@/src/api';
+import { HoldingsStats, PortfolioStats } from '@/src/api/models';
 
 interface PortfolioPageClientProps {
   portfolioId: string;
@@ -16,7 +17,8 @@ interface PortfolioPageClientProps {
 const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
   const [activeTab, setActiveTab] = useState('holdings');
   const [isLoading, setIsLoading] = useState(true);
-  const [portfolioData, setPortfolioData] = useState<any>(null);
+  const [portfolioData, setPortfolioData] = useState<PortfolioStats | null>(null);
+  const [holdingsData, setHoldingsData] = useState<HoldingsStats | null>(null);
   const [currency, setCurrency] = useState('USD');
 
   useEffect(() => {
@@ -30,9 +32,14 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
           setCurrency(storedCurrency);
         }
         
-        // Fetch portfolio stats
-        const stats = await DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId);
+        // Fetch portfolio stats and holdings data in parallel
+        const [stats, holdings] = await Promise.all([
+          DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId),
+          DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(portfolioId)
+        ]);
+        
         setPortfolioData(stats);
+        setHoldingsData(holdings);
         
       } catch (error) {
         console.error('Error fetching portfolio data:', error);
@@ -68,7 +75,12 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                 ) : (
                   <>
                     <TabsContent value="holdings">
-                      <HoldingsTab portfolioId={portfolioId} currency={currency} />
+                      <HoldingsTab 
+                        portfolioId={portfolioId} 
+                        currency={currency} 
+                        portfolioData={portfolioData}
+                        holdingsData={holdingsData}
+                      />
                     </TabsContent>
                     
                     <TabsContent value="returns">

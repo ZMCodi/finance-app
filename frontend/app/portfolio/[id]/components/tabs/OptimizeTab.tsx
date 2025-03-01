@@ -2,6 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableRow
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { RotateCw } from 'lucide-react';
@@ -166,13 +172,13 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
       </Card>
       
       {/* Optimization Results */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className='col-span-3'>
           <CardHeader>
             <CardTitle>Efficient Frontier</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-slate-800 h-64 rounded-md flex items-center justify-center">
+            <div className="bg-slate-800 h-[450px] rounded-md flex items-center justify-center">
               <p className="text-slate-400">Efficient Frontier Chart will appear here</p>
             </div>
           </CardContent>
@@ -206,16 +212,22 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
                 
                 <div className="pt-4">
                   <h4 className="text-sm font-medium mb-2 text-slate-400">Optimal Weights</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {Object.entries(optimizationResults.opt_weights)
-                      .sort(([, a], [, b]) => b - a) // Sort by weight in descending order
-                      .map(([asset, weight]) => (
-                        <div key={asset} className="flex justify-between items-center">
-                          <span>{asset}</span>
-                          <span>{(weight * 100).toFixed(1)}%</span>
-                        </div>
-                      ))}
-                  </div>
+                    <div className="max-h-60 overflow-y-auto">
+                      <Table>
+                      <TableBody>
+                        {Object.entries(optimizationResults.opt_weights)
+                        .sort(([, a], [, b]) => b - a)
+                        .map(([asset, weight]) => (
+                          <TableRow key={asset}>
+                          <TableCell>{asset}</TableCell>
+                          <TableCell className="text-right">
+                            {(weight * 100).toFixed(1)}%
+                          </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                      </Table>
+                    </div>
                 </div>
                 
                 <Button 

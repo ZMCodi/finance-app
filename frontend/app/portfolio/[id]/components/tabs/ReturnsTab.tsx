@@ -27,43 +27,10 @@ const ReturnsTab = ({ portfolioId, currency, portfolioData }: ReturnsTabProps) =
           const stats = await DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId);
           if (stats && stats.performance) {
             setPerformanceMetrics(stats.performance);
-          } else {
-            // Fallback to placeholder data
-            setPerformanceMetrics({
-              total_returns: 0.1834,
-              trading_returns: 0.1542,
-              annualized_returns: 0.1256,
-              daily_returns: {
-                mean: 0.0008,
-                median: 0.0006,
-                std: 0.0152,
-                skewness: -0.2,
-                kurtosis: 3.8
-              },
-              best_day: 0.0342,
-              worst_day: -0.0251,
-              positive_days: 0.65
-            });
           }
         }
       } catch (error) {
-        console.error('Error fetching performance data:', error);
-        // Fallback to placeholder data
-        setPerformanceMetrics({
-          total_returns: 0.1834,
-          trading_returns: 0.1542,
-          annualized_returns: 0.1256,
-          daily_returns: {
-            mean: 0.0008,
-            median: 0.0006,
-            std: 0.0152,
-            skewness: -0.2,
-            kurtosis: 3.8
-          },
-          best_day: 0.0342,
-          worst_day: -0.0251,
-          positive_days: 0.65
-        });
+        console.error('Error fetching performance data:', error);;
       } finally {
         setIsLoading(false);
       }
@@ -115,7 +82,7 @@ const ReturnsTab = ({ portfolioId, currency, portfolioData }: ReturnsTabProps) =
       </Card>
       
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Performance Metrics</CardTitle>
@@ -171,8 +138,45 @@ const ReturnsTab = ({ portfolioId, currency, portfolioData }: ReturnsTabProps) =
           </CardContent>
         </Card>
         
-        {/* Returns Distribution */}
+        {/* Returns Distribution Metrics */}
         <Card>
+          <CardHeader>
+            <CardTitle>Returns Distribution Stats</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+              <span className="text-slate-400">Mean Daily Return</span>
+              <span className={`font-semibold ${performanceMetrics.daily_returns?.mean >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {performanceMetrics.daily_returns?.mean >= 0 ? '+' : ''}
+                {(performanceMetrics.daily_returns?.mean * 100).toFixed(2)}%
+              </span>
+              </div>
+              <div className="flex justify-between items-center">
+              <span className="text-slate-400">Median Daily Return</span>
+              <span className={`font-semibold ${performanceMetrics.daily_returns?.median >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {performanceMetrics.daily_returns?.median >= 0 ? '+' : ''}
+                {(performanceMetrics.daily_returns?.median * 100).toFixed(2)}%
+              </span>
+              </div>
+              <div className="flex justify-between items-center">
+              <span className="text-slate-400">Skewness</span>
+              <span className="font-semibold">
+                {performanceMetrics.daily_returns?.skewness.toFixed(2)}
+              </span>
+              </div>
+              <div className="flex justify-between items-center">
+              <span className="text-slate-400">Kurtosis</span>
+              <span className="font-semibold">
+                {performanceMetrics.daily_returns?.kurtosis.toFixed(2)}
+              </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        {/* Returns Distribution */}
+        <Card className='col-span-2'>
           <CardHeader>
             <CardTitle>Returns Distribution</CardTitle>
           </CardHeader>
@@ -183,43 +187,6 @@ const ReturnsTab = ({ portfolioId, currency, portfolioData }: ReturnsTabProps) =
           </CardContent>
         </Card>
       </div>
-      
-      {/* Daily Returns Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily Returns Statistics</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <span className="text-sm text-slate-400">Mean</span>
-              <p className={`text-lg font-semibold ${performanceMetrics.daily_returns?.mean >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {performanceMetrics.daily_returns?.mean >= 0 ? '+' : ''}
-                {(performanceMetrics.daily_returns?.mean * 100).toFixed(3)}%
-              </p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-slate-400">Median</span>
-              <p className={`text-lg font-semibold ${performanceMetrics.daily_returns?.median >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {performanceMetrics.daily_returns?.median >= 0 ? '+' : ''}
-                {(performanceMetrics.daily_returns?.median * 100).toFixed(3)}%
-              </p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-slate-400">Skewness</span>
-              <p className="text-lg font-semibold">
-                {performanceMetrics.daily_returns?.skewness.toFixed(2)}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm text-slate-400">Kurtosis</span>
-              <p className="text-lg font-semibold">
-                {performanceMetrics.daily_returns?.kurtosis.toFixed(2)}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

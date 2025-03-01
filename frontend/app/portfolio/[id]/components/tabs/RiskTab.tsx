@@ -122,7 +122,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
       </Card>
       
       {/* Risk Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Risk Metrics</CardTitle>
@@ -160,6 +160,12 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
+                <span className="text-slate-400">Tracking Error</span>
+                <span className="font-semibold">
+                  {riskMetrics.tracking_error.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
                 <span className="text-slate-400">Information Ratio</span>
                 <span className="font-semibold">
                   {riskMetrics.information_ratio.toFixed(2)}
@@ -187,6 +193,25 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
                   {(drawdownMetrics.max_drawdown * 100).toFixed(2)}%
                 </span>
               </div>
+                <div className="flex flex-col gap-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Longest Drawdown</span>
+                  <span className="font-semibold">
+                  {drawdownMetrics.longest_drawdown_duration?.duration || 'N/A'} days
+                  </span>
+                </div>
+                {drawdownMetrics.longest_drawdown_duration?.duration && (
+                  <div className="text-sm text-slate-500 pl-2">
+                  From {drawdownMetrics.longest_drawdown_duration.start} to {drawdownMetrics.longest_drawdown_duration.end}
+                  </div>
+                )}
+                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Average Drawdown</span>
+                <span className="font-semibold text-red-500">
+                  {(drawdownMetrics.average_drawdown * 100).toFixed(2)}%
+                </span>
+              </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-400">Calmar Ratio</span>
                 <span className="font-semibold">
@@ -194,9 +219,9 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">Average Drawdown</span>
-                <span className="font-semibold text-red-500">
-                  {(drawdownMetrics.average_drawdown * 100).toFixed(2)}%
+                <span className="text-slate-400">Drawdown Ratio</span>
+                <span className="font-semibold">
+                  {drawdownMetrics.drawdown_ratio.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -205,27 +230,26 @@ const RiskTab = ({ portfolioId, currency, portfolioData }: RiskTabProps) => {
                   {drawdownMetrics.time_to_recovery || 'N/A'} days
                 </span>
               </div>
-              
-              {/* Drawdown Chart Placeholder */}
-              <div className="bg-slate-800 h-32 mt-4 rounded-md flex items-center justify-center">
+            </div>
+          </CardContent>
+        </Card>
+        {/* Drawdown Charts */}
+        <Card className='col-span-2'>
+          <CardHeader>
+            <CardTitle>Drawdown Chart</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className='flex flex-col'>
+              <div className="bg-slate-800 h-[150px] mb-4 rounded-md flex items-center justify-center">
+                <p className="text-slate-400">Drawdown Chart will appear here</p>
+              </div>
+              <div className="bg-slate-800 h-[150px] rounded-md flex items-center justify-center">
                 <p className="text-slate-400">Drawdown Chart will appear here</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Correlation Matrix */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Correlation Matrix</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-slate-800 h-64 rounded-md flex items-center justify-center">
-            <p className="text-slate-400">Correlation Heatmap will appear here</p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
