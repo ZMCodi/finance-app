@@ -128,10 +128,15 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
           data={plots.holdings_pie.data}
           layout={{
             ...plots.holdings_pie.layout,
-            margin: { t: 0, b: 0, l: 0, r: 0 },
+            margin: { t: 0, b: 10, l: 0, r: 0 },
             autosize: true,
           }}
-          config={{ responsive: true }}
+          config={{
+            responsive: true,
+            displaylogo: false,
+            displayModeBar: false,
+            logging: 0
+          }}
           useResizeHandler={true}
           style={{ width: '100%', height: '100%' }}
             />
@@ -147,10 +152,15 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
           data={plots.asset_type_exposure.data}
           layout={{
             ...plots.asset_type_exposure.layout,
-            margin: { t: 0, b: 0, l: 0, r: 0 },
+            margin: { t: 0, b: 10, l: 0, r: 0 },
             autosize: true,
           }}
-          config={{ responsive: true }}
+          config={{
+            responsive: true,
+            displaylogo: false,
+            displayModeBar: false,
+            logging: 0
+        }}
           useResizeHandler={true}
           style={{ width: '100%', height: '100%' }}
             />
@@ -166,10 +176,15 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
           data={plots.sector_exposure.data}
           layout={{
             ...plots.sector_exposure.layout,
-            margin: { t: 0, b: 0, l: 0, r: 0 },
+            margin: { t: 0, b: 10, l: 0, r: 0 },
             autosize: true,
           }}
-          config={{ responsive: true }}
+          config={{
+            responsive: true,
+            displaylogo: false,
+            displayModeBar: false,
+            logging: 0
+        }}
           useResizeHandler={true}
           style={{ width: '100%', height: '100%' }}
             />
@@ -195,7 +210,11 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                 <Plot
                   className='h-full'
                   data={plots.correlation_heatmap.data}
-                  layout={plots.correlation_heatmap.layout} 
+                  layout={{
+                    ...plots.correlation_heatmap.layout,
+                    margin: { t: 0 },
+                    // autosize: true,
+                  }}
                 />
               ) : (
               <div className="h-full flex items-center justify-center">

@@ -88,7 +88,11 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                     </TabsContent>
                     
                     <TabsContent value="returns">
-                      <ReturnsTab portfolioId={portfolioId} currency={currency} portfolioData={portfolioData} />
+                      <ReturnsTab 
+                      portfolioId={portfolioId} 
+                      portfolioData={portfolioData}
+                      plotData={plotData?.returns}
+                      />
                     </TabsContent>
                     
                     <TabsContent value="risk">

@@ -342,12 +342,12 @@ class Portfolio:
         fig = go.Figure()
 
         # Calculate statistics
-        stats_text = (
-            f'Mean: {np.mean(data):.4f}<br>'
-            f'Std Dev: {np.std(data):.4f}<br>'
-            f'Skewness: {stats.skew(data):.4f}<br>'
-            f'Kurtosis: {stats.kurtosis(data):.4f}'
-        )
+        # stats_text = (
+        #     f'Mean: {np.mean(data):.4f}<br>'
+        #     f'Std Dev: {np.std(data):.4f}<br>'
+        #     f'Skewness: {stats.skew(data):.4f}<br>'
+        #     f'Kurtosis: {stats.kurtosis(data):.4f}'
+        # )
 
         bins = np.linspace(data.min(), data.max(), bins + 1)
 
@@ -359,39 +359,42 @@ class Portfolio:
                     end=bins[-1],
                     size=(bins[1] - bins[0])
                 ),
-                name='Portfolio Returns Distribution'
+                # name='Portfolio Returns Distribution'
             )
         )
 
         xref = 'paper'
         yref = 'paper'
 
-        if show_stats:
-                fig.add_annotation(
-                    x=0.95,
-                    y=0.95,
-                    xref=xref,
-                    yref=yref,
-                    text=stats_text,
-                    showarrow=False,
-                    font=dict(size=10),
-                    align='left',
-                    bgcolor='white',
-                    bordercolor='black',
-                    borderwidth=1,
-                    xanchor='right',
-                    yanchor='top'
-                )
+        # if show_stats:
+        #         fig.add_annotation(
+        #             x=0.95,
+        #             y=0.95,
+        #             xref=xref,
+        #             yref=yref,
+        #             # text=stats_text,
+        #             showarrow=False,
+        #             font=dict(size=10),
+        #             align='left',
+        #             bgcolor='white',
+        #             bordercolor='black',
+        #             borderwidth=1,
+        #             xanchor='right',
+        #             yanchor='top'
+        #         )
 
         fig.update_layout(
                 yaxis=dict(
                     range=[0, None],
-                    rangemode='nonnegative'
+                    rangemode='nonnegative',
+                    gridcolor='rgba(128, 128, 128, 0.2)',
                 ),
                 bargap=0.05,
-                title='Portfolio Returns Distribution',
                 xaxis_title='Returns',
-                yaxis_title='Count'
+                yaxis_title='Count',
+                paper_bgcolor='rgba(0, 0, 0, 0)',
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+                font=dict(color='white')
             )
 
         
@@ -761,8 +764,29 @@ class Portfolio:
         if pnl.empty:
             return None
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=pnl.index, y=pnl.cumsum(), mode='lines', name='PnL'))
-        fig.update_layout(title='Portfolio PnL', xaxis_title='Date', yaxis_title='PnL')
+        fig.add_trace(
+            go.Scatter(
+                x=pnl.index, 
+                y=pnl.cumsum(), 
+                mode='lines', 
+                name='PnL'
+            )
+        )
+        fig.update_layout(
+            xaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                zeroline=False,
+            ), 
+            yaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                title='PnL',
+                zeroline=False,
+            ),
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            hovermode='x'
+        )
         
         return fig
     
@@ -771,8 +795,27 @@ class Portfolio:
         if rets.empty:
             return None
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=rets.index, y=np.exp(rets.cumsum()), mode='lines', name='Returns'))
-        fig.update_layout(title='Portfolio Returns', xaxis_title='Date', yaxis_title='Returns')
+        fig.add_trace(
+            go.Scatter(
+                x=rets.index, 
+                y=np.exp(rets.cumsum()), 
+                mode='lines',
+                name='Returns'
+            )
+        )
+        fig.update_layout(
+            xaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+            ), 
+            yaxis=dict(
+                gridcolor='rgba(128, 128, 128, 0.2)',
+                title='Returns'
+            ),
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            hovermode='x'
+        )
         
         return fig
 
@@ -970,7 +1013,6 @@ class Portfolio:
 
         # Update layout
         fig.update_layout(
-            title='Asset Correlation Matrix',
             xaxis=dict(
                 tickangle=-90,
                 side='bottom',
