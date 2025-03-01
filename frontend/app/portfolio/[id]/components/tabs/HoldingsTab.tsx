@@ -134,7 +134,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => setTransactionDialogOpen(true)}>
-              Make Transaction
+              Add Transaction
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
               Transaction History
@@ -242,6 +242,12 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                     ...plots.correlation_heatmap.layout,
                     margin: { t: 0 },
                     // autosize: true,
+                  }}
+                  config={{
+                    responsive: true,
+                    displaylogo: false,
+                    displayModeBar: false,
+                    logging: 0
                   }}
                 />
               ) : (

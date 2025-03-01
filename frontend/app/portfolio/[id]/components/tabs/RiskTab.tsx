@@ -115,7 +115,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProp
             style={{ width: '100%', height: '100%' }}
           />
         ) : (
-          <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+          <div className="h-full rounded-md flex items-center justify-center">
             <p className="text-slate-400">No risk decomposition data available</p>
           </div>
         )}
@@ -263,7 +263,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProp
                     style={{ width: '100%', height: '100%' }}
                   />
                 ) : (
-                  <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+                  <div className="h-full rounded-md flex items-center justify-center">
                     <p className="text-slate-400">No drawdown data available</p>
                   </div>
                 )}
@@ -289,7 +289,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProp
                     style={{ width: '100%', height: '100%' }}
                   />
                 ) : (
-                  <div className="h-full rounded-md flex items-center justify-center bg-slate-800">
+                  <div className="h-full rounded-md flex items-center justify-center">
                     <p className="text-slate-400">No frequency data available</p>
                   </div>
                 )}

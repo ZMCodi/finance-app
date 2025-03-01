@@ -36,6 +36,7 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
   const [maxAllocation, setMaxAllocation] = useState<number[]>([100]);
   const [points, setPoints] = useState<number[]>([50]);
   const [optimizing, setOptimizing] = useState(false);
+  const [rebalancing, setRebalancing] = useState(false);
   const [optimizationResults, setOptimizationResults] = useState<PortfolioOptimize | null>(null);
   const [portfolioType, setPortfolioType] = useState<PortfolioType>('optimal');
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -47,24 +48,6 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
   const [transactions, setTransactions] = useState<any[] | null>(null);
   const [targetReturns, setTargetReturns] = useState<string>('');
   const [targetVolatility, setTargetVolatility] = useState<string>('');
-  
-  // Get currency symbol
-  const getCurrencySymbol = (currencyCode: string): string => {
-    const currencies: Record<string, string> = {
-      'USD': '$',
-      'EUR': '€',
-      'GBP': '£',
-      'JPY': '¥',
-      'CAD': 'C$',
-      'AUD': 'A$',
-      'CHF': 'CHF',
-      // Add more currencies as needed
-    };
-    
-    return currencies[currencyCode] || currencyCode;
-  };
-  
-  const currencySymbol = getCurrencySymbol(currency);
 
   const handleOptimize = async () => {
     try {
@@ -90,6 +73,8 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
     if (!optimizationResults) return;
     
     try {
+      setRebalancing(true);
+      
       // Determine which weights to use based on the selected portfolio type
       let weights;
       
@@ -117,6 +102,8 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
     } catch (error) {
       console.error('Error calculating rebalance transactions:', error);
       alert('Failed to calculate rebalance transactions. Please try again.');
+    } finally {
+      setRebalancing(false);
     }
   };
   
@@ -388,10 +375,15 @@ const OptimizeTab = ({ portfolioId, currency }: OptimizeTabProps) => {
                 {/* Button */}
                 <Button 
                   className="w-full mt-4" 
-                  variant="outline"
                   onClick={handleRebalance}
+                  disabled={rebalancing}
                 >
-                  Rebalance Portfolio
+                  {rebalancing ? (
+                    <>
+                      <RotateCw className="mr-2 h-4 w-4 animate-spin" /> 
+                      Rebalancing...
+                    </>
+                  ) : 'Rebalance Portfolio'}
                 </Button>
               </div>
             ) : (

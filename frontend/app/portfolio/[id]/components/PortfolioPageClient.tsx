@@ -56,7 +56,7 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
 
   return (
     <div className="flex flex-col min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-8 text-center">Portfolio: {portfolioId}</h1>
+      <h1 className="text-3xl font-bold mb-8 text-left">{portfolioId}</h1>
 
       <div className="flex flex-1 gap-6">
         {/* Full width tabs */}
@@ -105,7 +105,10 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                     </TabsContent>
                     
                     <TabsContent value="optimize">
-                      <OptimizeTab portfolioId={portfolioId} />
+                      <OptimizeTab 
+                      portfolioId={portfolioId}
+                      currency={currency}
+                      />
                     </TabsContent>
                   </>
                 )}

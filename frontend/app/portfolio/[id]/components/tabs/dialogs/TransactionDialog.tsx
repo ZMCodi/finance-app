@@ -13,6 +13,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover-dialog';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,6 +36,8 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
   const [assetTicker, setAssetTicker] = useState<string>('');
   const [value, setValue] = useState<string>('');
   const [shares, setShares] = useState<string>('');
+  const [transactionDate, setTransactionDate] = useState<Date | undefined>(undefined);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,11 +51,16 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
           if (!assetTicker) {
             throw new Error('Asset ticker is required for buying');
           }
+          
+          // Format date if it exists
+          const buyDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
+          
           await DefaultService.buyApiPortfolioPortfolioIdBuyPatch(
             portfolioId,
             assetTicker,
             shares ? parseFloat(shares) : undefined,
-            value ? parseFloat(value) : undefined
+            value ? parseFloat(value) : undefined,
+            buyDate
           );
           break;
         
@@ -57,11 +68,16 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
           if (!assetTicker) {
             throw new Error('Asset ticker is required for selling');
           }
+          
+          // Format date if it exists
+          const sellDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
+          
           await DefaultService.sellApiPortfolioPortfolioIdSellPatch(
             portfolioId,
             assetTicker,
             shares ? parseFloat(shares) : undefined,
-            value ? parseFloat(value) : undefined
+            value ? parseFloat(value) : undefined,
+            sellDate
           );
           break;
         
@@ -69,9 +85,15 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
           if (!value) {
             throw new Error('Value is required for deposits');
           }
+          
+          // Format date if it exists
+          const depositDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
+          
           await DefaultService.depositApiPortfolioPortfolioIdDepositPatch(
             portfolioId,
-            parseFloat(value)
+            parseFloat(value),
+            undefined,  // currency
+            depositDate
           );
           break;
         
@@ -79,9 +101,15 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
           if (!value) {
             throw new Error('Value is required for withdrawals');
           }
+          
+          // Format date if it exists
+          const withdrawDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
+          
           await DefaultService.withdrawApiPortfolioPortfolioIdWithdrawPatch(
             portfolioId,
-            parseFloat(value)
+            parseFloat(value),
+            undefined,  // currency
+            withdrawDate
           );
           break;
       }
@@ -101,6 +129,7 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
     setAssetTicker('');
     setValue('');
     setShares('');
+    setTransactionDate(undefined);
     setError(null);
   };
 
@@ -207,10 +236,47 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency }: Transa
             </div>
           )}
           
+          {/* Transaction Date */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="transaction-date" className="text-right">
+              Date
+            </Label>
+            <div className="col-span-3">
+              <Popover 
+                open={datePopoverOpen} 
+                onOpenChange={setDatePopoverOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    id="transaction-date"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                    disabled={isSubmitting}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {transactionDate ? format(transactionDate, 'MMM d, yyyy') : "Today (default)"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={transactionDate}
+                    onSelect={(date) => {
+                      setTransactionDate(date);
+                      setDatePopoverOpen(false);
+                    }}
+                    initialFocus
+                    disabled={(date) => date > new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          
           {/* Note */}
           <div className="text-xs text-slate-400 mt-2">
             {transactionType === 'buy' || transactionType === 'sell' 
-              ? 'Specify either value or shares (or both).'
+              ? 'Specify either value or shares (not both) for market orders.'
               : `Enter the amount to ${transactionType} in ${currency}.`
             }
           </div>

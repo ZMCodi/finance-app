@@ -168,7 +168,7 @@ const RebalanceDialog = ({
           <div className="space-y-4">
             <div className="overflow-y-auto max-h-[400px]">
               <Table>
-                <TableHeader className="sticky top-0 bg-slate-950">
+                <TableHeader className="sticky top-0 bg-slate-950 z-10">
                   <TableRow>
                     <TableHead>Asset</TableHead>
                     <TableHead className="text-right">Current Weight</TableHead>
@@ -196,7 +196,7 @@ const RebalanceDialog = ({
                               min="0"
                               max="100"
                               step="0.1"
-                              className="w-20 h-8 text-right ml-auto"
+                              className="w-20 h-8 text-center ml-auto"
                             />
                           </TableCell>
                           <TableCell className="text-right">
@@ -218,7 +218,7 @@ const RebalanceDialog = ({
               </Table>
             </div>
             
-            <div className="flex justify-between items-center p-2 border rounded-md bg-slate-900">
+            <div className="flex justify-between items-center p-2 border rounded-md">
               <div className="flex items-center">
                 <span className="text-sm font-medium mr-2">Total:</span>
                 <span className={
