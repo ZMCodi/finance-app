@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { DefaultService } from '@/src/api';
-import { HoldingsStats, PortfolioStats } from '@/src/api/models';
+import { HoldingsStats, PortfolioStats, HoldingsPlots, PlotJSON } from '@/src/api/index';
 import {
   Table,
   TableBody,
@@ -14,12 +13,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import dynamic from 'next/dynamic';
 
 interface HoldingsTabProps {
   portfolioId: string;
   currency: string;
   portfolioData?: PortfolioStats | null;
   holdingsData?: HoldingsStats | null;
+  plotData?: HoldingsPlots | null;
 }
 
 interface HoldingData {
@@ -33,17 +34,21 @@ interface HoldingData {
   deposited: number;
 }
 
-const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: HoldingsTabProps) => {
+const Plot = dynamic(() => import("react-plotly.js"), {
+    ssr: false,
+    loading: () => <div>Loading...</div>, 
+});
+
+const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotData }: HoldingsTabProps) => {
   const [holdings, setHoldings] = useState<HoldingData[]>([]);
+  const [plots, setPlots] = useState<Record<string, PlotJSON | null | undefined> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [totalValue, setTotalValue] = useState(0);
-  const [totalPnL, setTotalPnL] = useState(0);
 
   useEffect(() => {
     const processHoldingsData = async () => {
       try {
         // If we have holdingsData and portfolioData from props, use them
-        if (holdingsData && portfolioData) {
+        if (holdingsData && portfolioData && plotData) {
           // Convert the dictionary to an array for easier rendering
           const holdingsArray = Object.entries(holdingsData).map(([ticker, metrics]) => ({
             asset: ticker,
@@ -55,58 +60,26 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
             cost_basis: metrics.cost_basis,
             deposited: metrics.deposited
           }));
+
+          const plotArray: Record<string, PlotJSON | null | undefined> = {
+            holdings_pie: plotData.holdings_chart,
+            asset_type_exposure: plotData.asset_type_exposure,
+            sector_exposure: plotData.sector_exposure,
+            correlation_heatmap: plotData.correlation_matrix
+          }
           
-          // Calculate totals
-          const totalVal = holdingsArray.reduce((sum, holding) => sum + holding.value, 0);
-          const totalProfitLoss = holdingsArray.reduce((sum, holding) => sum + holding.pnl, 0);
-          
-          setTotalValue(totalVal);
-          setTotalPnL(totalProfitLoss);
           setHoldings(holdingsArray);
+          setPlots(plotArray);
           return;
         }
-        
-        // Fallback to fetching data if it wasn't provided
-        setIsLoading(true);
-        
-        // Fetch holdings data
-        const fetchedHoldingsStats = await DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(
-          portfolioId
-        );
-        
-        // Fetch portfolio stats for position and activity metrics
-        const fetchedStats = await DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(
-          portfolioId
-        );
-        
-        // Convert the dictionary to an array for easier rendering
-        const holdingsArray = Object.entries(fetchedHoldingsStats).map(([ticker, metrics]) => ({
-          asset: ticker,
-          shares: metrics.shares,
-          weight: metrics.weight,
-          pnl: metrics.pnl,
-          returns: metrics.returns,
-          value: metrics.value,
-          cost_basis: metrics.cost_basis,
-          deposited: metrics.deposited
-        }));
-        
-        // Calculate totals
-        const totalVal = holdingsArray.reduce((sum, holding) => sum + holding.value, 0);
-        const totalProfitLoss = holdingsArray.reduce((sum, holding) => sum + holding.pnl, 0);
-        
-        setTotalValue(totalVal);
-        setTotalPnL(totalProfitLoss);
-        setHoldings(holdingsArray);
-      } catch (error) {
-        console.error('Error processing holdings data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
+    } catch (error) {
+      console.error('Error processing holdings data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
     processHoldingsData();
-  }, [portfolioId, holdingsData, portfolioData]);
+  }, [portfolioId, holdingsData, portfolioData, plotData]);
 
   // Get currency symbol
   const getCurrencySymbol = (currencyCode: string): string => {
@@ -123,6 +96,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
     
     return currencies[currencyCode] || currencyCode;
   };
+  
   
   const currencySymbol = getCurrencySymbol(currency);
 
@@ -145,13 +119,66 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
       </div>
       
       {/* Holdings Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Holdings Allocation</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-slate-800 h-64 rounded-md flex items-center justify-center">
-            <p className="text-slate-400">Holdings Pie Chart will appear here</p>
+      <Card className='h-96'>
+        <CardContent className='p-4 h-full'>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
+        <div className="h-full">
+          {plots?.holdings_pie ? (
+            <Plot
+          data={plots.holdings_pie.data}
+          layout={{
+            ...plots.holdings_pie.layout,
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            autosize: true,
+          }}
+          config={{ responsive: true }}
+          useResizeHandler={true}
+          style={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+          <p className="text-slate-400">Holdings chart not available</p>
+            </div>
+          )}
+        </div>
+        <div className="h-full">
+          {plots?.asset_type_exposure ? (
+            <Plot
+          data={plots.asset_type_exposure.data}
+          layout={{
+            ...plots.asset_type_exposure.layout,
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            autosize: true,
+          }}
+          config={{ responsive: true }}
+          useResizeHandler={true}
+          style={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+          <p className="text-slate-400">Asset type exposure not available</p>
+            </div>
+          )}
+        </div>
+        <div className="h-full">
+          {plots?.sector_exposure ? (
+            <Plot
+          data={plots.sector_exposure.data}
+          layout={{
+            ...plots.sector_exposure.layout,
+            margin: { t: 0, b: 0, l: 0, r: 0 },
+            autosize: true,
+          }}
+          config={{ responsive: true }}
+          useResizeHandler={true}
+          style={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center">
+          <p className="text-slate-400">Sector exposure not available</p>
+            </div>
+          )}
+        </div>
           </div>
         </CardContent>
       </Card>
@@ -163,10 +190,18 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Correlation Heatmap</CardTitle>
             </CardHeader>
-            <CardContent className="h-full">
-              <div className="bg-slate-800 rounded-md flex items-center justify-center h-[450px]">
-              <p className="text-slate-400">Correlation Heatmap will appear here</p>
+            <CardContent className="p-0 h-[85%]">
+              {plots?.correlation_heatmap ? (
+                <Plot
+                  className='h-full'
+                  data={plots.correlation_heatmap.data}
+                  layout={plots.correlation_heatmap.layout} 
+                />
+              ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-slate-400">No correlation matrix available</p>
               </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -182,7 +217,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Total Value</span>
                   <span className="font-semibold">
-                    {currencySymbol}{totalValue.toFixed(2)}
+                    {currencySymbol}{portfolioData?.position.total_value.toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -223,15 +258,15 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData }: Hol
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Realized P&L</span>
                   <span className={`font-semibold ${portfolioData?.activity?.realized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {portfolioData?.activity?.realized_pnl >= 0 ? '+' : ''}
+                    {portfolioData?.activity?.realized_pnl >= 0 ? '+' : '-'}
                     {currencySymbol}{(portfolioData?.activity?.realized_pnl || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Unrealized P&L</span>
-                  <span className={`font-semibold ${totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {totalPnL >= 0 ? '+' : ''}
-                    {currencySymbol}{totalPnL.toFixed(2)}
+                  <span className={`font-semibold ${portfolioData?.activity.unrealized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {portfolioData?.activity.unrealized_pnl >= 0 ? '+' : '-'}
+                    {currencySymbol}{Math.abs(portfolioData?.activity.unrealized_pnl.toFixed(2))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

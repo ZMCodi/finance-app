@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DefaultService } from '@/src/api';
+import { DefaultService, ReturnsPlots } from '@/src/api';
 
 interface ReturnsTabProps {
   portfolioId: string;
   currency: string;
   portfolioData?: any;
+  plotData?: ReturnsPlots;
 }
 
 const ReturnsTab = ({ portfolioId, currency, portfolioData }: ReturnsTabProps) => {

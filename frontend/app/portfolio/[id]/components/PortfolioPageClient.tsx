@@ -7,8 +7,8 @@ import HoldingsTab from './tabs/HoldingsTab';
 import ReturnsTab from './tabs/ReturnsTab';
 import RiskTab from './tabs/RiskTab';
 import OptimizeTab from './tabs/OptimizeTab';
-import { DefaultService } from '@/src/api';
-import { HoldingsStats, PortfolioStats } from '@/src/api/models';
+import { DefaultService, PortfolioPlots } from '@/src/api';
+import { HoldingsStats, PortfolioStats } from '@/src/api/index';
 
 interface PortfolioPageClientProps {
   portfolioId: string;
@@ -19,6 +19,7 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [portfolioData, setPortfolioData] = useState<PortfolioStats | null>(null);
   const [holdingsData, setHoldingsData] = useState<HoldingsStats | null>(null);
+  const [plotData, setPlotData] = useState<PortfolioPlots | null>(null);
   const [currency, setCurrency] = useState('USD');
 
   useEffect(() => {
@@ -33,13 +34,15 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
         }
         
         // Fetch portfolio stats and holdings data in parallel
-        const [stats, holdings] = await Promise.all([
+        const [stats, holdings, plots] = await Promise.all([
           DefaultService.portfolioStatsApiPortfolioPortfolioIdStatsGet(portfolioId),
-          DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(portfolioId)
+          DefaultService.holdingsStatsApiPortfolioPortfolioIdHoldingsStatsGet(portfolioId),
+          DefaultService.portfolioPlotsApiPortfolioPortfolioIdPlotsGet(portfolioId),
         ]);
         
         setPortfolioData(stats);
         setHoldingsData(holdings);
+        setPlotData(plots);
         
       } catch (error) {
         console.error('Error fetching portfolio data:', error);
@@ -80,6 +83,7 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
                         currency={currency} 
                         portfolioData={portfolioData}
                         holdingsData={holdingsData}
+                        plotData={plotData?.holdings}
                       />
                     </TabsContent>
                     

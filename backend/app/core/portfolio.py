@@ -11,6 +11,7 @@ from scipy import stats
 import json
 from dotenv import load_dotenv
 import os
+from itertools import cycle, islice
 
 load_dotenv()
 DB_CONFIG = {
@@ -267,31 +268,43 @@ class Portfolio:
     def pie_chart(self, data: dict, title: str) -> go.Figure:
         fig = go.Figure()
 
+        sorted_by_weight = sorted(data, key=data.get, reverse=True)
+        sorted_dict = {k: data[k] for k in sorted_by_weight}
+        sorted_dict
+
+        fig = go.Figure()
+
         # Create custom text array - empty string for small values
-        text = [f'{p*100:.1f}%' if p >= 0.05 else '' for p in data.values()]
+        text = [f'{p*100:.1f}%<br>{"Crypto" if l == "Cryptocurrency" else l}' 
+                if p >= 0.05 else '' for l, p in sorted_dict.items()]
+        colors = list(islice(cycle(px.colors.sequential.RdBu_r), len(data)))
 
         fig.add_trace(go.Pie(
-            labels=list(data.keys()),
-            values=list(data.values()),
+            labels=list(sorted_dict.keys()),
+            values=list(sorted_dict.values()),
             text=text,
             textinfo='text',
             hoverinfo='label+percent',
             textposition='auto',
+            hole=0.4,
+            marker=dict(colors=colors)
         ))
 
         fig.update_layout(
-            title=title,
-            showlegend=True,
-            legend=dict(
-                orientation="v",
-                yanchor="middle",
+            showlegend=False,
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white'),
+            width=400,
+            annotations=[dict(
+                x=0.5,
                 y=0.5,
-                xanchor="right",
-                x=1
-            )
+                showarrow=False,
+                text=title,
+                font=dict(size=15)
+            )]
         )
 
-        
         return fig
 
     def holdings_chart(self) -> go.Figure | None:
@@ -299,7 +312,7 @@ class Portfolio:
         if not weights:
             return None
         data = {k.ticker: v for k, v in weights.items()}
-        return self.pie_chart(data, 'Portfolio Holdings')
+        return self.pie_chart(data, 'Holdings')
 
     def asset_type_exposure(self) -> go.Figure | None:
         data = defaultdict(float)
@@ -308,8 +321,7 @@ class Portfolio:
             return None
         for ast, weight in weights.items():
             data[ast.asset_type] += weight
-
-        return self.pie_chart(data, 'Asset Type Exposure')
+        return self.pie_chart(data, 'Asset Type<br>Exposure')
 
     def sector_exposure(self) -> go.Figure | None:
         data = defaultdict(float)
@@ -321,8 +333,7 @@ class Portfolio:
                 data[ast.sector] += weight
 
         data = {k: v / sum(data.values()) for k, v in data.items()}
-
-        return self.pie_chart(data, 'Sector Exposure')
+        return self.pie_chart(data, 'Sector<br>Exposure')
 
     def returns_dist(self, bins: int = 100, show_stats: bool = True) -> go.Figure | None:
         data = self.returns.dropna()
@@ -938,7 +949,14 @@ class Portfolio:
             df[ast.ticker] = ast.daily['rets']
 
         corr_matrix = df.corr()
-        corr_matrix_masked = np.tril(corr_matrix, k=-1)
+        
+        # Create mask for upper triangle
+        mask = np.zeros_like(corr_matrix, dtype=bool)
+        mask[np.triu_indices_from(mask, k=1)] = True
+        
+        # Set upper triangle to None or NaN which Plotly treats as transparent
+        corr_matrix_masked = corr_matrix.copy()
+        corr_matrix_masked[mask] = np.nan
 
         fig = go.Figure(data=go.Heatmap(
             z=corr_matrix_masked,
@@ -953,16 +971,19 @@ class Portfolio:
         # Update layout
         fig.update_layout(
             title='Asset Correlation Matrix',
-            height=800,
             xaxis=dict(
                 tickangle=-90,
-                side='bottom'
+                side='bottom',
+                showgrid=False,
             ),
             yaxis=dict(
-                autorange='reversed'
-            )
+                autorange='reversed',
+                showgrid=False,
+            ),
+            paper_bgcolor='rgba(0, 0, 0, 0)',
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+            font=dict(color='white')
         )
-
         
         return fig
 

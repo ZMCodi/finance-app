@@ -7,10 +7,8 @@ interface PortfolioPageProps {
   };
 }
 
-const PortfolioPage = ({ params }: PortfolioPageProps) => {
-  const { id } = params;
+export default async function PortfolioPage({ params }: PortfolioPageProps) {
+  const { id } = await params;
   
   return <PortfolioPageClient portfolioId={id} />;
 };
-
-export default PortfolioPage;
