@@ -23,6 +23,7 @@ import dynamic from 'next/dynamic';
 import TransactionDialog from './dialogs/TransactionDialog';
 import TransactionHistoryDialog from './dialogs/TransactionHistoryDialog';
 import RebalanceDialog from './dialogs/RebalanceDialog';
+import { useRouter } from 'next/navigation';
 
 interface HoldingsTabProps {
   portfolioId: string;
@@ -58,6 +59,8 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [rebalanceDialogOpen, setRebalanceDialogOpen] = useState(false);
+
+  const router = useRouter();
 
   useEffect(() => {
     const processHoldingsData = async () => {
@@ -388,7 +391,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                     {holdings
                       .sort((a, b) => b.weight - a.weight)
                       .map((holding, index) => (
-                      <TableRow key={index} className="hover:bg-slate-900 cursor-pointer" onClick={() => console.log(`Details for ${holding.asset}`)}>
+                      <TableRow key={index} className="hover:bg-slate-900 cursor-pointer" onClick={() => router.push(`/assets/${holding.asset}`)}>
                       <TableCell className="py-2">
                         <div>
                         <div className="font-medium">{holding.asset}</div>
