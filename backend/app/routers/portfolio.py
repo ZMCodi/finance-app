@@ -154,6 +154,8 @@ def sell(portfolio_id: str, shares: float = None, value: float = None, date: str
 
 @router.get('/{portfolio_id}/stats', response_model=PortfolioStats)
 def portfolio_stats(portfolio_id: str):
+    import time
+    time.sleep(0.005)
     decoded_id = decode_portfolio_id(portfolio_id)
     portfolio: Portfolio = portfolio_cache[decoded_id]
     return portfolio.stats
@@ -277,7 +279,6 @@ def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     decoded_id = decode_portfolio_id(portfolio_id)
     portfolio: Portfolio = portfolio_cache[decoded_id]
     asset_mapping = {a.ticker: a for a in portfolio.cost_bases}  # use cost bases bcs the method is only for rebalancing
-    print(transactions)
     t_list = [
         Portfolio.transaction(
             t.type,
