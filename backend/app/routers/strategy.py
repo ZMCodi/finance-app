@@ -99,7 +99,6 @@ def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: s
 
 @router.patch('/{strategy_key}/params', response_model=StrategyParams)
 def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
-    print(params)
     strategy: Strategy = strategy_cache.get(strategy_key)
     param_updates = params.model_dump(exclude_none=True)
     for k, v in param_updates.items():
@@ -166,7 +165,6 @@ def backtest(strategy_key: str, timeframe: str = '1d', start_date: str = None, e
 def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
     strategy: Strategy = strategy_cache.get(strategy_key)
     res = strategy.optimize(timeframe=timeframe, start_date=start_date, end_date=end_date)
-    print(res)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
@@ -177,7 +175,6 @@ def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: st
 def optimize_weights(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None, runs: int = 20):
     strategy: Strategy = strategy_cache.get(strategy_key)
     res = strategy.optimize_weights(timeframe=timeframe, start_date=start_date, end_date=end_date, runs=runs)
-    print(res)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,

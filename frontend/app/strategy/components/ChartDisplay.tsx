@@ -190,7 +190,7 @@ export default function ChartDisplay({
     layout.yaxis2 = {
       overlaying: 'y',
       side: 'right',
-      range: [-1.5, 1.5], // Set fixed range for signal
+      range: [-1.1, 1.1], // Set fixed range for signal
       showgrid: false,
       zeroline: false,
       tickvals: [-1, 1],

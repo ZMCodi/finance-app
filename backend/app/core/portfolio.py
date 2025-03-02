@@ -551,23 +551,6 @@ class Portfolio:
             return round(float(value), decimals)
 
         # Returns & Performance Metrics
-        # performance_metrics = {
-        #     'total_returns': round_number(self.total_returns),
-        #     'trading_returns': round_number(self.trading_returns),
-        #     'annualized_returns': round_number(self.annualized_returns),
-        #     'daily_returns': {
-        #         'mean': round_number(self.returns.mean()),
-        #         'median': round_number(self.returns.median()),
-        #         'std': round_number(self.returns.std()),
-        #         'skewness': round_number(stats.skew(self.returns.dropna())),
-        #         'kurtosis': round_number(stats.kurtosis(self.returns.dropna())),
-        #     } if self.returns.any() else {
-        #         'mean': 0, 'median': 0, 'std': 0, 'skewness': 0, 'kurtosis': 0
-        #     },
-        #     'best_day': round_number(self.returns.max()) if self.returns.any() else 0,
-        #     'worst_day': round_number(self.returns.min()) if self.returns.any() else 0,
-        #     'positive_days': round_number((self.returns > 0).sum() / len(self.returns)) if self.returns.any() else 0,
-        # }
         returns = self.returns
         empty = returns.empty
         log_returns = np.log1p(returns)
@@ -590,16 +573,6 @@ class Portfolio:
         }
 
         # Risk Metrics
-        # risk_metrics = {
-        #     'volatility': round_number(self.volatility),
-        #     'sharpe_ratio': round_number(self.sharpe_ratio),
-        #     'sortino_ratio': round_number(self.sortino_ratio),
-        #     'beta': round_number(self.beta),
-        #     'value_at_risk': round_number(self.VaR(), True),
-        #     'tracking_error': round_number(self.tracking_error),
-        #     'information_ratio': round_number(self.information_ratio),
-        #     'treynor_ratio': round_number(self.treynor_ratio),
-        # }
         daily_rf = self.r / ann_factor
         mean_excess_returns = (returns - daily_rf).mean() * ann_factor
         dd = float(np.sqrt(np.mean(np.minimum(returns, 0) ** 2))) if not empty else 0.
@@ -618,15 +591,6 @@ class Portfolio:
         }
 
         # Drawdown Metrics 
-        # drawdown_metrics = {
-        #     'max_drawdown': round_number(self.max_drawdown),
-        #     'longest_drawdown_duration': self.longest_drawdown_duration,
-        #     'average_drawdown': round_number(self.average_drawdown),
-        #     'average_drawdown_duration': round_number(self.average_drawdown_duration()),
-        #     'time_to_recovery': round_number(self.time_to_recovery()),
-        #     'drawdown_ratio': round_number(self.drawdown_ratio),
-        #     'calmar_ratio': round_number(self.calmar_ratio),
-        # }
         cum_rets = (1 + returns).cumprod()
         df = self.drawdown_df
         drawdowns = self.drawdowns
@@ -647,15 +611,6 @@ class Portfolio:
         }
 
         # Position & Exposure Metrics
-        # position_metrics = {
-        #     'total_value': round_number(self.get_value(), True),
-        #     'cash': round_number(self.cash, True),
-        #     'cash_weight': round_number(self.cash / self.get_value()) if self.get_value() != 0 else 0,
-        #     'number_of_positions': len(self.holdings),
-        #     'largest_position': round_number(max(self.weights.values()) if self.weights else 0),
-        #     'smallest_position': round_number(min(self.weights.values()) if self.weights else 0),
-        #     'concentration': round_number(sum(w*w for w in self.weights.values())),
-        # }
         weights = self.weights
         position_metrics = {
             'total_value': round_number(value, True),
@@ -668,17 +623,6 @@ class Portfolio:
         }
 
         # Trading Activity Metrics
-        # activity_metrics = {
-        #     'realized_pnl': round_number(self.realized_pnl, True),
-        #     'unrealized_pnl': round_number(self.unrealized_pnl, True),
-        #     'total_pnl': round_number(self.trading_pnl(), True),
-        #     'investment_pnl': round_number(self.investment_pnl(), True),
-        #     'net_deposits': round_number(self.net_deposits, True),
-        #     'number_of_trades': len([t for t in self.transactions if t.type in ['BUY', 'SELL']]),
-        #     'win_rate': round_number(self.win_rate),
-        #     'profit_factor': round_number(self.profit_factor),
-        #     'average_win_loss_ratio': round_number(self.average_win_loss_ratio),
-        # }
         net_deposits = self.net_deposits
         buys = [t for t in self.transactions if t.type == 'BUY']
         sells = [t for t in self.transactions if t.type == 'SELL']
