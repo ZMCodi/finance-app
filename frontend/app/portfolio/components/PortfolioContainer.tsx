@@ -28,7 +28,10 @@ const PortfolioContainer = () => {
   };
 
   const handleViewPortfolio = () => {
-    router.push(`/portfolio/${portfolioId}`);
+    if (portfolioId) {
+      // Use encodeURIComponent to ensure the URL is properly formatted
+      router.push(`/portfolio/${encodeURIComponent(portfolioId)}`);
+    }
   };
 
   return (
