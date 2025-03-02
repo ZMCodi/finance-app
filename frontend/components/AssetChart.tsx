@@ -21,7 +21,7 @@ interface AssetChartProps {
 
 const Plot = dynamic(() => import("react-plotly.js"), {
     ssr: false,
-    loading: () => <div>Loading...</div>, 
+    loading: () => <div className='h-full flex items-center justify-center'>Loading...</div>, 
 });
 
 export default function AssetChart({ 
