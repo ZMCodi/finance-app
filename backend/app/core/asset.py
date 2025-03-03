@@ -20,15 +20,13 @@ from scipy import stats
 from typing import Optional, List
 from dotenv import load_dotenv
 import os
+from supabase import Client
+from app.database.insert import insert_new_ticker
 
 load_dotenv()
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
-}
+
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_URL = os.getenv('SUPABASE_URL')
 
 DateLike = str | datetime | date | pd.Timestamp
 
@@ -71,187 +69,33 @@ class Asset():
         - Store ticker metadata
         """
         # query db and check if ticker exists
-        with pg.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
 
-                cur.execute("SELECT date, open, high, low, close, adj_close, volume FROM daily WHERE ticker = %s", (self.ticker,))
-                # if not, add new ticker and requery
-                if cur.rowcount == 0:
-                    self.__insert_new_ticker()
-                    cur.execute("SELECT date, open, high, low, close, adj_close, volume FROM daily WHERE ticker = %s", (self.ticker,))
+        sb = Client(SUPABASE_URL, SUPABASE_KEY)
 
-                data = cur.fetchall()
+        metadata = sb.table('tickers').select('asset_type, currency, sector, timezone').eq('ticker', self.ticker).execute().data
+        if not metadata:
+            insert_new_ticker(self.ticker)
+            metadata = sb.table('tickers').select('asset_type, currency, sector, timezone').eq('ticker', self.ticker).execute().data
+        metadata = metadata[0]
+        self.asset_type, self.currency, self.sector, self.timezone = metadata.values()
 
-                # get metadata like asset type and currency
-                cur.execute("SELECT asset_type, currency, sector, timezone FROM tickers WHERE ticker = %s", (self.ticker,))
-                self.asset_type, self.currency, self.sector, self.timezone = cur.fetchone()
+        # reindex data and calculate returns and log returns
+        for i, table in enumerate(['daily', 'five_minute']):
+            data = sb.table(table).select('date, open, high, low, close, adj_close, volume').eq('ticker', self.ticker).execute().data
+            if table == 'five_minute' and self.asset_type == 'Mutual Fund':
+                df = self.daily
+                continue
+            df = pd.DataFrame(data).set_index('date')
+            df = df.astype(float)
+            df.index = pd.to_datetime(df.index)
+            df = df.sort_index()
+            df['log_rets'] = np.log(df['adj_close'] / df['adj_close'].shift(1))
+            df['rets'] = df['adj_close'].pct_change()
 
-                # reindex data and calculate returns and log returns
-                self.daily = pd.DataFrame(data, columns=['date', 'open', 'high', 'low', 'close', 'adj_close', 'volume']).set_index('date')
-                self.daily = self.daily.astype(float)
-                self.daily.index = pd.to_datetime(self.daily.index)
-                self.daily = self.daily.sort_index()
-                self.daily['log_rets'] = np.log(self.daily['adj_close'] / self.daily['adj_close'].shift(1))
-                self.daily['rets'] = self.daily['adj_close'].pct_change()
-
-                if self.asset_type == 'Mutual Fund':
-                    self.five_minute = self.daily
-                    return
-
-                # same for five minute data
-                cur.execute("SELECT date, open, high, low, close, adj_close, volume FROM five_minute WHERE ticker = %s", (self.ticker,))
-                self.five_minute = pd.DataFrame(cur.fetchall(), columns=['date', 'open', 'high', 'low', 'close', 'adj_close', 'volume']).set_index('date')
-                self.five_minute = self.five_minute.astype(float)
-                self.five_minute.index = pd.to_datetime(self.five_minute.index).tz_convert(self.timezone)
-                self.five_minute = self.five_minute.sort_index()
-                self.five_minute['log_rets'] = np.log(self.five_minute['adj_close'] / self.five_minute['adj_close'].shift(1))
-                self.five_minute['rets'] = self.five_minute['adj_close'].pct_change()
-
-    def __insert_new_ticker(self) -> None:
-        """Downloads and inserts new ticker to database
-        
-        - Downloads ticker from yfinance
-        - Get ticker metadata and insert into tickers table
-        - Clean and transform daily and 5min data
-        - Batch insert into database
-        """
-        print(f"{self.ticker} is not yet available in database. Downloading from yfinance...")
-
-        # Ticker table data
-        ticker = yf.Ticker(self.ticker)
-
-        # Check valid ticker
-        if ticker.history().empty:
-            print(f'{self.ticker} is an invalid yfinance ticker')
-            return
-
-        # transform metadata for insertion to database
-        comp_name = ticker.info['shortName'].replace("'", "''")
-        exchange = ticker.info['exchange']
-        currency = ticker.info['currency']
-        in_pence = False
-        if currency == 'GBp':
-            currency = 'GBP'
-            in_pence = True
-        start_date = pd.to_datetime('today').date()
-        timezone = ticker.info['exchangeTimezoneShortName']
-        asset_type = ticker.info['quoteType']
-        if asset_type == 'MUTUALFUND':
-            asset_type = 'Mutual Fund'
-        elif asset_type != 'ETF':
-            asset_type = asset_type.capitalize()
-
-        # map exchanges according to pandas market calendar
-        exchange_mapping = {
-            'NYQ': 'NYSE',
-            'NMS': 'NASDAQ',
-            'NGM': 'NASDAQ',
-            'PCX': 'NYSE',
-            'PNK': 'stock',
-            'FGI': 'LSE',
-        }
-        exchange = exchange_mapping.get(exchange, exchange)
-
-        # special handling for optional metadata
-        try:
-            market_cap = ticker.info['marketCap']
-        except KeyError:
-            market_cap = None
-
-        try:
-            sector = ticker.info['sector']
-        except KeyError:
-            if asset_type == 'Cryptocurrency':
-                sector = 'Cryptocurrency'
+            if i == 0:
+                self.daily = df
             else:
-                sector = None
-
-        print(f'Inserting to DB {ticker=}, {comp_name=}, {exchange=}, {currency=}, {asset_type=}, {market_cap=}, {sector=}, {timezone=}')
-
-        # Get daily data from 2020, clean and transform
-        daily_data = yf.download(self.ticker, start='2020-01-01', auto_adjust=False)
-        daily_data = daily_data.droplevel(1, axis=1)
-        daily_data['ticker'] = self.ticker
-        clean_daily = self.__clean_data(daily_data)
-        clean_daily = clean_daily.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
-        # adj_close column might not be available, especially for crypto
-        if 'Adj Close' not in clean_daily.columns or asset_type == 'Mutual Fund':
-            clean_daily['adj_close'] = clean_daily['close']
-        else:
-            clean_daily = clean_daily.rename(columns={'Adj Close': 'adj_close'})
-
-        if in_pence:
-            clean_daily[['open', 'high', 'low', 'close', 'adj_close']] /= 100
-
-        # Get 5min data
-        if asset_type != 'Mutual Fund':
-            five_min_data = yf.download(self.ticker, interval='5m', auto_adjust=False)
-            five_min_data = five_min_data.droplevel(1, axis=1)
-            five_min_data['ticker'] = self.ticker
-            clean_five_min = self.__clean_data(five_min_data)
-            clean_five_min = clean_five_min.rename(columns={'Datetime': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
-            if 'Adj Close' not in clean_five_min.columns:
-                clean_five_min['adj_close'] = clean_five_min['close']
-            else:
-                clean_five_min = clean_five_min.rename(columns={'Adj Close': 'adj_close'})
-
-            if in_pence:
-                clean_five_min[['open', 'high', 'low', 'close', 'adj_close']] /= 100
-
-
-
-        # Insert to database
-        with pg.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
-                cur.execute('SELECT DISTINCT LEFT(currency_pair, 3) FROM daily_forex;')
-                currencies = [cur[0] for cur in cur.fetchall()]
-
-                # if asset's currency is not in db, add all possible pairs
-                if currency not in currencies:
-                    self.__add_new_currency(cur, conn, currencies, currency)
-
-                # insert metadata into db
-                cur.execute("INSERT INTO tickers (ticker, comp_name, exchange, sector, market_cap, start_date, currency, asset_type, timezone) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", (self.ticker, comp_name, exchange, sector, market_cap, start_date, currency, asset_type, timezone))
-
-                # batch insertion for price data
-                BATCH_SIZE = 1000
-                batch_count = 0
-                rows_inserted = 0
-
-                # insert daily data
-                for _, row in clean_daily.iterrows():
-                    cur.execute("INSERT INTO daily (ticker, date, open, high, low, close, adj_close, volume) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (row['ticker'], row['date'], row['open'], row['high'], row['low'], row['close'], row['adj_close'], row['volume']))
-                    batch_count += 1
-                    rows_inserted += 1
-
-                    if batch_count >= BATCH_SIZE:
-                        conn.commit()
-                        batch_count = 0
-
-                if batch_count > 0:
-                    conn.commit()
-                    batch_count = 0
-
-                print(f'daily_{rows_inserted=}')
-                rows_inserted = 0
-
-                # insert 5min data
-                if asset_type != 'Mutual Fund':
-                    for _, row in clean_five_min.iterrows():
-                        cur.execute("INSERT INTO five_minute (ticker, date, open, high, low, close, adj_close, volume) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", (row['ticker'], row['date'], row['open'], row['high'], row['low'], row['close'], row['adj_close'], row['volume']))
-                        batch_count += 1
-                        rows_inserted += 1
-
-                        if batch_count >= BATCH_SIZE:
-                            conn.commit()
-                            batch_count = 0
-
-                    if batch_count > 0:
-                        conn.commit()
-                        batch_count = 0
-
-                    print(f'five_min_{rows_inserted=}')
-
+                self.five_minute = df
 
     def __clean_data(self, df: DataFrame) -> DataFrame:
         """Cleans OHLC data to ensure data passes db table price checks
@@ -339,49 +183,6 @@ class Asset():
         self.five_minute = self.five_minute.sort_index()
         self.five_minute['log_rets'] = np.log(self.five_minute['adj_close'] / self.five_minute['adj_close'].shift(1))
         self.five_minute['rets'] = self.five_minute['adj_close'].pct_change()
-
-    def __add_new_currency(self, cur: pg.Cursor, conn: pg.Connection, currencies: list, currency: str) -> None:
-        """Adds new currency to database to be tracked
-
-        Args:
-            cur (psycopg.Cursor): connection cursor to execute data insertion
-            conn (psycopg.Connection): Database connection
-            currencies (list): List of currencies in database
-            currency (str): New currency to be added
-        """
-        # create all possible pairs and format according to yfinance
-        new_forex = []
-        for curr in currencies:
-            new_forex.append(f'{curr}{currency}=X')
-            new_forex.append(f'{currency}{curr}=X')
-
-        # get new forex data from yfinance
-        df_list = []
-        for pair in new_forex:
-            data = yf.download(pair, start='2020-01-01')
-            data = data.droplevel(1, axis=1)
-            data['currency_pair'] = f'{pair[:3]}/{pair[3:6]}'  # reformat according to db
-            df_list.append(data)
-
-        # combine, clean and transform data
-        df = pd.concat(df_list)
-        clean = self.clean_data(df)
-        clean.drop(columns=['Adj Close', 'Volume'], inplace=True)
-        clean = clean.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close'})
-
-        # batch insertion
-        BATCH_SIZE = 1000
-        batch_count = 0
-        for _, row in clean.iterrows():
-            cur.execute("INSERT INTO daily_forex (currency_pair, date, open, high, low, close) VALUES (%s, %s, %s, %s, %s, %s)", (row['currency_pair'], row['date'], row['open'], row['high'], row['low'], row['close']))
-            batch_count += 1
-
-            if batch_count >= BATCH_SIZE:
-                conn.commit()
-                batch_count = 0
-
-        if batch_count > 0:
-            conn.commit()
 
     def plot_price_history(self, *, timeframe: str = '1d', start_date: Optional[DateLike] = None,
                         end_date: Optional[DateLike] = None, resample: Optional[str] = None, 
