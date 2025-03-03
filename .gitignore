@@ -213,5 +213,6 @@ pyrightconfig.json
 tree.txt
 test.py
 test.ipynb
+logs/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,nextjs

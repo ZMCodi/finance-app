@@ -12,15 +12,13 @@ import json
 from dotenv import load_dotenv
 import os
 from itertools import cycle, islice
+from supabase import Client
 
 load_dotenv()
-DB_CONFIG = {
-    'dbname': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'host': os.getenv('DB_HOST'),
-    'port': os.getenv('DB_PORT')
-}
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_SERVICE_ROLE = os.getenv('SUPABASE_SERVICE_ROLE')
 
 DateLike = str | datetime.datetime | datetime.date | pd.Timestamp
 
@@ -98,12 +96,9 @@ class Portfolio:
             return
         key = f'{f}/{t}'
         if key not in self.forex_cache:
-            with pg.connect(**DB_CONFIG) as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT currency_pair, date, close FROM daily_forex WHERE currency_pair = %s", (key,))
-                    forex = cur.fetchall()
-
-            forex = pd.DataFrame(forex, columns=['pair', 'date', 'close']).set_index('date')
+            sb = Client(SUPABASE_URL, SUPABASE_KEY)
+            forex = sb.table('daily_forex').select('currency_pair, date, close').eq('currency_pair', key).execute().data
+            forex = pd.DataFrame(forex).set_index('date')
             forex.index = pd.to_datetime(forex.index)
             forex = forex.sort_index()
             forex['close'] = forex['close'].astype(float)
@@ -1375,7 +1370,7 @@ class Portfolio:
 
         return fig
 
-    def save(self, name: str):
+    def save(self, name: str, user_id: str):
         state = {
             'holdings': {k.ticker: v for k, v in self.holdings.items()},
             'cost_bases': {k.ticker: v for k, v in self.cost_bases.items()},
@@ -1386,46 +1381,42 @@ class Portfolio:
             'id': self.id,
         }
 
-        with pg.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO portfolio_states (name, state)
-                    VALUES (%s, %s)
-                    ON CONFLICT (name) 
-                    DO UPDATE SET state = EXCLUDED.state
-                """, (name, json.dumps(state)))
+        sb = Client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
+        sb.table('portfolios').upsert({
+            'name': name,
+            'user_id': user_id,
+            'state': state,
+            'updated_at': datetime.datetime.now().isoformat()
+        }, on_conflict='name, user_id').execute()
 
-                for t in self.transactions:
-                    ticker = t.asset if type(t.asset) == str else t.asset.ticker
-                    cur.execute("""
-                        INSERT INTO portfolio_transactions 
-                        (name, type, asset, shares, value, profit, date, id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (name, id) 
-                        DO NOTHING
-                    """, (name, t.type, ticker, t.shares, t.value, t.profit, t.date, t.id))
+        portfolio_id = sb.table('portfolios').select('id').eq('name', name).eq('user_id', user_id).execute().data[0]['id']
+
+        json_transactions = []
+        for t in self.transactions:
+            t = t._asdict()
+            if isinstance(t['asset'], Asset):
+                t['asset'] = t['asset'].ticker
+            t['id'] = str(t['id'])
+            t['portfolio_id'] = portfolio_id
+            json_transactions.append(t)
+
+        # print(json_transactions)
+
+        sb.table('portfolio_transactions').upsert(json_transactions, on_conflict='id, portfolio_id', ignore_duplicates=True).execute()
+
 
     @classmethod
-    def load(cls, name):
-        with pg.connect(**DB_CONFIG) as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT state FROM portfolio_states
-                    WHERE name = %s
-                """, (name,))
-                state = cur.fetchone()[0]
-
-                cur.execute("""
-                    SELECT * FROM portfolio_transactions
-                    WHERE name = %s
-                """, (name,))
-                transactions = cur.fetchall()
+    def load(cls, name, user_id: str):
+        sb = Client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
+        data = sb.table('portfolios').select('state, id').eq('name', name).eq('user_id', user_id).execute().data[0]
+        state = data['state']
+        portfolio_id = data['id']
+        transactions = sb.table('portfolio_transactions').select('*').eq('portfolio_id', portfolio_id).execute().data
 
         port = cls(currency=state['currency'], r=state['r'])
 
         # update state
         port.cash = state['cash']
-        port.id = state['id']
 
         port.assets = [Asset(ast) for ast in state['assets']]
 
@@ -1452,8 +1443,8 @@ class Portfolio:
         asset_mapping = {ast.ticker: ast for ast in port.cost_bases.keys()}
         t_list = []
         for t in transactions:
-            ast = asset_mapping.get(t[2], 'Cash')
-            t = cls.transaction(t[1], ast, t[3], t[4], t[5], t[6], t[7])
+            ast = asset_mapping.get(t['asset'], 'Cash')
+            t = cls.transaction(t['type'], ast, t['shares'], t['value'], t['profit'], t['date'], t['id'])
             t_list.append(t)
 
         port.transactions = t_list
