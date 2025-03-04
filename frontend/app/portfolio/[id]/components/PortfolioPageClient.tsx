@@ -173,7 +173,7 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
           aria-label={isSaved ? "Portfolio saved" : "Save portfolio"}
         >
           {isSaved ? 
-            <BookmarkCheck className="h-6 w-6 text-primary" /> : 
+            <BookmarkCheck className="h-20 w-20 text-primary" /> : 
             <Bookmark className="h-6 w-6" />
           }
         </Button>

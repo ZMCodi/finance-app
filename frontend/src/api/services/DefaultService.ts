@@ -18,9 +18,11 @@ import type { PortfolioTransactions_Input } from '../models/PortfolioTransaction
 import type { PortfolioTransactions_Output } from '../models/PortfolioTransactions_Output';
 import type { StrategyBase } from '../models/StrategyBase';
 import type { StrategyCreate } from '../models/StrategyCreate';
+import type { StrategyLoad } from '../models/StrategyLoad';
 import type { StrategyOptimize } from '../models/StrategyOptimize';
 import type { StrategyParams } from '../models/StrategyParams';
 import type { StrategyPlot } from '../models/StrategyPlot';
+import type { StrategySave_Output } from '../models/StrategySave_Output';
 import type { StrategySignal } from '../models/StrategySignal';
 import type { StrategyUpdateParams } from '../models/StrategyUpdateParams';
 import type { TransactionResponse } from '../models/TransactionResponse';
@@ -396,6 +398,45 @@ export class DefaultService {
                 'combined_key': combinedKey,
                 'strategy_key': strategyKey,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Save Combined Strategy
+     * @param combinedKey
+     * @returns StrategySave_Output Successful Response
+     * @throws ApiError
+     */
+    public static saveCombinedStrategyApiStrategiesCombinedCombinedKeySavePost(
+        combinedKey: string,
+    ): CancelablePromise<StrategySave_Output> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/strategies/combined/{combined_key}/save',
+            path: {
+                'combined_key': combinedKey,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Load Combined Strategy
+     * @param requestBody
+     * @returns StrategyCreate Successful Response
+     * @throws ApiError
+     */
+    public static loadCombinedStrategyApiStrategiesLoadPost(
+        requestBody: StrategyLoad,
+    ): CancelablePromise<StrategyCreate> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/strategies/load',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

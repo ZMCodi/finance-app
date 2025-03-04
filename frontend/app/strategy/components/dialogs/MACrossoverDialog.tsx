@@ -107,7 +107,7 @@ export default function MACrossoverDialog({
           <Select
             disabled={isLoading || !isEwmEnabled}
             value={params.ptype || 'window'}
-            onValueChange={(value) => onParamChange('param_type', value)}
+            onValueChange={(value) => onParamChange('ptype', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select parameter type" />

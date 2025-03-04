@@ -74,7 +74,7 @@ class StrategyUpdateParams(BaseModel):
     # MA Crossover
     short: Optional[int | float] = Field(None, title='Short', description='The short moving average period')
     long: Optional[int | float] = Field(None, title='Long', description='The long moving average period')
-    param_type: Optional[MA_ParamType] = Field(None, title='Param Type', description='The type of parameter to update', alias='ptype')
+    ptype: Optional[MA_ParamType] = Field(None, title='Param Type', description='The type of parameter to update')
     ewm: Optional[bool] = Field(None, title='Exponential Weighted Moving Average', description='Whether to use exponential weighted moving average')
 
     # RSI
@@ -104,3 +104,15 @@ class StrategyOptimize(StrategyBase):
 
 class StrategyParams(StrategyBase):
     params: StrategyUpdateParams = Field(..., title='Parameters', description='The parameters of the strategy')
+
+class StrategyIndicators(BaseModel):
+    type: StrategyType = Field(..., title='Type', description='The type of indicator')
+    params: StrategyUpdateParams = Field(..., title='Parameters', description='The parameters of the indicator')
+
+class StrategySave(BaseModel):
+    params: StrategyUpdateParams = Field(..., title='Parameters', description='The parameters of the combined strategy')
+    indicators: List[StrategyIndicators] = Field(..., title='Indicators', description='The parameters of the indicators')
+
+class StrategyLoad(BaseModel):
+    params: StrategySave = Field(..., title='Parameters', description='The parameters of the combined strategy and its indicators')
+    asset: str = Field(..., title='Asset', description='The asset ticker according to Yahoo Finance')

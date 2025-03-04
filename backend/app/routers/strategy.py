@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
 from app.models.strategy import (StrategyBase, StrategyCreate, StrategyPlot, StrategyParams, 
                                  StrategySignal, StrategyUpdateParams,
-                                 StrategyOptimize)
+                                 StrategyOptimize, StrategySave, StrategyLoad)
 import json
 from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
@@ -148,6 +148,54 @@ def remove_strategy_from_combined(combined_key: str, strategy_key: str):
         'ticker': combined.asset.ticker,
         'strategy': combined.__class__.__name__,
         'params': combined.parameters,
+    }
+
+@router.post('/combined/{combined_key}/save', response_model=StrategySave)
+def save_combined_strategy(combined_key: str):
+    combined: CombinedStrategy = strategy_cache.get(combined_key)
+    params = combined.parameters
+    params.pop('strategies')
+    indicators = []
+    for strat in combined.strategies:
+        indicators.append({
+            'type': strat.__class__.__name__,
+            'params': strat.parameters,
+        })
+
+    return {
+        'params': params,
+        'indicators': indicators,
+    }
+
+@router.post('/load', response_model=StrategyCreate)
+def load_combined_strategy(request: StrategyLoad):
+    params = request.model_dump(exclude_none=True)
+    print(params)
+    asset = Asset(params['asset'])
+    combined = CombinedStrategy(asset)
+    for indicator in params['params']['indicators']:
+        match indicator['type']:
+            case 'MA_Crossover':
+                strategy = MA_Crossover(asset)
+            case 'RSI':
+                strategy = RSI(asset)
+            case 'MACD':
+                strategy = MACD(asset)
+            case 'BB':
+                strategy = BB(asset)
+
+        strategy.change_params(**indicator['params'])
+        combined.add_strategy(strategy)
+
+    combined.change_params(**params['params']['params'])
+    global _id
+    key = f'combined_{asset.ticker}_{_id}'
+    _id += 1
+    strategy_cache[key] = combined
+    return {
+        'ticker': asset.ticker,
+        'strategy': combined.__class__.__name__,
+        'strategy_id': key,
     }
 
 @router.get('/{strategy_key}/backtest', response_model=StrategyPlot)

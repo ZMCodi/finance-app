@@ -1,30 +1,27 @@
+// First, update imports to include SaveStrategyDialog
 // app/strategy/components/StrategyContainer.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, Settings, RefreshCw, LineChart, FolderPlus, X } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
+
 import ChartControls from './ChartControls';
 import ChartDisplay from './ChartDisplay';
 import TickerInput from '@/app/assets/components/TickerInput';
-import { IndicatorType, strategyNameMap } from './IndicatorPanel';
-import { StrategyCreate, StrategyPlot, PlotJSON } from '@/src/api/index';
+import { IndicatorType } from './IndicatorPanel';
 import useStrategyOperations from '../hooks/useStrategyOperations';
 import StrategyConfigDialog from './StrategyConfigDialog';
 import CombinedStrategyIndicatorRow from './CombinedStrategyIndicatorRow';
 import CombinedStrategyControls from './CombinedStrategyControls';
 import BacktestChart from './BacktestChart';
 import SignalManagement from './SignalManagement';
-import { get } from 'http';
+import SaveStrategyDialog from './dialogs/SaveStrategyDialog';
+import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/context/AuthContext';
 
+// Then, add a new state for saved strategy info
 export default function StrategyContainer() {
   const [selectedAsset, setSelectedAsset] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('5m');
@@ -32,6 +29,10 @@ export default function StrategyContainer() {
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [activeConfigIndicator, setActiveConfigIndicator] = useState<IndicatorType | null>(null);
   const [activeConfigStrategyId, setActiveConfigStrategyId] = useState<string | null>(null);
+  const [savedStrategy, setSavedStrategy] = useState<{id: string, name: string} | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isCheckingSaveStatus, setIsCheckingSaveStatus] = useState(false);
+  const { user } = useAuth();
   
   // Default start date for 5min data (15 days ago)
   const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
@@ -153,6 +154,7 @@ export default function StrategyContainer() {
         });
     }
   }, [strategyState.combinedStrategyId, combinedStrategyIndicators.length]);
+
   
   // Handle adding a ticker
   const handleAddTicker = (ticker: string) => {
@@ -175,6 +177,14 @@ export default function StrategyContainer() {
   // Handle volume change
   const handleVolumeChange = (show: boolean) => {
     setShowVolume(show);
+  };
+
+  // Handler for strategy saved
+  const handleStrategySaved = (strategyId: string, strategyName: string) => {
+    console.log(`Strategy saved with ID: ${strategyId}, Name: ${strategyName}`);
+    setSavedStrategy({ id: strategyId, name: strategyName });
+    
+    // Optional: Show a success message or toast notification
   };
   
   // Handle indicator selection - updated to check if an indicator type already exists
@@ -578,6 +588,54 @@ export default function StrategyContainer() {
     }
   };
 
+  // Function to check if the strategy has been saved
+  const checkSaveStatus = useCallback(async () => {
+    // Only check if we have a user and a strategy name to check
+    if (!user || !strategyState.combinedStrategyId) {
+      setIsCheckingSaveStatus(false);
+      return;
+    }
+    
+    setIsCheckingSaveStatus(true);
+    
+    try {
+      // Try to find any strategies for this user with this combined strategy ID
+      // This is a simplified check - in practice, you'd use the saved strategy name
+      const { data, error } = await supabase
+        .from('strategies')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data) {
+        setSavedStrategy({
+          id: data.id,
+          name: data.name
+        });
+        setIsSaved(true);
+      } else {
+        setSavedStrategy(null);
+        setIsSaved(false);
+      }
+    } catch (error) {
+      console.error('Error checking save status:', error);
+      setSavedStrategy(null);
+      setIsSaved(false);
+    } finally {
+      setIsCheckingSaveStatus(false);
+    }
+  }, [user, strategyState.combinedStrategyId]);
+
+  // Add this effect to check save status when user or strategy changes
+  useEffect(() => {
+    if (user) {
+      checkSaveStatus();
+    } else {
+      setIsSaved(false);
+      setSavedStrategy(null);
+    }
+  }, [checkSaveStatus, user]);
+
   return (
     <div className="p-4">
       <h1 className="text-2xl text-center font-bold mb-6">Strategy Builder</h1>
@@ -680,8 +738,17 @@ export default function StrategyContainer() {
                         currentStartDate={getActiveStartDate()}
                         currentEndDate={getActiveEndDate()}
                       />
+
+                      {/* Add Save Strategy button with dialog */}
+                      <div className="flex justify-end mb-4">
+                        <SaveStrategyDialog 
+                          combinedStrategyId={strategyState.combinedStrategyId}
+                          asset={selectedAsset}
+                          isDisabled={combinedStrategyIndicators.length === 0}
+                          onStrategySaved={handleStrategySaved}
+                        />
+                      </div>
                       
-                      {/* <div className=""> */}
                         <h4 className="font-medium text-sm mb-2">Strategy Components</h4>
                         {combinedStrategyIndicators.length > 0 ? (
                           <div className="flex flex-wrap">

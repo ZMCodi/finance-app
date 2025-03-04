@@ -540,6 +540,13 @@ class Strategy(ABC):
         self.signal_type.remove(signal_type)
         self.weights = np.delete(self.weights, idx)
 
+    @classmethod
+    def load(cls, params, asset: Asset) -> 'Strategy':
+        strat = cls(asset)
+        strat.change_params(**params)
+        return strat
+
+
 class MA_Crossover(Strategy):
     """Moving Average Crossover trading strategy implementation.
     
@@ -644,7 +651,7 @@ class MA_Crossover(Strategy):
         self.__long = value
         self.__get_data()
 
-    def change_params(self, param_type: Optional[str] = None, 
+    def change_params(self, ptype: Optional[str] = None, 
                      short: Optional[float] = None, 
                      long: Optional[float] = None,
                      ewm: Optional[bool] = None) -> None:
@@ -656,7 +663,7 @@ class MA_Crossover(Strategy):
             long (float, optional): New long MA parameter. Defaults to None.
             ewm (bool, optional): Whether to use EMA. Defaults to None.
         """
-        self.ptype = param_type if param_type is not None else self.ptype
+        self.ptype = ptype if ptype is not None else self.ptype
         self.__short = short if short is not None else self.short
         self.__long = long if long is not None else self.long
         self.ewm = ewm if ewm is not None else self.ewm
@@ -2100,13 +2107,16 @@ class CombinedStrategy(Strategy):
                     raise TypeError("Strategies and asset do not match")
             self.__strategies = strategies
         else:
-            self.__strategies = [MA_Crossover(asset), RSI(asset), MACD(asset), BB(asset)]
+            self.__strategies = []
 
         if weights is not None:
             self.__weights = np.array(weights)
-        else:
+            self.__weights /= np.sum(self.__weights)
+        elif len(self.__strategies) > 0:
             self.__weights = np.array([1 / len(self.__strategies)] * len(self.__strategies))
-        self.__weights /= np.sum(self.__weights)
+            self.__weights /= np.sum(self.__weights)
+        else:
+            self.__weights = np.array([])
 
         self.__method = str(method)
         self.__vote_threshold = vote_threshold
