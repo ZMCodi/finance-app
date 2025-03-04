@@ -17,10 +17,13 @@ import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 import { AuthRequiredDialog } from '@/components/AuthRequiredDialog';
 import { usePathname } from 'next/navigation';
+import { saveStrategyState } from '../../utils/strategyPersistence';
 
 interface SaveStrategyDialogProps {
   combinedStrategyId: string | null;
   asset: string | null;
+  activeTab: string;
+  strategyIds: string[]; // Array of strategy IDs instead of strategy objects
   isDisabled?: boolean;
   onStrategySaved?: (strategyId: string, strategyName: string) => void;
 }
@@ -28,6 +31,8 @@ interface SaveStrategyDialogProps {
 const SaveStrategyDialog: React.FC<SaveStrategyDialogProps> = ({ 
   combinedStrategyId, 
   asset,
+  activeTab,
+  strategyIds,
   isDisabled = false,
   onStrategySaved 
 }) => {
@@ -136,8 +141,16 @@ const SaveStrategyDialog: React.FC<SaveStrategyDialogProps> = ({
             className="flex items-center gap-2"
             disabled={isDisabled || !combinedStrategyId || !asset}
             onClick={() => {
-              // If not authenticated, show auth dialog instead of opening the save dialog
+              // If not authenticated, save state and show auth dialog
               if (!user) {
+                // Save current strategy state before redirecting
+                saveStrategyState({
+                  selectedAsset: asset,
+                  activeTab,
+                  combinedStrategyId,
+                  strategyIds
+                });
+                
                 setAuthDialogOpen(true);
                 return;
               }

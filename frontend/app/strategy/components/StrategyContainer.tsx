@@ -20,6 +20,9 @@ import SignalManagement from './SignalManagement';
 import SaveStrategyDialog from './dialogs/SaveStrategyDialog';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import { getSavedStrategyState, clearSavedStrategyState } from '../utils/strategyPersistence';
+import { BookmarkCheck } from 'lucide-react';
+import { getIndicatorTypeFromId } from '../utils/strategyIdUtils';
 
 // Then, add a new state for saved strategy info
 export default function StrategyContainer() {
@@ -84,7 +87,95 @@ export default function StrategyContainer() {
 
   // Destructure strategy state for easier access
   const { activeStrategies, indicatorPlots, combinedStrategyIndicators } = strategyState;
+
+// Effect to restore saved strategy state after login redirect
+useEffect(() => {
+  // Only run this effect once on initial mount
+  const savedState = getSavedStrategyState();
   
+  if (savedState) {
+    console.log('Restoring saved strategy state:', savedState);
+    
+    // Restore the asset selection first
+    if (savedState.selectedAsset) {
+      setSelectedAsset(savedState.selectedAsset);
+    }
+    
+    // Restore active tab
+    if (savedState.activeTab) {
+      setActiveTab(savedState.activeTab);
+    }
+    
+    // If there were strategies, restore them properly
+    if (savedState.strategyIds && savedState.strategyIds.length > 0 && savedState.selectedAsset) {
+      // Step 1: Load unique indicators first (ensuring no duplicates)
+      // Use the strategyIdUtils to group strategies by their indicator type
+      const strategyIdsByType = new Map<string, string[]>();
+      
+      savedState.strategyIds.forEach(id => {
+        const indicatorType = getIndicatorTypeFromId(id);
+        if (indicatorType) {
+          if (!strategyIdsByType.has(indicatorType)) {
+            strategyIdsByType.set(indicatorType, []);
+          }
+          strategyIdsByType.get(indicatorType)!.push(id);
+        }
+      });
+      
+      // For each indicator type, only load the first strategy ID
+      const uniqueStrategyIds: string[] = [];
+      strategyIdsByType.forEach((ids) => {
+        if (ids.length > 0) {
+          uniqueStrategyIds.push(ids[0]);
+        }
+      });
+      
+      // Now load each unique strategy
+      const loadedStrategies = uniqueStrategyIds.map(strategyId => {
+        const success = actions.loadExistingStrategy(strategyId);
+        return { id: strategyId, success, indicatorType: getIndicatorTypeFromId(strategyId) };
+      }).filter(s => s.success);
+      
+      // Step 2: If there was a combined strategy, restore reference to it without recreating
+      if (savedState.combinedStrategyId && loadedStrategies.length > 0) {
+        // Instead of recreating the combined strategy, just update the state to reference it
+        actions.setCombinedStrategyId(savedState.combinedStrategyId);
+        
+        // Also update the combinedStrategyIndicators array with the loaded strategies
+        const indicators = loadedStrategies.map(strategy => ({
+          strategyId: strategy.id,
+          indicatorType: strategy.indicatorType as IndicatorType,
+          weight: 1 // Default weight, will be updated when we fetch params
+        }));
+        
+        actions.setCombinedStrategyIndicators(indicators);
+        
+        // After a short delay to ensure indicators are loaded, fetch the combined parameters
+        setTimeout(() => {
+          actions.fetchCombinedStrategyParams()
+            .then(params => {
+              // Update weights if available in the params
+              if (params && params.weights && params.weights.length > 0) {
+                loadedStrategies.forEach((strategy, index) => {
+                  if (index < params.weights.length) {
+                    actions.updateIndicatorWeight(strategy.id, params.weights[index]);
+                  }
+                });
+              }
+              console.log('Successfully restored combined strategy state');
+            })
+            .catch(error => {
+              console.error('Error fetching combined strategy params:', error);
+            });
+        }, 500);
+      }
+    }
+    
+    // Clear the saved state after restoration
+    clearSavedStrategyState();
+  }
+}, [actions]); // Include only actions in dependencies
+
   // Update query strings when settings change for 5min
   useEffect(() => {
     const params = new URLSearchParams();
@@ -740,11 +831,21 @@ export default function StrategyContainer() {
                       />
 
                       {/* Add Save Strategy button with dialog */}
-                      <div className="flex justify-end mb-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center">
+                          {isSaved && (
+                            <div className="flex items-center text-sm text-green-400 gap-1 mr-2">
+                              <BookmarkCheck size={16} />
+                              <span>Saved as "{savedStrategy?.name}"</span>
+                            </div>
+                          )}
+                        </div>
                         <SaveStrategyDialog 
                           combinedStrategyId={strategyState.combinedStrategyId}
                           asset={selectedAsset}
-                          isDisabled={combinedStrategyIndicators.length === 0}
+                          activeTab={activeTab}
+                          strategyIds={activeStrategies.map(strategy => strategy.id)}
+                          isDisabled={combinedStrategyIndicators.length === 0 || isCheckingSaveStatus}
                           onStrategySaved={handleStrategySaved}
                         />
                       </div>

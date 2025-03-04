@@ -9,7 +9,7 @@ export const saveStrategyState = (state: {
     selectedAsset: string | null;
     activeTab: string;
     combinedStrategyId: string | null;
-    strategies: any[];
+    strategyIds: string[]; // Save IDs instead of full strategy objects
   }) => {
     try {
       // Store essential strategy information
@@ -17,7 +17,7 @@ export const saveStrategyState = (state: {
         selectedAsset: state.selectedAsset,
         activeTab: state.activeTab,
         combinedStrategyId: state.combinedStrategyId,
-        strategies: state.strategies,
+        strategyIds: state.strategyIds,
         timestamp: new Date().getTime() // Add timestamp for expiration
       }));
     } catch (error) {

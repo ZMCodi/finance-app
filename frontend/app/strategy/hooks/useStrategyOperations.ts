@@ -559,6 +559,68 @@ export default function useStrategyOperations(
     return getIndicatorTypeFromId(strategyId);
   };
 
+  // Add this function to your useStrategyOperations.ts hook
+
+  // Function to load an existing strategy by ID (used for restoring state after login)
+  const loadExistingStrategy = (strategyId: string) => {
+    // Get the indicator type using the utility function
+    const indicatorType = getIndicatorTypeFromId(strategyId);
+    
+    if (!indicatorType) {
+      console.error(`Could not determine indicator type for strategy ID: ${strategyId}`);
+      return false;
+    }
+    
+    // Check if we already have a strategy of this type
+    const existingStrategy = state.activeStrategies.find(s => s.indicator === indicatorType);
+    
+    if (existingStrategy) {
+      console.log(`Strategy of type ${indicatorType} already exists, skipping`);
+      return false;
+    }
+    
+    // Update the state to refer to this strategy
+    setState(prev => {
+      // Check if strategy is already in the state
+      if (prev.activeStrategies.some(s => s.id === strategyId)) {
+        return prev;
+      }
+      
+      return {
+        ...prev,
+        activeStrategies: [
+          ...prev.activeStrategies,
+          { id: strategyId, indicator: indicatorType }
+        ]
+      };
+    });
+    
+    return true;
+  };
+
+  const setCombinedStrategyId = (strategyId: string) => {
+    setState(prev => ({
+      ...prev,
+      combinedStrategyId: strategyId
+    }));
+    
+    return true;
+  };
+
+  // Function to directly set the combined strategy indicators array
+  const setCombinedStrategyIndicators = (indicators: Array<{
+    strategyId: string;
+    indicatorType: IndicatorType;
+    weight: number;
+  }>) => {
+    setState(prev => ({
+      ...prev,
+      combinedStrategyIndicators: indicators
+    }));
+    
+    return true;
+  };
+
   return {
     state,
     operationState,
@@ -586,6 +648,9 @@ export default function useStrategyOperations(
       updateCombinedStrategyParams,
       updateIndicatorWeight,
       getIndicatorType,
+      loadExistingStrategy,
+      setCombinedStrategyId,
+      setCombinedStrategyIndicators,
     }
   };
 }
