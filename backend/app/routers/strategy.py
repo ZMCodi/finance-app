@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from app.core.strategy import MA_Crossover, RSI, MACD, BB, CombinedStrategy, Strategy
 from app.models.strategy import (StrategyBase, StrategyCreate, StrategyPlot, StrategyParams, 
                                  StrategySignal, StrategyUpdateParams,
-                                 StrategyOptimize, StrategySave, StrategyLoad)
+                                 StrategyOptimize, StrategySave, StrategyLoad, StrategyLoadResponse)
 import json
 from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
@@ -167,12 +167,14 @@ def save_combined_strategy(combined_key: str):
         'indicators': indicators,
     }
 
-@router.post('/load', response_model=StrategyCreate)
+@router.post('/load', response_model=StrategyLoadResponse)
 def load_combined_strategy(request: StrategyLoad):
     params = request.model_dump(exclude_none=True)
     print(params)
+    global _id
     asset = Asset(params['asset'])
     combined = CombinedStrategy(asset)
+    indicators = []
     for indicator in params['params']['indicators']:
         match indicator['type']:
             case 'MA_Crossover':
@@ -183,12 +185,14 @@ def load_combined_strategy(request: StrategyLoad):
                 strategy = MACD(asset)
             case 'BB':
                 strategy = BB(asset)
-
+        key = f'{indicator["type"].value}_{asset.ticker}_{_id}'
+        indicators.append(key)
+        _id += 1
+        strategy_cache[key] = strategy
         strategy.change_params(**indicator['params'])
         combined.add_strategy(strategy)
 
     combined.change_params(**params['params']['params'])
-    global _id
     key = f'combined_{asset.ticker}_{_id}'
     _id += 1
     strategy_cache[key] = combined
@@ -196,6 +200,7 @@ def load_combined_strategy(request: StrategyLoad):
         'ticker': asset.ticker,
         'strategy': combined.__class__.__name__,
         'strategy_id': key,
+        'indicators': indicators,
     }
 
 @router.get('/{strategy_key}/backtest', response_model=StrategyPlot)

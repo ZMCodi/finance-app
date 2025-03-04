@@ -69,15 +69,14 @@ def save_portfolio(portfolio_id: str):
     }
 
 @router.post('/{portfolio_id}/load', response_model=PortfolioCreate)
-def load_portfolio(request: PortfolioSave):
-    global _id
-    state = request.state
+def load_portfolio(request: PortfolioSave, name: str = None):
+    state = request.state.model_dump()
+    print(state)
     transactions = request.transactions
     portfolio = Portfolio.load(state, transactions)
-    portfolio_cache[_id] = portfolio
-    _id += 1
+    portfolio_cache[name] = portfolio
     return {
-        'portfolio_id': _id,
+        'portfolio_id': name,
         'currency': portfolio.currency,
         'cash': portfolio.cash,
         'holdings': {a.ticker: v for a, v in portfolio.holdings.items()},

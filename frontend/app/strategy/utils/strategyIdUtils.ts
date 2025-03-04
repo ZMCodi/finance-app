@@ -8,7 +8,11 @@ export const STRATEGY_PREFIX_MAP: Record<string, IndicatorType> = {
   'ma_crossover': 'MA Crossover',
   'rsi': 'RSI',
   'macd': 'MACD',
-  'bb': 'Bollinger Bands'
+  'bb': 'Bollinger Bands',
+  'MA_CROSSOVER': 'MA Crossover',
+  'RSI': 'RSI',
+  'MACD': 'MACD',
+  'BB': 'Bollinger Bands',
 };
 
 /**

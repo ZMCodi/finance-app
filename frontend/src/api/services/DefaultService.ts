@@ -19,6 +19,7 @@ import type { PortfolioTransactions_Output } from '../models/PortfolioTransactio
 import type { StrategyBase } from '../models/StrategyBase';
 import type { StrategyCreate } from '../models/StrategyCreate';
 import type { StrategyLoad } from '../models/StrategyLoad';
+import type { StrategyLoadResponse } from '../models/StrategyLoadResponse';
 import type { StrategyOptimize } from '../models/StrategyOptimize';
 import type { StrategyParams } from '../models/StrategyParams';
 import type { StrategyPlot } from '../models/StrategyPlot';
@@ -426,12 +427,12 @@ export class DefaultService {
     /**
      * Load Combined Strategy
      * @param requestBody
-     * @returns StrategyCreate Successful Response
+     * @returns StrategyLoadResponse Successful Response
      * @throws ApiError
      */
     public static loadCombinedStrategyApiStrategiesLoadPost(
         requestBody: StrategyLoad,
-    ): CancelablePromise<StrategyCreate> {
+    ): CancelablePromise<StrategyLoadResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/strategies/load',
@@ -590,14 +591,14 @@ export class DefaultService {
     }
     /**
      * Load Portfolio
-     * @param name
      * @param requestBody
+     * @param name
      * @returns PortfolioCreate Successful Response
      * @throws ApiError
      */
     public static loadPortfolioApiPortfolioPortfolioIdLoadPost(
-        name: string,
         requestBody: PortfolioSave_Input,
+        name?: string,
     ): CancelablePromise<PortfolioCreate> {
         return __request(OpenAPI, {
             method: 'POST',

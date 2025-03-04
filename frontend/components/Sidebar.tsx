@@ -79,8 +79,8 @@ export function Sidebar() {
       
       // Load the portfolio data into the backend
       await DefaultService.loadPortfolioApiPortfolioPortfolioIdLoadPost(
-        portfolioId,
-        payload
+        payload,
+        portfolioId
       );
       
       // After successful loading, navigate to the portfolio page

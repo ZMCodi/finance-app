@@ -53,6 +53,7 @@ export type { StrategyCreate } from './models/StrategyCreate';
 export type { StrategyIndicators_Input } from './models/StrategyIndicators_Input';
 export type { StrategyIndicators_Output } from './models/StrategyIndicators_Output';
 export type { StrategyLoad } from './models/StrategyLoad';
+export type { StrategyLoadResponse } from './models/StrategyLoadResponse';
 export type { StrategyOptimize } from './models/StrategyOptimize';
 export type { StrategyParams } from './models/StrategyParams';
 export type { StrategyPlot } from './models/StrategyPlot';

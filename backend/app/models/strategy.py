@@ -116,3 +116,6 @@ class StrategySave(BaseModel):
 class StrategyLoad(BaseModel):
     params: StrategySave = Field(..., title='Parameters', description='The parameters of the combined strategy and its indicators')
     asset: str = Field(..., title='Asset', description='The asset ticker according to Yahoo Finance')
+
+class StrategyLoadResponse(StrategyCreate):
+    indicators: List[str] = Field(..., title='Indicators', description='The cache key for the indicators')

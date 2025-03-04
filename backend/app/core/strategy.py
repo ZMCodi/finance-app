@@ -827,7 +827,7 @@ class MA_Crossover(Strategy):
                 if self.ptype == 'halflife':
                     long_range = -np.log(2) / np.log(1 - long_range)  # halflife
 
-        old_params = {'short': self.short, 'long': self.long, 'ewm': self.ewm, 'param_type': self.ptype}
+        old_params = {'short': self.short, 'long': self.long, 'ewm': self.ewm, 'ptype': self.ptype}
 
         results = []
         for short, long in product(short_range, long_range):

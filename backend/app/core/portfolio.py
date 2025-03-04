@@ -1427,6 +1427,7 @@ class Portfolio:
         asset_mapping = {ast.ticker: ast for ast in port.cost_bases.keys()}
         t_list = []
         for t in transactions:
+            t = t.model_dump()
             ast = asset_mapping.get(t['asset'], 'Cash')
             t = cls.transaction(t['type'], ast, t['shares'], t['value'], t['profit'], t['date'], t['id'])
             t_list.append(t)

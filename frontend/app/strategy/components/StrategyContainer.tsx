@@ -768,9 +768,42 @@ useEffect(() => {
       
       console.log('Strategy loaded successfully:', loadedStrategy);
       
+      // The backend now returns individual indicator IDs
+      if (loadedStrategy.indicators && Array.isArray(loadedStrategy.indicators)) {
+        console.log("Adding indicators to strategy state:", loadedStrategy.indicators);
+        
+        // Add each indicator to the state
+        loadedStrategy.indicators.forEach((indicatorId, index) => {
+          if (index < indicatorsData.length) {
+            const indicatorType = indicatorsData[index].type;
+            
+            // Add this indicator to activeStrategies
+            actions.loadExistingStrategy(indicatorId);
+          }
+        });
+      }
+      
       // Set the combined strategy ID from the API response
       if (loadedStrategy.strategy_id) {
         actions.setCombinedStrategyId(loadedStrategy.strategy_id);
+        
+        // After setting the combined strategy ID, add the indicators to it
+        if (loadedStrategy.indicators && Array.isArray(loadedStrategy.indicators)) {
+          // Create combined strategy indicators
+          const combinedIndicators = loadedStrategy.indicators.map((indicatorId, index) => {
+            if (index < indicatorsData.length) {
+              return {
+                strategyId: indicatorId,
+                indicatorType: indicatorsData[index].type as IndicatorType,
+                weight: 1 // Default weight, will be updated from strategy parameters
+              };
+            }
+            return null;
+          }).filter(Boolean);
+          
+          // Set combined strategy indicators
+          actions.setCombinedStrategyIndicators(combinedIndicators);
+        }
       }
       
       // Update local state
@@ -783,6 +816,25 @@ useEffect(() => {
       // Force data refresh
       setFiveMinNeedsRefresh(true);
       setDailyNeedsRefresh(true);
+      
+      // After a short delay, update indicator weights based on loaded parameters
+      setTimeout(() => {
+        if (loadedStrategy.strategy_id) {
+          actions.fetchCombinedStrategyParams()
+            .then(params => {
+              if (params && params.weights && params.weights.length > 0) {
+                loadedStrategy.indicators.forEach((indicatorId, index) => {
+                  if (index < params.weights.length) {
+                    actions.updateIndicatorWeight(indicatorId, params.weights[index]);
+                  }
+                });
+              }
+            })
+            .catch(error => {
+              console.error('Error updating indicator weights:', error);
+            });
+        }
+      }, 500);
     } catch (error) {
       console.error('Error loading strategy:', error);
     }
