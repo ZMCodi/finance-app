@@ -34,6 +34,9 @@ export type { PortfolioEfficientFrontier } from './models/PortfolioEfficientFron
 export type { PortfolioInitialHoldings } from './models/PortfolioInitialHoldings';
 export type { PortfolioOptimize } from './models/PortfolioOptimize';
 export type { PortfolioPlots } from './models/PortfolioPlots';
+export type { PortfolioSave_Input } from './models/PortfolioSave_Input';
+export type { PortfolioSave_Output } from './models/PortfolioSave_Output';
+export type { PortfolioState } from './models/PortfolioState';
 export type { PortfolioStats } from './models/PortfolioStats';
 export type { PortfolioTransactions_Input } from './models/PortfolioTransactions_Input';
 export type { PortfolioTransactions_Output } from './models/PortfolioTransactions_Output';

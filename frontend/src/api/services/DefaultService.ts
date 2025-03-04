@@ -11,6 +11,8 @@ import type { PortfolioCreate } from '../models/PortfolioCreate';
 import type { PortfolioCreatePost } from '../models/PortfolioCreatePost';
 import type { PortfolioOptimize } from '../models/PortfolioOptimize';
 import type { PortfolioPlots } from '../models/PortfolioPlots';
+import type { PortfolioSave_Input } from '../models/PortfolioSave_Input';
+import type { PortfolioSave_Output } from '../models/PortfolioSave_Output';
 import type { PortfolioStats } from '../models/PortfolioStats';
 import type { PortfolioTransactions_Input } from '../models/PortfolioTransactions_Input';
 import type { PortfolioTransactions_Output } from '../models/PortfolioTransactions_Output';
@@ -518,6 +520,45 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/portfolio/create',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Save Portfolio
+     * @param portfolioId
+     * @returns PortfolioSave_Output Successful Response
+     * @throws ApiError
+     */
+    public static savePortfolioApiPortfolioPortfolioIdSavePost(
+        portfolioId: string,
+    ): CancelablePromise<PortfolioSave_Output> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/portfolio/{portfolio_id}/save',
+            path: {
+                'portfolio_id': portfolioId,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Load Portfolio
+     * @param requestBody
+     * @returns PortfolioCreate Successful Response
+     * @throws ApiError
+     */
+    public static loadPortfolioApiPortfolioPortfolioIdLoadPost(
+        requestBody: PortfolioSave_Input,
+    ): CancelablePromise<PortfolioCreate> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/portfolio/{portfolio_id}/load',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
