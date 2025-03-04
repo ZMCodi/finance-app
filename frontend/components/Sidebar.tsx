@@ -31,7 +31,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { watchlist, strategies, portfolios, isLoading: dataIsLoading } = useUserData();
+  const { watchlist, portfolios, isLoading: dataIsLoading } = useUserData();
 
   const handlePortfolioClick = async (portfolioId: string) => {
     try {
@@ -141,36 +141,19 @@ export function Sidebar() {
           </SidebarSection>
         </div>
 
-        {/* Strategies Section */}
+        {/* Strategies Link (without dropdown) */}
         <div className="px-3">
-          <SidebarSection
-            icon={<BarChart3 size={20} />}
-            title="Strategies"
-            isExpanded={isExpanded}
-            isActive={pathname.startsWith('/strategy')}
+          <Link 
             href="/strategy"
-          >
-            {user ? (
-              dataIsLoading ? (
-                <p className="px-4 py-2 text-sm text-gray-400">Loading...</p>
-              ) : strategies.length > 0 ? (
-                strategies.map((strategy) => (
-                  <SidebarItem
-                    key={strategy}
-                    title={strategy}
-                    href={`/strategy/${strategy}`}
-                    isExpanded={isExpanded}
-                  />
-                ))
-              ) : (
-                <p className="px-4 py-2 text-sm text-gray-400">No saved strategies</p>
-              )
-            ) : (
-              <p className="px-4 py-2 text-sm text-gray-400">Log in to view your strategies</p>
+            className={cn(
+              "flex h-10 w-full items-center gap-2 rounded-md px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-white",
+              pathname.startsWith('/strategy') && "bg-gray-800 text-white"
             )}
-          </SidebarSection>
+          >
+            <BarChart3 size={20} />
+            {isExpanded && <span className="text-sm">Strategies</span>}
+          </Link>
         </div>
-        
 
         {/* Portfolios Section */}
         <div className="px-3">

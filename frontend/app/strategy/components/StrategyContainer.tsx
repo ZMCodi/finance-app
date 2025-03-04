@@ -18,6 +18,8 @@ import CombinedStrategyControls from './CombinedStrategyControls';
 import BacktestChart from './BacktestChart';
 import SignalManagement from './SignalManagement';
 import SaveStrategyDialog from './dialogs/SaveStrategyDialog';
+import LoadStrategyDialog from './dialogs/LoadStrategyDialog';
+import { DefaultService } from '@/src/api';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { getSavedStrategyState, clearSavedStrategyState } from '../utils/strategyPersistence';
@@ -717,6 +719,75 @@ useEffect(() => {
     }
   }, [user, strategyState.combinedStrategyId]);
 
+  const handleStrategyLoaded = async (strategyId: string, strategyName: string) => {
+    console.log(`Loading strategy: ${strategyName} (${strategyId})`);
+    
+    try {
+      // Reset any existing strategy
+      activeStrategies.forEach(strategy => {
+        actions.removeIndicator(strategy.id);
+      });
+      
+      // Fetch the strategy parameters from Supabase
+      const { data: strategyData, error: strategyError } = await supabase
+        .from('strategies')
+        .select('parameters')
+        .eq('id', strategyId)
+        .single();
+      
+      if (strategyError) {
+        throw new Error(`Error fetching strategy: ${strategyError.message}`);
+      }
+      
+      // Fetch all associated strategy indicators
+      const { data: indicatorsData, error: indicatorsError } = await supabase
+        .from('strategy_indicators')
+        .select('type, parameters')
+        .eq('strategy_id', strategyId);
+      
+      if (indicatorsError) {
+        throw new Error(`Error fetching strategy indicators: ${indicatorsError.message}`);
+      }
+      
+      // Prepare the payload in the exact format expected by the API
+      const payload = {
+        params: {
+          params: strategyData.parameters,
+          indicators: indicatorsData.map(indicator => ({
+            type: indicator.type,
+            params: indicator.parameters
+          }))
+        },
+        asset: selectedAsset
+      };
+      
+      console.log('Loading strategy with payload:', payload);
+      
+      // Call the API with the structured payload
+      const loadedStrategy = await DefaultService.loadCombinedStrategyApiStrategiesLoadPost(payload);
+      
+      console.log('Strategy loaded successfully:', loadedStrategy);
+      
+      // Set the combined strategy ID from the API response
+      if (loadedStrategy.strategy_id) {
+        actions.setCombinedStrategyId(loadedStrategy.strategy_id);
+      }
+      
+      // Update local state
+      setSavedStrategy({ id: strategyId, name: strategyName });
+      setIsSaved(true);
+      
+      // Switch to strategy tab
+      setActiveSideTab('strategy');
+      
+      // Force data refresh
+      setFiveMinNeedsRefresh(true);
+      setDailyNeedsRefresh(true);
+    } catch (error) {
+      console.error('Error loading strategy:', error);
+    }
+  };
+
   // Add this effect to check save status when user or strategy changes
   useEffect(() => {
     if (user) {
@@ -813,7 +884,10 @@ useEffect(() => {
               
               <TabsContent value="strategy" className="h-full mt-0 w-full">
                 <div className="h-[90vh] p-2 border rounded-lg">
-                  <h3 className="text-lg font-medium mb-1">Strategy Builder</h3>
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="text-lg font-medium">Strategy Builder</h3>
+                    {user && <LoadStrategyDialog onStrategyLoaded={handleStrategyLoaded} />}
+                  </div>
                   
                   {strategyState.combinedStrategyId ? (
                     <div className="space-y-4 flex flex-col h-[95%]">
