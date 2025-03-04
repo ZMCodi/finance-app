@@ -151,3 +151,15 @@ class PortfolioOptimize(BaseModel):
     opt_weights: Dict[str, float] = Field(..., title='Weights', description='The optimal weights for each asset in the portfolio')
     ef_results: PortfolioEfficientFrontier = Field(..., title='Efficient Frontier', description='The efficient frontier results of the portfolio')
 
+class PortfolioState(BaseModel):
+    holdings: Dict[str, float] = Field(..., title='Holdings', description='The number of shares for each asset in the portfolio')
+    cost_bases: Dict[str, float] = Field(..., title='Cost Bases', description='The average buying price for each asset in the portfolio')
+    assets: List[str] = Field(..., title='Assets', description='The list of assets in the portfolio')
+    cash: float = Field(..., title='Cash', description='The current cash in the portfolio')
+    r: float = Field(..., title='Risk-Free Rate', description='The risk-free rate for the portfolio')
+    currency: str = Field(..., title='Currency', description='The currency of the portfolio')
+    id: int = Field(..., title='ID', description='The last transaction id for the portfolio')
+
+class PortfolioSave(BaseModel):
+    state: PortfolioState = Field(..., title='State', description='The current state of the portfolio')
+    transactions: List[BaseTransaction] = Field(..., title='Transactions', description='The transaction data for each transaction in the portfolio')

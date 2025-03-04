@@ -1370,7 +1370,7 @@ class Portfolio:
 
         return fig
 
-    def save(self, name: str, user_id: str):
+    def save(self):
         state = {
             'holdings': {k.ticker: v for k, v in self.holdings.items()},
             'cost_bases': {k.ticker: v for k, v in self.cost_bases.items()},
@@ -1381,43 +1381,23 @@ class Portfolio:
             'id': self.id,
         }
 
-        sb = Client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
-        sb.table('portfolios').upsert({
-            'name': name,
-            'user_id': user_id,
-            'state': state,
-            'updated_at': datetime.datetime.now().isoformat()
-        }, on_conflict='name, user_id').execute()
-
-        portfolio_id = sb.table('portfolios').select('id').eq('name', name).eq('user_id', user_id).execute().data[0]['id']
-
         json_transactions = []
         for t in self.transactions:
             t = t._asdict()
             if isinstance(t['asset'], Asset):
                 t['asset'] = t['asset'].ticker
             t['id'] = str(t['id'])
-            t['portfolio_id'] = portfolio_id
             json_transactions.append(t)
 
-        # print(json_transactions)
-
-        sb.table('portfolio_transactions').upsert(json_transactions, on_conflict='id, portfolio_id', ignore_duplicates=True).execute()
+        return state, json_transactions
 
 
     @classmethod
-    def load(cls, name, user_id: str):
-        sb = Client(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
-        data = sb.table('portfolios').select('state, id').eq('name', name).eq('user_id', user_id).execute().data[0]
-        state = data['state']
-        portfolio_id = data['id']
-        transactions = sb.table('portfolio_transactions').select('*').eq('portfolio_id', portfolio_id).execute().data
-
+    def load(cls, state, transactions):
         port = cls(currency=state['currency'], r=state['r'])
 
         # update state
         port.cash = state['cash']
-
         port.assets = [Asset(ast) for ast in state['assets']]
 
         for ast in port.assets:

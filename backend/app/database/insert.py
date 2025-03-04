@@ -228,8 +228,8 @@ def get_data(sb, table, ticker):
 def cleanup_old_data():
     try:
         sb = Client(SUPABASE_URL, SUPABASE_KEY)
-        result = sb.rpc('delete_old_data').execute().data
-        logging.info(f"Successfully executed cleanup of {len(result)} rows of old data")
+        result = sb.rpc('delete_old_data').execute()
+        logging.info(f"Successfully executed cleanup of old data")
     except Exception as e:
         logging.error(f"Failed to execute cleanup: {str(e)}")
 

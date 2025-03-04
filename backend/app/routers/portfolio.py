@@ -11,7 +11,8 @@ import json
 from typing import Dict
 from app.models.portfolio import (PortfolioCreate, PortfolioCreatePost, TransactionResponse,
                                   PortfolioStats, HoldingsStats, PortfolioPlots,
-                                  PortfolioTransactions, PortfolioOptimize, PortfolioEfficientFrontier)
+                                  PortfolioTransactions, PortfolioOptimize,
+                                  PortfolioSave)
 import urllib.parse
 
 router = APIRouter(prefix='/api/portfolio')
@@ -29,9 +30,9 @@ def decode_portfolio_id(portfolio_id: str) -> str:
         # Return the original if there's any error in decoding
         return portfolio_id
 
-test_portfolio = Portfolio.load('my_portfolio')
+# test_portfolio = Portfolio.load('my_portfolio')
 
-portfolio_cache = {'test': test_portfolio, 'empty': Portfolio()}
+portfolio_cache = {'empty': Portfolio()}
 _id = 0
 
 @router.get('/cache')
@@ -51,6 +52,32 @@ def create_portfolio(request: PortfolioCreatePost):
     portfolio_cache[name] = portfolio
     return {
         'portfolio_id': name,
+        'currency': portfolio.currency,
+        'cash': portfolio.cash,
+        'holdings': {a.ticker: v for a, v in portfolio.holdings.items()},
+    }
+
+@router.post('/{portfolio_id}/save', response_model=PortfolioSave)
+def save_portfolio(portfolio_id: str):
+    decoded_id = decode_portfolio_id(portfolio_id)
+    portfolio: Portfolio = portfolio_cache[decoded_id]
+    state, transactions = portfolio.save()
+
+    return {
+        'state': state,
+        'transactions': transactions
+    }
+
+@router.post('/{portfolio_id}/load', response_model=PortfolioCreate)
+def load_portfolio(request: PortfolioSave):
+    global _id
+    state = request.state
+    transactions = request.transactions
+    portfolio = Portfolio.load(state, transactions)
+    portfolio_cache[_id] = portfolio
+    _id += 1
+    return {
+        'portfolio_id': _id,
         'currency': portfolio.currency,
         'cash': portfolio.cash,
         'holdings': {a.ticker: v for a, v in portfolio.holdings.items()},
