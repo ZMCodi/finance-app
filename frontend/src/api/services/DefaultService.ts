@@ -590,16 +590,21 @@ export class DefaultService {
     }
     /**
      * Load Portfolio
+     * @param name
      * @param requestBody
      * @returns PortfolioCreate Successful Response
      * @throws ApiError
      */
     public static loadPortfolioApiPortfolioPortfolioIdLoadPost(
+        name: string,
         requestBody: PortfolioSave_Input,
     ): CancelablePromise<PortfolioCreate> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/portfolio/{portfolio_id}/load',
+            query: {
+                'name': name,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {

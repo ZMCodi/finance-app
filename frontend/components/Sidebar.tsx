@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useUserData } from '@/hooks/useUserData';
@@ -21,12 +21,77 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { DefaultService } from '@/src/api/services/DefaultService';
+import { PortfolioSave_Input } from '@/src/api/models/PortfolioSave_Input';
+import { supabase } from '@/lib/supabaseClient';
 
 export function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, signOut } = useAuth();
-  const { watchlist, strategies, portfolios, isLoading } = useUserData();
+  const { watchlist, strategies, portfolios, isLoading: dataIsLoading } = useUserData();
+
+  const handlePortfolioClick = async (portfolioId: string) => {
+    try {
+      setIsLoading(portfolioId);
+      
+      // First, fetch the portfolio data from Supabase
+      const { data: portfolioData, error: portfolioError } = await supabase
+        .from('portfolios')
+        .select('state, id')
+        .eq('name', portfolioId)
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (portfolioError) {
+        throw new Error(`Error fetching portfolio: ${portfolioError.message}`);
+      }
+      
+      if (!portfolioData) {
+        throw new Error(`Portfolio not found: ${portfolioId}`);
+      }
+      
+      // Then, fetch the transactions for this portfolio
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('portfolio_transactions')
+        .select('*')
+        .eq('portfolio_id', portfolioData.id);
+      
+      if (transactionsError) {
+        throw new Error(`Error fetching transactions: ${transactionsError.message}`);
+      }
+      
+      // Prepare the data in the format expected by the API
+      const payload: PortfolioSave_Input = {
+        state: portfolioData.state,
+        transactions: transactionsData.map(transaction => ({
+          type: transaction.type,
+          asset: transaction.asset,
+          shares: transaction.shares,
+          value: transaction.value,
+          profit: transaction.profit,
+          date: transaction.date,
+          id: parseInt(transaction.id)
+        }))
+      };
+      
+      // Load the portfolio data into the backend
+      await DefaultService.loadPortfolioApiPortfolioPortfolioIdLoadPost(
+        portfolioId,
+        payload
+      );
+      
+      // After successful loading, navigate to the portfolio page
+      router.push(`/portfolio/${portfolioId}`);
+    } catch (error) {
+      console.error('Error loading portfolio:', error);
+      // You might want to show an error notification here
+    } finally {
+      setIsLoading(null);
+    }
+  };
 
   return (
     <div
@@ -56,7 +121,7 @@ export function Sidebar() {
             href="/assets"
           >
             {user ? (
-              isLoading ? (
+              dataIsLoading ? (
                 <p className="px-4 py-2 text-sm text-gray-400">Loading...</p>
               ) : watchlist.length > 0 ? (
                 watchlist.map((ticker) => (
@@ -86,7 +151,7 @@ export function Sidebar() {
             href="/strategy"
           >
             {user ? (
-              isLoading ? (
+              dataIsLoading ? (
                 <p className="px-4 py-2 text-sm text-gray-400">Loading...</p>
               ) : strategies.length > 0 ? (
                 strategies.map((strategy) => (
@@ -117,15 +182,16 @@ export function Sidebar() {
             href="/portfolio"
           >
             {user ? (
-              isLoading ? (
+              dataIsLoading ? (
                 <p className="px-4 py-2 text-sm text-gray-400">Loading...</p>
               ) : portfolios.length > 0 ? (
                 portfolios.map((portfolio) => (
-                  <SidebarItem
+                  <PortfolioItem
                     key={portfolio}
                     title={portfolio}
-                    href={`/portfolio/${portfolio}`}
                     isExpanded={isExpanded}
+                    isLoading={isLoading === portfolio}
+                    onClick={() => handlePortfolioClick(portfolio)}
                   />
                 ))
               ) : (
@@ -237,5 +303,37 @@ function SidebarItem({
     >
       {title}
     </Link>
+  );
+}
+
+function PortfolioItem({
+  title,
+  isExpanded,
+  isLoading,
+  onClick,
+}: {
+  title: string;
+  isExpanded: boolean;
+  isLoading: boolean;
+  onClick: () => void;
+}) {
+  const pathname = usePathname();
+  const isActive = pathname === `/portfolio/${title}`;
+
+  if (!isExpanded) return null;
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "w-full justify-start py-2 px-8 rounded-md text-sm hover:bg-gray-800 hover:text-white",
+        isActive ? "text-white" : "text-gray-400"
+      )}
+      onClick={onClick}
+      disabled={isLoading}
+    >
+      {isLoading ? "Loading..." : title}
+    </Button>
   );
 }
