@@ -83,7 +83,7 @@ class Asset():
         for i, table in enumerate(['daily', 'five_minute']):
             data = sb.table(table).select('date, open, high, low, close, adj_close, volume').eq('ticker', self.ticker).execute().data
             if table == 'five_minute' and self.asset_type == 'Mutual Fund':
-                df = self.daily
+                self.five_minute = self.daily
                 continue
             df = pd.DataFrame(data).set_index('date')
             df = df.astype(float)

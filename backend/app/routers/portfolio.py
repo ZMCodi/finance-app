@@ -83,7 +83,7 @@ def load_portfolio(request: PortfolioSave):
         'holdings': {a.ticker: v for a, v in portfolio.holdings.items()},
     }
 
-@router.patch('/{portfolio_id}/load', response_model=PortfolioTransactions)
+@router.patch('/{portfolio_id}/upload', response_model=PortfolioTransactions)
 async def upload_portfolio(portfolio_id: str, file: UploadFile = File(...), source: str = Form(...)):
     decoded_id = decode_portfolio_id(portfolio_id)
     suffix = '.csv' if source == 'trading212' else '.xlsx'
@@ -182,7 +182,7 @@ def sell(portfolio_id: str, shares: float = None, value: float = None, date: str
 @router.get('/{portfolio_id}/stats', response_model=PortfolioStats)
 def portfolio_stats(portfolio_id: str):
     import time
-    time.sleep(0.005)
+    time.sleep(0.01)
     decoded_id = decode_portfolio_id(portfolio_id)
     portfolio: Portfolio = portfolio_cache[decoded_id]
     return portfolio.stats

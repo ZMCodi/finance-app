@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type Body_upload_portfolio_api_portfolio__portfolio_id__load_patch = {
+export type Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch = {
     file: Blob;
     source: string;
 };

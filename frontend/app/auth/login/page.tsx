@@ -19,20 +19,28 @@ export default function LoginPage() {
   const { signIn } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError(null)
-
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+  
     try {
-      const { error } = await signIn(email, password)
-      if (error) throw error
-      router.push('/portfolio')
+      const { error } = await signIn(email, password);
+      if (error) throw error;
+      
+      // Check for redirect URL from query params or localStorage
+      const params = new URLSearchParams(window.location.search);
+      const redirectTo = params.get('redirectTo') || localStorage.getItem('redirectAfterAuth') || '/portfolio';
+      
+      // Clear the stored redirect path
+      localStorage.removeItem('redirectAfterAuth');
+      
+      router.push(redirectTo);
     } catch (error: any) {
-      setError(error.message || 'Failed to sign in')
+      setError(error.message || 'Failed to sign in');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen">

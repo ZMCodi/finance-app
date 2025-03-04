@@ -121,7 +121,7 @@ const CreatePortfolioDialog: React.FC<CreatePortfolioDialogProps> = ({ onPortfol
             <Input
               id="currency"
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
               className="col-span-3"
               placeholder="USD"
             />

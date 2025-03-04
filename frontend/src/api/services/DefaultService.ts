@@ -5,7 +5,7 @@
 import type { AssetPlot } from '../models/AssetPlot';
 import type { AssetResponse } from '../models/AssetResponse';
 import type { AssetStats } from '../models/AssetStats';
-import type { Body_upload_portfolio_api_portfolio__portfolio_id__load_patch } from '../models/Body_upload_portfolio_api_portfolio__portfolio_id__load_patch';
+import type { Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch } from '../models/Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch';
 import type { HoldingsStats } from '../models/HoldingsStats';
 import type { PortfolioCreate } from '../models/PortfolioCreate';
 import type { PortfolioCreatePost } from '../models/PortfolioCreatePost';
@@ -573,13 +573,13 @@ export class DefaultService {
      * @returns PortfolioTransactions_Output Successful Response
      * @throws ApiError
      */
-    public static uploadPortfolioApiPortfolioPortfolioIdLoadPatch(
+    public static uploadPortfolioApiPortfolioPortfolioIdUploadPatch(
         portfolioId: string,
-        formData: Body_upload_portfolio_api_portfolio__portfolio_id__load_patch,
+        formData: Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch,
     ): CancelablePromise<PortfolioTransactions_Output> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/portfolio/{portfolio_id}/load',
+            url: '/api/portfolio/{portfolio_id}/upload',
             path: {
                 'portfolio_id': portfolioId,
             },

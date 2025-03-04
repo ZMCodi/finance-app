@@ -58,30 +58,30 @@ const TransactionDialog = ({ open, onOpenChange, portfolioId, currency, onSucces
           // Format date if it exists
           const buyDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
           
-          await DefaultService.buyApiPortfolioPortfolioIdBuyPatch(
+            await DefaultService.buyApiPortfolioPortfolioIdBuyPatch(
             portfolioId,
             assetTicker,
-            shares ? parseFloat(shares) : undefined,
-            value ? parseFloat(value) : undefined,
+            shares ? Number(parseFloat(shares).toFixed(5)) : undefined,
+            value ? Number(parseFloat(value).toFixed(2)) : undefined,
             buyDate
-          );
-          break;
-        
-        case 'sell':
-          if (!assetTicker) {
+            );
+            break;
+          
+          case 'sell':
+            if (!assetTicker) {
             throw new Error('Asset ticker is required for selling');
-          }
-          
-          // Format date if it exists
-          const sellDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
-          
-          await DefaultService.sellApiPortfolioPortfolioIdSellPatch(
+            }
+            
+            // Format date if it exists
+            const sellDate = transactionDate ? format(transactionDate, 'yyyy-MM-dd') : undefined;
+            
+            await DefaultService.sellApiPortfolioPortfolioIdSellPatch(
             portfolioId,
             assetTicker,
-            shares ? parseFloat(shares) : undefined,
-            value ? parseFloat(value) : undefined,
+            shares ? Number(parseFloat(shares).toFixed(5)) : undefined,
+            value ? Number(parseFloat(value).toFixed(2)) : undefined,
             sellDate
-          );
+            );
           break;
         
         case 'deposit':

@@ -180,7 +180,7 @@ class Portfolio:
         date = self._parse_date(date)
 
         if currency is None:
-            currency = asset.currency
+            currency = self.currency
 
         if asset not in self.assets:
             ast = Asset(asset.ticker)  # create copy
@@ -541,7 +541,7 @@ class Portfolio:
         def round_number(value, is_currency=False):
             """Helper function to round numbers consistently"""
             if pd.isna(value):
-                return value
+                return 0.
             decimals = 2 if is_currency else 3
             return round(float(value), decimals)
 
@@ -573,23 +573,24 @@ class Portfolio:
         dd = float(np.sqrt(np.mean(np.minimum(returns, 0) ** 2))) if not empty else 0.
         market = self.market.daily['rets'].reindex(returns.index)
         value = self.get_value()
+        volatility = returns.std() * np.sqrt(ann_factor)
 
         risk_metrics = {
-            'volatility': round_number(volatility := returns.std() * np.sqrt(ann_factor)) if not empty else 0.,
-            'sharpe_ratio': round_number(mean_excess_returns / volatility) if not empty else 0.,
-            'sortino_ratio': round_number(mean_excess_returns / (dd * np.sqrt(ann_factor))) if not empty else 0.,
+            'volatility': round_number(volatility) if not empty else 0.,
+            'sharpe_ratio': round_number(mean_excess_returns / volatility) if volatility != 0 else 0.,
+            'sortino_ratio': round_number(mean_excess_returns / (dd * np.sqrt(ann_factor))) if (dd * np.sqrt(ann_factor)) != 0 else 0.,
             'beta': round_number(beta := self.beta),
             'value_at_risk': round_number(np.abs(returns.quantile(0.05) * value), True) if not empty else 0.,
             'tracking_error': round_number(tracking_error := np.std(returns - market)) if not empty else 0.,
             'information_ratio': round_number(np.mean(returns - market) / tracking_error) if not empty else 0.,
-            'treynor_ratio': round_number(mean_excess_returns / beta) if not empty else 0.,
+            'treynor_ratio': round_number(mean_excess_returns / beta) if beta != 0 else 0.,
         }
 
         # Drawdown Metrics 
         cum_rets = (1 + returns).cumprod()
         df = self.drawdown_df
         drawdowns = self.drawdowns
-        min_depth = df['depth'].quantile(0.95) if not empty else 0.
+        min_depth = df['depth'].quantile(0.95) if not df.empty else 0.
 
         drawdown_metrics = {
             'max_drawdown': round_number(max_dd := (cum_rets / cum_rets.cummax() - 1).min() if not empty else 0.),
@@ -597,12 +598,12 @@ class Portfolio:
             'average_drawdown': round_number(avg_dd := drawdowns[drawdowns < 0].mean() if not empty else 0.),
             'average_drawdown_duration': round_number(
                 df[(df['duration'] >= 3) & (-df['depth'] >= np.abs(min_depth))]['duration'].mean()
-            ) if not empty else 0.,
+            ) if not df.empty else 0.,
             'time_to_recovery': round_number(
                 df[(df['duration'] >= 3) & (-df['depth'] >= np.abs(min_depth))]['time_to_recovery'].mean()
-            ) if not empty else 0.,
+            ) if not df.empty else 0.,
             'drawdown_ratio': round_number(max_dd / avg_dd) if not empty else 0.,
-            'calmar_ratio': round_number(ann_rets / np.abs(max_dd)) if not empty else 0.,
+            'calmar_ratio': round_number(ann_rets / np.abs(max_dd)) if max_dd != 0 else 0.,
         }
 
         # Position & Exposure Metrics
@@ -632,8 +633,8 @@ class Portfolio:
             'net_deposits': round_number(net_deposits, True),
             'number_of_trades': len(buys) + len(sells),
             'win_rate': round_number(len([t for t in sells if t.profit > 0]) / len(sells)) if sells else 0.,
-            'profit_factor': round_number(sum(profits) / abs(sum(losses))) if sells else 0.,
-            'average_win_loss_ratio': round_number(np.mean(profits) / np.mean(np.abs(losses))) if sells else 0.,
+            'profit_factor': round_number(sum(profits) / abs(sum(losses))) if sum(losses) != 0 else 0.,
+            'average_win_loss_ratio': round_number(np.mean(profits) / np.mean(np.abs(losses))) if np.mean(np.abs(losses)) != 0 else 0.,
         }
 
         return {
@@ -743,7 +744,10 @@ class Portfolio:
         # Convert to DataFrame and forward fill
         holdings_df = pd.DataFrame.from_dict(holdings_changes, orient='index').fillna(0)
         holdings_df.index = pd.to_datetime(holdings_df.index)
-        earliest_date = min(cash.index[0], running_deposit.index[0], holdings_df.index[0])
+        if holdings_df.empty:
+            earliest_date = min(cash.index[0], running_deposit.index[0])
+        else:
+            earliest_date = min(cash.index[0], running_deposit.index[0], holdings_df.index[0])
         holdings_df = holdings_df.reindex(
             pd.date_range(start=earliest_date.date(), end=pd.Timestamp.today(), freq=('D' if has_crypto else 'B'))
         ).ffill()

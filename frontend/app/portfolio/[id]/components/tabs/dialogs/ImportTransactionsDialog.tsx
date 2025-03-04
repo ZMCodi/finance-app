@@ -76,7 +76,7 @@ const ImportTransactionsDialog = ({
       };
       
       // Call the API to upload transactions
-      await DefaultService.uploadPortfolioApiPortfolioPortfolioIdLoadPatch(
+      await DefaultService.uploadPortfolioApiPortfolioPortfolioIdUploadPatch(
         portfolioId,
         requestData
       );

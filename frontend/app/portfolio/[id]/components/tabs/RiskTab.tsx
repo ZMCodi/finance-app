@@ -103,7 +103,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProp
             layout={{
           ...riskPlots.risk_decomposition.layout,
           autosize: true,
-          margin: { t: 0, r: 0, b: 0, l: 0 },
+          margin: { t: 20, r: 0, b: 0, l: 0 },
             }}
             config={{
           responsive: true,

@@ -13,7 +13,7 @@ export type { AssetResponse } from './models/AssetResponse';
 export type { AssetStats } from './models/AssetStats';
 export { AssetType } from './models/AssetType';
 export type { BaseTransaction } from './models/BaseTransaction';
-export type { Body_upload_portfolio_api_portfolio__portfolio_id__load_patch } from './models/Body_upload_portfolio_api_portfolio__portfolio_id__load_patch';
+export type { Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch } from './models/Body_upload_portfolio_api_portfolio__portfolio_id__upload_patch';
 export type { DailyReturnsMetrics } from './models/DailyReturnsMetrics';
 export type { DistributionStats } from './models/DistributionStats';
 export type { DrawdownMetrics } from './models/DrawdownMetrics';
