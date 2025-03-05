@@ -217,17 +217,6 @@ export class DefaultService {
         });
     }
     /**
-     * Get Cache
-     * @returns any Successful Response
-     * @throws ApiError
-     */
-    public static getCacheApiStrategiesCacheGet(): CancelablePromise<any> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/strategies/cache',
-        });
-    }
-    /**
      * Plot Strategy
      * @param strategyKey
      * @param timeframe
@@ -540,14 +529,14 @@ export class DefaultService {
         });
     }
     /**
-     * Get Cache
+     * Home
      * @returns any Successful Response
      * @throws ApiError
      */
-    public static getCacheApiPortfolioCacheGet(): CancelablePromise<any> {
+    public static homeApiPortfolioHomeGet(): CancelablePromise<any> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/portfolio/cache',
+            url: '/api/portfolio/home',
         });
     }
     /**
@@ -941,6 +930,17 @@ export class DefaultService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/',
+        });
+    }
+    /**
+     * Ping
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static pingPingGet(): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/ping',
         });
     }
 }

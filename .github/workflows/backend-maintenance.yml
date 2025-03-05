@@ -1,0 +1,38 @@
+name: Backend Maintenance
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Keep alive every 10 minutes
+    - cron: '0 2 * * *'     # Run data insertion at 2 AM UTC
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend to prevent sleep
+        run: curl https://flapp-uffh.onrender.com/ping
+  
+  data-insertion:
+    runs-on: ubuntu-latest
+    # Only run this job for the 2 AM schedule
+    if: github.event.schedule == '0 2 * * *'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      
+      - name: Run data insertion script
+        run: python backend/app/database/insert.py
+        env:
+          # Add any environment variables your script needs
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}

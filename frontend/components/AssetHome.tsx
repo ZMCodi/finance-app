@@ -19,7 +19,7 @@ export default function AssetHome() {
               <span className="underline">Look up assets</span>
             </button>
           </CardTitle>
-          <CardDescription>do some analysis and shit</CardDescription>
+          <CardDescription>look at stats and save to your watchlist</CardDescription>
         </CardHeader>
         <CardContent className="flex-1">
           <div className="h-full">

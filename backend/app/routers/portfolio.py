@@ -35,6 +35,24 @@ def decode_portfolio_id(portfolio_id: str) -> str:
 
 _id = 0
 
+@router.get('/home')
+def home():
+    port = Portfolio(assets=[
+        {'asset': 'AAPL', 'shares': 20, 'avg_price': 120},
+        {'asset': 'SPY', 'shares': 10, 'avg_price': 300},
+        {'asset': 'BTC-USD', 'shares': 0.1, 'avg_price': 50_000},
+        {'asset': 'CAT', 'shares': 5, 'avg_price': 200},
+        {'asset': 'NKE', 'shares': 10, 'avg_price': 150},
+        {'asset': 'NFLX', 'shares': 5, 'avg_price': 500},
+        {'asset': 'VUSA.L', 'shares': 10, 'avg_price': 50},
+    ])
+
+    return {
+        'holdings_chart': json.loads(json.dumps(port.holdings_chart(), cls=PlotlyJSONEncoder)),
+        'asset_type_exposure': json.loads(json.dumps(port.asset_type_exposure(), cls=PlotlyJSONEncoder)),
+        'sector_exposure': json.loads(json.dumps(port.sector_exposure(), cls=PlotlyJSONEncoder)),
+    }
+
 @router.post('/create', response_model=PortfolioCreate)
 def create_portfolio(request: PortfolioCreatePost):
     global _id
