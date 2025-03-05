@@ -1,9 +1,9 @@
 'use client';
 import { useState } from 'react';
-import ChartTypeSelector from '@/app/assets/[ticker]/components/ChartTypeSelector';
-import ChartDisplay from '@/app/assets/[ticker]/components/ChartDisplay';
-import AssetInfo from '@/app/assets/[ticker]/components/AssetInfo';
-import AssetTitle from '@/app/assets/[ticker]/components/AssetTitle';
+import ChartTypeSelector from './ChartTypeSelector';
+import ChartDisplay from './ChartDisplay';
+import AssetInfo from './AssetInfo';
+import AssetTitle from './AssetTitle';
 
 interface TickerPageClientProps {
   ticker: string;

@@ -47,7 +47,7 @@ export default function AssetCard({
   }, [selectedPlot]);
 
   const handleTickerClick = () => {
-    router.push(`/assets/${ticker}`);
+    router.push(`/assets/details?ticker=${ticker}`);
   };
 
   const handleChartTypeChange = (type: 'price_history' | 'candlestick' | 'returns_distribution') => {

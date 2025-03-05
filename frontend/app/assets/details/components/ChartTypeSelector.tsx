@@ -2,7 +2,7 @@
 /* eslint-disable  @typescript-eslint/no-explicit-any */
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import ChartControls from '@/app/assets/[ticker]/components/ChartControls';
+import ChartControls from './ChartControls';
 
 interface ChartTypeSelectorProps {
   chartType: string;

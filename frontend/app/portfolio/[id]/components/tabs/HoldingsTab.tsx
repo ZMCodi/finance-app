@@ -391,7 +391,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                     {holdings
                       .sort((a, b) => b.weight - a.weight)
                       .map((holding, index) => (
-                      <TableRow key={index} className="hover:bg-slate-900 cursor-pointer" onClick={() => router.push(`/assets/${holding.asset}`)}>
+                      <TableRow key={index} className="hover:bg-slate-900 cursor-pointer" onClick={() => router.push(`/assets/details?ticker=${holding.asset}`)}>
                       <TableCell className="py-2">
                         <div>
                         <div className="font-medium">{holding.asset}</div>
