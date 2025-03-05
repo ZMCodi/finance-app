@@ -38,6 +38,7 @@ export default function StrategyContainer() {
   const [isSaved, setIsSaved] = useState(false);
   const [isCheckingSaveStatus, setIsCheckingSaveStatus] = useState(false);
   const { user } = useAuth();
+  const [isModified, setIsModified] = useState(false);
   
   // Default start date for 5min data (15 days ago)
   const defaultFiveMinStart = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
@@ -276,8 +277,8 @@ useEffect(() => {
   const handleStrategySaved = (strategyId: string, strategyName: string) => {
     console.log(`Strategy saved with ID: ${strategyId}, Name: ${strategyName}`);
     setSavedStrategy({ id: strategyId, name: strategyName });
-    
-    // Optional: Show a success message or toast notification
+    setIsSaved(true);
+    setIsModified(false);
   };
   
   // Handle indicator selection - updated to check if an indicator type already exists
@@ -485,6 +486,9 @@ useEffect(() => {
       const result = await actions.configureIndicator(activeConfigStrategyId, params);
       console.log('Configuration result:', result);
       
+      // Mark as modified when indicator parameters change
+      markStrategyAsModified();
+      
       // Refresh charts
       if (activeTab === '5m') {
         setFiveMinNeedsRefresh(true);
@@ -533,6 +537,7 @@ useEffect(() => {
     try {
       console.log(`Removing strategy ${strategyId} from combined strategy`);
       await actions.removeFromStrategy(strategyId);
+      markStrategyAsModified();
       
       // The state will be updated by the hook's removeFromStrategy function
       // which calls fetchCombinedStrategyParams to update weights
@@ -555,6 +560,9 @@ useEffect(() => {
         ...prev,
         weights: newWeights
       }));
+      
+      // Mark as modified when weights change
+      markStrategyAsModified();
     }
   };
 
@@ -564,6 +572,7 @@ useEffect(() => {
       ...prev,
       [key]: value
     }));
+    markStrategyAsModified();
   };
 
   // Handle optimization of weights for the combined strategy
@@ -643,6 +652,9 @@ useEffect(() => {
       await actions.updateCombinedStrategyParams(paramsToUpdate);
       await actions.fetchCombinedStrategyParams();
       console.log('Combined strategy parameters updated successfully');
+      
+      // Mark as modified when combined strategy parameters change
+      markStrategyAsModified();
     } catch (error) {
       console.error('Error updating combined strategy parameters:', error);
     }
@@ -848,7 +860,17 @@ useEffect(() => {
       setIsSaved(false);
       setSavedStrategy(null);
     }
+    // Reset modification flag when checking save status
+    setIsModified(false);
   }, [checkSaveStatus, user]);
+  
+  // Add a function to mark the strategy as modified
+  const markStrategyAsModified = useCallback(() => {
+    if (isSaved) {
+      setIsModified(true);
+      setIsSaved(false);
+    }
+  }, [isSaved]);
 
   return (
     <div className="p-4">
@@ -959,7 +981,7 @@ useEffect(() => {
                       {/* Add Save Strategy button with dialog */}
                       <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center">
-                          {isSaved && (
+                          {isSaved && !isModified && (
                             <div className="flex items-center text-sm text-green-400 gap-1 mr-2">
                               <BookmarkCheck size={16} />
                               <span>Saved as "{savedStrategy?.name}"</span>
