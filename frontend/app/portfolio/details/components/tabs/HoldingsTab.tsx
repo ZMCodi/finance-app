@@ -265,7 +265,7 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                   data={plots.correlation_heatmap.data}
                   layout={{
                     ...plots.correlation_heatmap.layout,
-                    margin: { t: 0 },
+                    margin: { t: 0, r: 150 },
                     // autosize: true,
                   }}
                   config={{
