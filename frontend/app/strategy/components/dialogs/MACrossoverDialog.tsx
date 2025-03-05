@@ -23,6 +23,7 @@ export default function MACrossoverDialog({
 }: MACrossoverDialogProps) {
   
   // Handle number input change (convert string to number)
+  console.log('params:', params);
   const handleNumberChange = (key: string, value: string) => {
     const numValue = value === '' ? '' : Number(value);
     onParamChange(key, numValue);

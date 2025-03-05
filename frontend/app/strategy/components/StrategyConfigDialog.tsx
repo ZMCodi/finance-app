@@ -110,7 +110,7 @@ export default function StrategyConfigDialog({
       }
       
       const data: StrategyParams = await response.json();
-      console.log(data);
+      console.log('data', data);
       
       // Set parameters from API response
       if (data.params) {
@@ -129,6 +129,25 @@ export default function StrategyConfigDialog({
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const normalizeIndicatorType = (type: string | null): string | null => {
+    if (!type) return null;
+    
+    // Convert backend format to UI format
+    switch(type) {
+      case 'MA_Crossover':
+      case 'MA_CROSSOVER':
+        return 'MA Crossover';
+      case 'RSI':
+        return 'RSI';
+      case 'MACD':
+        return 'MACD';
+      case 'BB':
+        return 'Bollinger Bands';
+      default:
+        return type;
     }
   };
 
@@ -265,8 +284,9 @@ export default function StrategyConfigDialog({
   // Render the appropriate dialog based on the indicator type
   const renderDialogContent = () => {
     if (!indicator) return null;
+    const normalizedType = normalizeIndicatorType(indicator);
     
-    switch(indicator) {
+    switch(normalizedType) {
       case 'MA Crossover':
         return (
           <MACrossoverDialog
