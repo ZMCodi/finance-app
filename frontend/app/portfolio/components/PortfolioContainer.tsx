@@ -101,12 +101,77 @@ const PortfolioContainer = () => {
     }
   };
 
-  const handleViewPortfolio = () => {
-    if (portfolioId) {
-      // Use encodeURIComponent to ensure the URL is properly formatted
-      router.push(`/portfolio/details?id=${encodeURIComponent(portfolioId)}`);
+  const handleViewSamplePortfolio = async () => {
+    // Use encodeURIComponent to ensure the URL is properly formatted
+    try {
+      setIsLoading('sample_portfolio');
+      const { data: portfolioData, error: portfolioError } = await supabase
+        .from('portfolios')
+        .select('state, id')
+        .eq('name', 'sample_portfolio')
+        .single();
+
+      if (portfolioError) {
+        throw new Error(`Error fetching sample portfolio: ${portfolioError.message}`);
+      }
+
+      if (!portfolioData) {
+        throw new Error('Sample portfolio not found');
+      }
+
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('portfolio_transactions')
+        .select('*')
+        .eq('portfolio_id', portfolioData.id);
+
+      if (transactionsError) {
+        throw new Error(`Error fetching transactions: ${transactionsError.message}`);
+      }
+
+      const payload: PortfolioSave_Input = {
+        state: portfolioData.state,
+        transactions: transactionsData.map(transaction => ({
+          type: transaction.type,
+          asset: transaction.asset,
+          shares: transaction.shares,
+          value: transaction.value,
+          profit: transaction.profit,
+          date: transaction.date,
+          id: parseInt(transaction.id)
+        }))
+      };
+
+      await DefaultService.loadPortfolioApiPortfolioPortfolioIdLoadPost(
+        payload,
+        'sample_portfolio'
+      );
+
+      localStorage.setItem('currentPortfolioId', 'sample_portfolio');
+      router.push(`/portfolio/details?id=sample_portfolio`);
+    } catch (error) {
+      console.error('Error loading sample portfolio:', error);
+    } finally {
+      setIsLoading(null);
     }
   };
+
+  // First, create a reusable component for the sample portfolio button
+const SamplePortfolioButton = ({ isLoading, onClick }) => (
+  <Button 
+    className='h-10'
+    onClick={onClick}
+    disabled={isLoading === 'sample_portfolio'}
+  >
+    {isLoading === 'sample_portfolio' ? (
+      <div className="animate-spin mr-2">
+        <View size={18} className="opacity-50" />
+      </div>
+    ) : (
+      <View size={18} className="mr-2" />
+    )}
+    View Sample Portfolio
+  </Button>
+);
 
   return (
     <div className="flex flex-col min-h-screen p-4">
@@ -144,7 +209,11 @@ const PortfolioContainer = () => {
                     </Button>
                   ))}
                 </div>
-                <div className="flex justify-center pt-2">
+                <div className="flex gap-4 justify-center">
+                  <SamplePortfolioButton 
+                    isLoading={isLoading} 
+                    onClick={handleViewSamplePortfolio} 
+                  />
                   <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated}>
                     <Plus size={16} className="mr-2" /> 
                     Create New Portfolio
@@ -156,7 +225,13 @@ const PortfolioContainer = () => {
                 <p className="mb-6 text-center">
                   You don&apos;t have any portfolios yet. Create one to start tracking your investments.
                 </p>
-                <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated} />
+                <div className='flex gap-4'>
+                  <SamplePortfolioButton 
+                    isLoading={isLoading} 
+                    onClick={handleViewSamplePortfolio} 
+                  />
+                  <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated} />
+                </div>
               </div>
             )}
           </Card>
@@ -169,20 +244,21 @@ const PortfolioContainer = () => {
               <p className="mb-6 text-center">
                 You don&apos;t have a portfolio yet. Create one to start tracking your investments.
               </p>
-              <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated} />
+              <div className="flex gap-4">
+                <SamplePortfolioButton 
+                  isLoading={isLoading} 
+                  onClick={handleViewSamplePortfolio} 
+                />
+                <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated} />
+              </div>
             </Card>
           ) : (
             <Card className="shadow-lg w-full max-w-md p-6 flex flex-col items-center">
-              <p className="text-slate-300 mb-4 text-center">
-                Portfolio: <span className="font-semibold">{portfolioId}</span>
-              </p>
               <div className="flex gap-4">
-                <Button className='h-10'
-                  onClick={handleViewPortfolio}
-                >
-                  <View size={18} className="mr-2" />
-                  View Portfolio
-                </Button>
+                <SamplePortfolioButton 
+                  isLoading={isLoading} 
+                  onClick={handleViewSamplePortfolio} 
+                />
                 <CreatePortfolioDialog onPortfolioCreated={handlePortfolioCreated} />
               </div>
             </Card>

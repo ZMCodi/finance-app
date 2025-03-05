@@ -251,7 +251,7 @@ const RiskTab = ({ portfolioId, currency, portfolioData, plotData }: RiskTabProp
                     layout={{
                       ...riskPlots.drawdown_plot.layout,
                       autosize: true,
-                      margin: { t: 0, r: 0, b: 0, l: 0 },
+                      margin: { t: 0, r: 0, b: 30, l: 0 },
                     }}
                     config={{
                       responsive: true,

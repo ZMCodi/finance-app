@@ -163,20 +163,22 @@ const PortfolioPageClient = ({ portfolioId }: PortfolioPageClientProps) => {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-left">{portfolioId}</h1>
         
-        {/* Save button */}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          disabled={isCheckingSaveStatus}
-          onClick={handleSavePortfolio}
-          className="ml-2"
-          aria-label={isSaved ? "Portfolio saved" : "Save portfolio"}
-        >
-          {isSaved ? 
-            <BookmarkCheck className="h-20 w-20 text-primary" /> : 
-            <Bookmark className="h-6 w-6" />
-          }
-        </Button>
+        {/* Save button - only show if not sample portfolio */}
+        {portfolioId !== 'sample_portfolio' && (
+          <Button 
+        variant="ghost" 
+        size="icon"
+        disabled={isCheckingSaveStatus}
+        onClick={handleSavePortfolio}
+        className="ml-2"
+        aria-label={isSaved ? "Portfolio saved" : "Save portfolio"}
+          >
+        {isSaved ? 
+          <BookmarkCheck className="h-20 w-20 text-primary" /> : 
+          <Bookmark className="h-6 w-6" />
+        }
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-1 gap-6">
