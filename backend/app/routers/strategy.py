@@ -8,6 +8,7 @@ from plotly.utils import PlotlyJSONEncoder
 from app.core.asset import Asset
 from functools import lru_cache
 from enum import Enum
+from app.database.redis_client import cache_strategy, get_cached_strategy, redis
 
 router = APIRouter(prefix='/api/strategies')
 
@@ -16,7 +17,6 @@ def get_asset(asset_ticker: str):
     return Asset(asset_ticker)
 
 _id = 0
-strategy_cache = {'rsi_AAPL_-1': RSI(Asset('AAPL'))}
 
 @router.post('/{asset_ticker}/{strategy_name}', response_model=StrategyCreate)
 def create_strategy(strategy_name: str, asset: Asset = Depends(get_asset)):
@@ -33,7 +33,7 @@ def create_strategy(strategy_name: str, asset: Asset = Depends(get_asset)):
         raise ValueError(f'Invalid strategy name: {strategy_name}')
     key = f'{strategy_name}_{asset.ticker}_{_id}'
     _id += 1
-    strategy_cache[key] = strategy
+    cache_strategy(key, strategy)
     return {
         'strategy': strategy.__class__.__name__,
         'ticker': asset.ticker,
@@ -42,15 +42,14 @@ def create_strategy(strategy_name: str, asset: Asset = Depends(get_asset)):
 
 @router.delete('/{strategy_key}/delete', response_model=StrategyBase)
 def delete_strategy(strategy_key: str):
-    strategy = strategy_cache.pop(strategy_key)
-    return {
+    strategy = get_cached_strategy(strategy_key)
+    strategy_info = {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
     }
 
-@router.get("/cache")
-def get_cache():
-    return str(strategy_cache)
+    redis.delete(f'strategy:{strategy_key}')
+    return strategy_info
 
 @router.get('/{strategy_key}/indicator', response_model=StrategyPlot)
 def plot_strategy(strategy_key: str, 
@@ -58,7 +57,7 @@ def plot_strategy(strategy_key: str,
                   start_date: str = None, 
                   end_date: str = None,
                   ):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     fig = strategy.plot(timeframe, start_date, end_date)
     return {
         'ticker': strategy.asset.ticker,
@@ -68,7 +67,7 @@ def plot_strategy(strategy_key: str,
 
 @router.get('/{strategy_key}/params', response_model=StrategyParams)
 def get_strategy_params(strategy_key: str):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
@@ -77,7 +76,7 @@ def get_strategy_params(strategy_key: str):
 
 @router.get('/{strategy_key}/signals', response_model=StrategySignal)
 def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     if timeframe == '1d':
         signal = strategy.daily['signal']
     elif timeframe == '5m':
@@ -99,14 +98,16 @@ def get_strategy_signals(strategy_key: str, timeframe: str = '1d', start_date: s
 
 @router.patch('/{strategy_key}/params', response_model=StrategyParams)
 def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     param_updates = params.model_dump(exclude_none=True)
     for k, v in param_updates.items():
         if isinstance(v, Enum):
             param_updates[k] = v.value
         elif k == 'signal_type':
             param_updates[k] = [x.value for x in v]
+
     strategy.change_params(**param_updates)
+    cache_strategy(strategy_key, strategy)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': strategy.__class__.__name__,
@@ -117,11 +118,11 @@ def update_strategy_params(strategy_key: str, params: StrategyUpdateParams):
 @router.post('/combined/create/{strategy_key}', response_model=StrategyCreate)
 def create_combined_strategy(strategy_key: str):
     global _id
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     combined = CombinedStrategy(strategy.asset, strategies=[strategy])
     key = f'combined_{strategy.asset.ticker}_{_id}'
     _id += 1
-    strategy_cache[key] = combined
+    cache_strategy(key, combined)
     return {
         'ticker': strategy.asset.ticker,
         'strategy': combined.__class__.__name__,
@@ -130,9 +131,10 @@ def create_combined_strategy(strategy_key: str):
 
 @router.patch('/combined/{combined_key}/{strategy_key}/add_strategy', response_model=StrategyParams)
 def add_strategy_to_combined(combined_key: str, strategy_key: str, weight: float = 1.):
-    combined: CombinedStrategy = strategy_cache.get(combined_key)
-    strategy = strategy_cache.get(strategy_key)
+    combined: CombinedStrategy = get_cached_strategy(combined_key)
+    strategy = get_cached_strategy(strategy_key)
     combined.add_strategy(strategy, weight)
+    cache_strategy(combined_key, combined)
     return {
         'ticker': combined.asset.ticker,
         'strategy': combined.__class__.__name__,
@@ -141,9 +143,10 @@ def add_strategy_to_combined(combined_key: str, strategy_key: str, weight: float
 
 @router.patch('/combined/{combined_key}/{strategy_key}/remove_strategy', response_model=StrategyParams)
 def remove_strategy_from_combined(combined_key: str, strategy_key: str):
-    combined: CombinedStrategy = strategy_cache.get(combined_key)
-    strategy = strategy_cache.get(strategy_key)
+    combined: CombinedStrategy = get_cached_strategy(combined_key)
+    strategy = get_cached_strategy(strategy_key)
     combined.remove_strategy(strategy)
+    cache_strategy(combined_key, combined)
     return {
         'ticker': combined.asset.ticker,
         'strategy': combined.__class__.__name__,
@@ -152,7 +155,7 @@ def remove_strategy_from_combined(combined_key: str, strategy_key: str):
 
 @router.post('/combined/{combined_key}/save', response_model=StrategySave)
 def save_combined_strategy(combined_key: str):
-    combined: CombinedStrategy = strategy_cache.get(combined_key)
+    combined: CombinedStrategy = get_cached_strategy(combined_key)
     params = combined.parameters
     params.pop('strategies')
     indicators = []
@@ -170,7 +173,6 @@ def save_combined_strategy(combined_key: str):
 @router.post('/load', response_model=StrategyLoadResponse)
 def load_combined_strategy(request: StrategyLoad):
     params = request.model_dump(exclude_none=True)
-    print(params)
     global _id
     asset = Asset(params['asset'])
     combined = CombinedStrategy(asset)
@@ -188,14 +190,14 @@ def load_combined_strategy(request: StrategyLoad):
         key = f'{indicator["type"].value}_{asset.ticker}_{_id}'
         indicators.append(key)
         _id += 1
-        strategy_cache[key] = strategy
         strategy.change_params(**indicator['params'])
+        cache_strategy(key, strategy)
         combined.add_strategy(strategy)
 
     combined.change_params(**params['params']['params'])
     key = f'combined_{asset.ticker}_{_id}'
     _id += 1
-    strategy_cache[key] = combined
+    cache_strategy(key, combined)
     return {
         'ticker': asset.ticker,
         'strategy': combined.__class__.__name__,
@@ -205,7 +207,7 @@ def load_combined_strategy(request: StrategyLoad):
 
 @router.get('/{strategy_key}/backtest', response_model=StrategyPlot)
 def backtest(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     res, fig = strategy.backtest(plot=True, timeframe=timeframe, start_date=start_date, end_date=end_date)
     return {
         'ticker': strategy.asset.ticker,
@@ -216,7 +218,7 @@ def backtest(strategy_key: str, timeframe: str = '1d', start_date: str = None, e
 
 @router.get('/{strategy_key}/optimize/params', response_model=StrategyOptimize)
 def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     res = strategy.optimize(timeframe=timeframe, start_date=start_date, end_date=end_date)
     return {
         'ticker': strategy.asset.ticker,
@@ -226,7 +228,7 @@ def optimize_parameters(strategy_key: str, timeframe: str = '1d', start_date: st
 
 @router.get('/{strategy_key}/optimize/weights', response_model=StrategyOptimize)
 def optimize_weights(strategy_key: str, timeframe: str = '1d', start_date: str = None, end_date: str = None, runs: int = 20):
-    strategy: Strategy = strategy_cache.get(strategy_key)
+    strategy: Strategy = get_cached_strategy(strategy_key)
     res = strategy.optimize_weights(timeframe=timeframe, start_date=start_date, end_date=end_date, runs=runs)
     return {
         'ticker': strategy.asset.ticker,

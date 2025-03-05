@@ -14,6 +14,7 @@ from app.models.portfolio import (PortfolioCreate, PortfolioCreatePost, Transact
                                   PortfolioTransactions, PortfolioOptimize,
                                   PortfolioSave)
 import urllib.parse
+from app.database.redis_client import cache_portfolio, get_cached_portfolio
 
 router = APIRouter(prefix='/api/portfolio')
 
@@ -32,12 +33,7 @@ def decode_portfolio_id(portfolio_id: str) -> str:
 
 # test_portfolio = Portfolio.load('my_portfolio')
 
-portfolio_cache = {'empty': Portfolio()}
 _id = 0
-
-@router.get('/cache')
-def get_cache():
-    return str(portfolio_cache)
 
 @router.post('/create', response_model=PortfolioCreate)
 def create_portfolio(request: PortfolioCreatePost):
@@ -49,7 +45,7 @@ def create_portfolio(request: PortfolioCreatePost):
         name = request.name
     print(request.model_dump(exclude_none=True, exclude={'name'}))
     portfolio = Portfolio(**request.model_dump(exclude_none=True, exclude={'name'}))
-    portfolio_cache[name] = portfolio
+    cache_portfolio(name, portfolio)
     return {
         'portfolio_id': name,
         'currency': portfolio.currency,
@@ -60,7 +56,7 @@ def create_portfolio(request: PortfolioCreatePost):
 @router.post('/{portfolio_id}/save', response_model=PortfolioSave)
 def save_portfolio(portfolio_id: str):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     state, transactions = portfolio.save()
 
     return {
@@ -71,10 +67,9 @@ def save_portfolio(portfolio_id: str):
 @router.post('/{portfolio_id}/load', response_model=PortfolioCreate)
 def load_portfolio(request: PortfolioSave, name: str = None):
     state = request.state.model_dump()
-    print(state)
     transactions = request.transactions
     portfolio = Portfolio.load(state, transactions)
-    portfolio_cache[name] = portfolio
+    cache_portfolio(name, portfolio)
     return {
         'portfolio_id': name,
         'currency': portfolio.currency,
@@ -91,13 +86,14 @@ async def upload_portfolio(portfolio_id: str, file: UploadFile = File(...), sour
         tmp.write(content)
         tmp_name = tmp.name
 
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     if source == 'trading212':
         transactions = portfolio.from_212(tmp_name)
     else:
         transactions = portfolio.from_vanguard(tmp_name)
 
     os.unlink(tmp_name)
+    cache_portfolio(portfolio_id, portfolio)
 
     return {
         'transactions': [
@@ -117,8 +113,9 @@ async def upload_portfolio(portfolio_id: str, file: UploadFile = File(...), sour
 @router.patch('/{portfolio_id}/deposit', response_model=TransactionResponse)
 def deposit(portfolio_id: str, value: float, currency: str = None, date: str = None):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     t, cash = portfolio.deposit(value, currency, date)
+    cache_portfolio(portfolio_id, portfolio)
     return {
         'type': t.type,
         'asset': t.asset,
@@ -133,8 +130,9 @@ def deposit(portfolio_id: str, value: float, currency: str = None, date: str = N
 @router.patch('/{portfolio_id}/withdraw', response_model=TransactionResponse)
 def withdraw(portfolio_id: str, value: float, currency: str = None, date: str = None):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     t, cash = portfolio.withdraw(value, currency, date)
+    cache_portfolio(portfolio_id, portfolio)
     return {
         'type': t.type,
         'asset': t.asset,
@@ -149,8 +147,9 @@ def withdraw(portfolio_id: str, value: float, currency: str = None, date: str = 
 @router.patch('/{portfolio_id}/buy', response_model=TransactionResponse)
 def buy(portfolio_id: str, shares: float = None, value: float = None, date: str = None, currency: str = None, asset: Asset = Depends(get_asset)):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     t, cash = portfolio.buy(asset=asset, shares=shares, value=value, date=date, currency=currency)
+    cache_portfolio(portfolio_id, portfolio)
     return {
         'type': t.type,
         'asset': t.asset.ticker,
@@ -165,8 +164,9 @@ def buy(portfolio_id: str, shares: float = None, value: float = None, date: str 
 @router.patch('/{portfolio_id}/sell', response_model=TransactionResponse)
 def sell(portfolio_id: str, shares: float = None, value: float = None, date: str = None, currency: str = None, asset: Asset = Depends(get_asset)):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     t, cash = portfolio.sell(asset=asset, shares=shares, value=value, date=date, currency=currency)
+    cache_portfolio(portfolio_id, portfolio)
     return {
         'type': t.type,
         'asset': t.asset.ticker,
@@ -183,13 +183,13 @@ def portfolio_stats(portfolio_id: str):
     import time
     time.sleep(0.01)
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     return portfolio.stats
 
 @router.get('/{portfolio_id}/holdings_stats', response_model=HoldingsStats)
 def holdings_stats(portfolio_id: str):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     holdings = portfolio.holdings
     weights = portfolio.weights
     pnl = portfolio.holdings_pnl()
@@ -210,7 +210,7 @@ def holdings_stats(portfolio_id: str):
 @router.get('/{portfolio_id}/plots', response_model=PortfolioPlots)
 def portfolio_plots(portfolio_id: str):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
 
     plots = {}
 
@@ -241,7 +241,7 @@ def portfolio_plots(portfolio_id: str):
 @router.get('/{portfolio_id}/transactions', response_model=PortfolioTransactions)
 def portfolio_transactions(portfolio_id: str):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     return {
         'transactions': [
             {
@@ -260,7 +260,7 @@ def portfolio_transactions(portfolio_id: str):
 @router.get('/{portfolio_id}/optimize', response_model=PortfolioOptimize)
 def optimize_portfolio(portfolio_id: str, min_alloc: float = 0., max_alloc: float = 1., points: int = 50):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     optimizer = PortfolioOptimizer(portfolio, min_alloc=min_alloc, max_alloc=max_alloc)
     opt = optimizer.optimal_sharpe_portfolio
     fig, res = optimizer.efficient_frontier(points=points)
@@ -281,7 +281,7 @@ def optimize_portfolio(portfolio_id: str, min_alloc: float = 0., max_alloc: floa
 @router.post('/{portfolio_id}/rebalance', response_model=PortfolioTransactions)
 def rebalance(portfolio_id: str, target_weights: Dict[str, float]):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     asset_mapping = {a.ticker: a for a in portfolio.assets}
     target_weights = {asset_mapping[k]: v for k, v in target_weights.items()}
     transactions = portfolio.rebalance(target_weights, inplace=False)
@@ -303,7 +303,7 @@ def rebalance(portfolio_id: str, target_weights: Dict[str, float]):
 @router.patch('/{portfolio_id}/parse_transactions', response_model=Dict[str, str])
 def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     decoded_id = decode_portfolio_id(portfolio_id)
-    portfolio: Portfolio = portfolio_cache[decoded_id]
+    portfolio: Portfolio = get_cached_portfolio(decoded_id)
     asset_mapping = {a.ticker: a for a in portfolio.cost_bases}  # use cost bases bcs the method is only for rebalancing
     t_list = [
         Portfolio.transaction(
@@ -318,6 +318,7 @@ def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     ]
 
     portfolio.from_transactions(t_list)
+    cache_portfolio(portfolio_id, portfolio)
     return {
         'status': 'success',
         'message': 'Transactions parsed successfully',
