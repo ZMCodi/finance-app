@@ -115,11 +115,13 @@ export function Sidebar() {
       onMouseLeave={() => setIsExpanded(false)}
     >
       <div className="flex h-16 items-center justify-center border-b border-gray-800">
-        {isExpanded ? (
-          <h1 className="text-xl font-bold">FLApp</h1>
-        ) : (
-          <h1 className="text-xl font-bold">FL</h1>
-        )}
+        <Link href="/">
+          {isExpanded ? (
+        <h1 className="text-xl font-bold">FLApp</h1>
+          ) : (
+        <h1 className="text-xl font-bold">FL</h1>
+          )}
+        </Link>
       </div>
 
       <nav className="flex-1 space-y-2 py-4">

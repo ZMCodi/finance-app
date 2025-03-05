@@ -28,10 +28,10 @@ DateLike = str | datetime.datetime | datetime.date | pd.Timestamp
 # Portfolio([{'asset': 'AAPL', 'shares': 20, 'avg_price': 100}, {'asset': 'NVDA', 'shares': 15, 'avg_price': 20}])
 # store total money invested and num of shares for each asset
 
+transaction = namedtuple('transaction', ['type', 'asset', 'shares', 'value', 'profit', 'date', 'id'])
+
 
 class Portfolio:
-
-    transaction = namedtuple('transaction', ['type', 'asset', 'shares', 'value', 'profit', 'date', 'id'])
 
     def __init__(self, assets: list[dict[str, str | float]] | None = None, cash: float | None = None, currency: str | None = None, r: float = 0.02):
         self.holdings = defaultdict(float)
@@ -149,11 +149,11 @@ class Portfolio:
             value = self._convert_price(value, currency, date)
         value = round(float(value), 2)
 
-        transaction = self.transaction('DEPOSIT', 'Cash', 0.0, value, 0., date, self.id)
-        self.transactions.append(transaction)
+        t = transaction('DEPOSIT', 'Cash', 0.0, value, 0., date, self.id)
+        self.transactions.append(t)
         self.cash += value
         self.id += 1
-        return transaction, self.cash
+        return t, self.cash
 
     def withdraw(self, value: float, currency: str | None = None, date: DateLike | None = None) -> tuple[transaction, float]:
         date = self._parse_date(date)
@@ -168,11 +168,11 @@ class Portfolio:
         if self.cash - value < 0:
             raise ValueError('Not enough money')
 
-        transaction = self.transaction('WITHDRAW', 'Cash', 0.0, value, 0., date, self.id)
-        self.transactions.append(transaction)
+        t = transaction('WITHDRAW', 'Cash', 0.0, value, 0., date, self.id)
+        self.transactions.append(t)
         self.cash -= value
         self.id += 1
-        return transaction, self.cash
+        return t, self.cash
 
     def buy(self, asset: Asset, *, shares: float | None = None, value: float | None = None, 
             date: DateLike | None = None, currency: str | None = None) -> tuple[transaction, float]:
@@ -212,14 +212,14 @@ class Portfolio:
         if self.cash - value < -0.01:
             raise ValueError('Not enough money')
 
-        transaction = self.transaction('BUY', ast, round(float(shares), 5), value, 0., date, self.id)
-        self.transactions.append(transaction)
+        t = transaction('BUY', ast, round(float(shares), 5), value, 0., date, self.id)
+        self.transactions.append(t)
         old_cost_basis = self.cost_bases[ast] * self.holdings[ast]
         self.holdings[ast] += float(shares)
         self.cost_bases[ast] = (old_cost_basis + value) / self.holdings[ast]
         self.cash -= value
         self.id += 1
-        return transaction, self.cash
+        return t, self.cash
 
     def sell(self, asset: Asset, *, shares: float | None = None, value: float | None = None, 
             date: DateLike | None = None, currency: str | None = None) -> tuple[transaction, float]:
@@ -249,8 +249,8 @@ class Portfolio:
 
         value = round(float(value), 2)
         profit = (value - (self.cost_bases[ast] * shares))
-        transaction = self.transaction('SELL', ast, round(float(shares), 5), value, round(float(profit), 2), date, self.id)
-        self.transactions.append(transaction)
+        t = transaction('SELL', ast, round(float(shares), 5), value, round(float(profit), 2), date, self.id)
+        self.transactions.append(t)
 
         self.holdings[ast] -= float(shares)
         self.cash += value
@@ -258,7 +258,7 @@ class Portfolio:
             del self.holdings[ast]
             del self.assets[idx]
         self.id += 1
-        return transaction, self.cash
+        return t, self.cash
 
     def pie_chart(self, data: dict, title: str) -> go.Figure:
 
@@ -1429,7 +1429,7 @@ class Portfolio:
         for t in transactions:
             t = t.model_dump()
             ast = asset_mapping.get(t['asset'], 'Cash')
-            t = cls.transaction(t['type'], ast, t['shares'], t['value'], t['profit'], t['date'], t['id'])
+            t = transaction(t['type'], ast, t['shares'], t['value'], t['profit'], t['date'], t['id'])
             t_list.append(t)
 
         port.transactions = t_list
