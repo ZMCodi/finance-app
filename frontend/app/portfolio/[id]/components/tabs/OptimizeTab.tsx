@@ -29,7 +29,7 @@ type PortfolioType = 'optimal' | 'target-returns' | 'target-volatility' | 'min-v
 interface OptimizeTabProps {
   portfolioId: string;
   currency: string;
-  numOfAssets: number;
+  numOfAssets?: number;
   onDataChange?: () => void;
 }
 
@@ -258,7 +258,7 @@ const OptimizeTab = ({ portfolioId, numOfAssets, currency, onDataChange }: Optim
                 <Slider
                   value={minAllocation}
                   min={0}
-                  max={Math.floor(100 / numOfAssets)}
+                  max={Math.floor(100 / (numOfAssets ?? 1))}
                   step={1}
                   onValueChange={setMinAllocation}
                 />
@@ -271,7 +271,7 @@ const OptimizeTab = ({ portfolioId, numOfAssets, currency, onDataChange }: Optim
                 </div>
                 <Slider
                   value={maxAllocation}
-                  min={Math.ceil(100 / numOfAssets)}
+                  min={Math.ceil(100 / (numOfAssets ?? 1))}
                   max={100}
                   step={1}
                   onValueChange={setMaxAllocation}

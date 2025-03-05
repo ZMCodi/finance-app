@@ -313,13 +313,13 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Largest/Smallest</span>
                   <span className="font-semibold">
-                    {(portfolioData?.position?.largest_position * 100 || 0).toFixed(2)}% / {(portfolioData?.position?.smallest_position * 100 || 0).toFixed(2)}%
+                    {((portfolioData?.position?.largest_position ?? 0) * 100).toFixed(2)}% / {((portfolioData?.position?.smallest_position ?? 0) * 100).toFixed(2)}%
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Concentration</span>
                   <span className="font-semibold">
-                    {(portfolioData?.position?.concentration * 100).toFixed(2)}%
+                    {((portfolioData?.position?.concentration ?? 0) * 100).toFixed(2)}%
                   </span>
                 </div>
               </div>
@@ -335,16 +335,16 @@ const HoldingsTab = ({ portfolioId, currency, portfolioData, holdingsData, plotD
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Realized P&L</span>
-                  <span className={`font-semibold ${portfolioData?.activity?.realized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {portfolioData?.activity?.realized_pnl >= 0 ? '+' : '-'}
-                    {currencySymbol}{Math.abs((portfolioData?.activity?.realized_pnl || 0).toFixed(2))}
+                  <span className={`font-semibold ${(portfolioData?.activity?.realized_pnl ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {(portfolioData?.activity?.realized_pnl ?? 0) >= 0 ? '+' : '-'}
+                    {currencySymbol}{Math.abs(portfolioData?.activity?.realized_pnl || 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-slate-400">Unrealized P&L</span>
-                  <span className={`font-semibold ${portfolioData?.activity.unrealized_pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {portfolioData?.activity.unrealized_pnl >= 0 ? '+' : '-'}
-                    {currencySymbol}{Math.abs(portfolioData?.activity.unrealized_pnl.toFixed(2))}
+                  <span className={`font-semibold ${(portfolioData?.activity?.unrealized_pnl ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {(portfolioData?.activity?.unrealized_pnl ?? 0) >= 0 ? '+' : '-'}
+                    {currencySymbol}{Math.abs(portfolioData?.activity?.unrealized_pnl ?? 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">

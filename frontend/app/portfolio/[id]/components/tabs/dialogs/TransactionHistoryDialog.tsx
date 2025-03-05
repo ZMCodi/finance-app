@@ -201,7 +201,7 @@ const TransactionHistoryDialog = ({
                         {transaction.type === 'SELL' ? (
                           <span className={transaction.profit >= 0 ? 'text-green-500' : 'text-red-500'}>
                             {transaction.profit >= 0 ? '+' : '-'}
-                            {currencySymbol}{Math.abs(transaction.profit.toFixed(2))}
+                            {currencySymbol}{Math.abs(Number(transaction.profit.toFixed(2)))}
                           </span>
                         ) : (
                           <span className="text-slate-500">-</span>

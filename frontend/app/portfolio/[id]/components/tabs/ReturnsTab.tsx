@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 
 interface ReturnsTabProps {
   portfolioId: string;
-  portfolioData: PortfolioStats;
+  portfolioData?: PortfolioStats | null;
   plotData?: ReturnsPlots | null;
 }
 
@@ -144,58 +144,64 @@ const ReturnsTab = ({ portfolioId, portfolioData, plotData }: ReturnsTabProps) =
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 h-full">
         <Card>
-          <CardHeader>
-            <CardTitle>Performance Metrics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Total Returns</span>
-                <span className={`font-semibold ${performanceMetrics.total_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {performanceMetrics.total_returns >= 0 ? '+' : ''}
-                  {(performanceMetrics.total_returns * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Trading Returns</span>
-                <span className={`font-semibold ${performanceMetrics.trading_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {performanceMetrics.trading_returns >= 0 ? '+' : ''}
-                  {(performanceMetrics.trading_returns * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Annualized Returns</span>
-                <span className={`font-semibold ${performanceMetrics.annualized_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {performanceMetrics.annualized_returns >= 0 ? '+' : ''}
-                  {(performanceMetrics.annualized_returns * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Daily Volatility</span>
-                <span className="font-semibold">
-                  {(performanceMetrics.daily_returns?.std * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Best Day</span>
-                <span className="text-green-500 font-semibold">
-                  +{(performanceMetrics.best_day * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Worst Day</span>
-                <span className="text-red-500 font-semibold">
-                  {(performanceMetrics.worst_day * 100).toFixed(2)}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400">Positive Days</span>
-                <span className="font-semibold">
-                  {(performanceMetrics.positive_days * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-          </CardContent>
+            <CardHeader>
+              <CardTitle>Performance Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {performanceMetrics ? (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Total Returns</span>
+                    <span className={`font-semibold ${performanceMetrics?.total_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {performanceMetrics?.total_returns >= 0 ? '+' : ''}
+                      {(performanceMetrics?.total_returns * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Trading Returns</span>
+                    <span className={`font-semibold ${performanceMetrics?.trading_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {performanceMetrics?.trading_returns >= 0 ? '+' : ''}
+                      {(performanceMetrics?.trading_returns * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Annualized Returns</span>
+                    <span className={`font-semibold ${performanceMetrics?.annualized_returns >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {performanceMetrics?.annualized_returns >= 0 ? '+' : ''}
+                      {(performanceMetrics?.annualized_returns * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Daily Volatility</span>
+                    <span className="font-semibold">
+                      {(performanceMetrics?.daily_returns?.std * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Best Day</span>
+                    <span className="text-green-500 font-semibold">
+                      +{(performanceMetrics?.best_day * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Worst Day</span>
+                    <span className="text-red-500 font-semibold">
+                      {(performanceMetrics?.worst_day * 100).toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-400">Positive Days</span>
+                    <span className="font-semibold">
+                      {(performanceMetrics?.positive_days * 100).toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-64">
+                  <p className="text-slate-400">No performance metrics available</p>
+                </div>
+              )}
+            </CardContent>
         </Card>
         
         {/* Returns Distribution Metrics */}
@@ -204,34 +210,40 @@ const ReturnsTab = ({ portfolioId, portfolioData, plotData }: ReturnsTabProps) =
             <CardTitle>Returns Distribution Stats</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-              <span className="text-slate-400">Mean Daily Return</span>
-              <span className={`font-semibold ${performanceMetrics.daily_returns?.mean >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {performanceMetrics.daily_returns?.mean >= 0 ? '+' : ''}
-                {(performanceMetrics.daily_returns?.mean * 100).toFixed(2)}%
-              </span>
+            {performanceMetrics ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                <span className="text-slate-400">Mean Daily Return</span>
+                <span className={`font-semibold ${performanceMetrics?.daily_returns?.mean >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {performanceMetrics?.daily_returns?.mean >= 0 ? '+' : ''}
+                  {(performanceMetrics?.daily_returns?.mean * 100)?.toFixed(2)}%
+                </span>
+                </div>
+                <div className="flex justify-between items-center">
+                <span className="text-slate-400">Median Daily Return</span>
+                <span className={`font-semibold ${performanceMetrics?.daily_returns?.median >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {performanceMetrics?.daily_returns?.median >= 0 ? '+' : ''}
+                  {(performanceMetrics?.daily_returns?.median * 100)?.toFixed(2)}%
+                </span>
+                </div>
+                <div className="flex justify-between items-center">
+                <span className="text-slate-400">Skewness</span>
+                <span className="font-semibold">
+                  {performanceMetrics?.daily_returns?.skewness?.toFixed(2)}
+                </span>
+                </div>
+                <div className="flex justify-between items-center">
+                <span className="text-slate-400">Kurtosis</span>
+                <span className="font-semibold">
+                  {performanceMetrics?.daily_returns?.kurtosis?.toFixed(2)}
+                </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-              <span className="text-slate-400">Median Daily Return</span>
-              <span className={`font-semibold ${performanceMetrics.daily_returns?.median >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {performanceMetrics.daily_returns?.median >= 0 ? '+' : ''}
-                {(performanceMetrics.daily_returns?.median * 100).toFixed(2)}%
-              </span>
+            ) : (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-slate-400">No distribution stats available</p>
               </div>
-              <div className="flex justify-between items-center">
-              <span className="text-slate-400">Skewness</span>
-              <span className="font-semibold">
-                {performanceMetrics.daily_returns?.skewness.toFixed(2)}
-              </span>
-              </div>
-              <div className="flex justify-between items-center">
-              <span className="text-slate-400">Kurtosis</span>
-              <span className="font-semibold">
-                {performanceMetrics.daily_returns?.kurtosis.toFixed(2)}
-              </span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
         

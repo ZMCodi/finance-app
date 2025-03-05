@@ -8,7 +8,7 @@ import dynamic from 'next/dynamic';
 interface RiskTabProps {
   portfolioId: string;
   currency: string;
-  portfolioData?: PortfolioStats;
+  portfolioData?: PortfolioStats | null;
   plotData?: RiskPlots | null;
 }
 

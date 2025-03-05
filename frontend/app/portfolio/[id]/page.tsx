@@ -2,9 +2,9 @@ import React from 'react';
 import PortfolioPageClient from './components/PortfolioPageClient';
 
 interface PortfolioPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function PortfolioPage({ params }: PortfolioPageProps) {

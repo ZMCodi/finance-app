@@ -15,6 +15,7 @@ import { DefaultService } from '@/src/api';
 
 interface CreatePortfolioDialogProps {
   onPortfolioCreated: (portfolioId: string) => void;
+  children?: React.ReactNode;
 }
 
 interface AssetHolding {
