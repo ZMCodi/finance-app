@@ -5,7 +5,7 @@ import base64
 import logging
 import math
 from upstash_redis import Redis
-from upstash_redis.errors import UpstashError
+import dotenv
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +14,11 @@ logger = logging.getLogger(__name__)
 # Get Redis configuration
 redis_url = os.environ.get("UPSTASH_REDIS_REST_URL")
 redis_token = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
+
+if redis_url is None or redis_token is None:
+    dotenv.load_dotenv()
+    redis_url = os.getenv("UPSTASH_REDIS_REST_URL")
+    redis_token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
 
 # Max chunk size (slightly less than 1MB to be safe)
 MAX_CHUNK_SIZE = 900000  

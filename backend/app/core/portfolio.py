@@ -1402,6 +1402,7 @@ class Portfolio:
 
         # update state
         port.cash = state['cash']
+        port.id = state['id']
         port.assets = [Asset(ast) for ast in state['assets']]
 
         for ast in port.assets:
