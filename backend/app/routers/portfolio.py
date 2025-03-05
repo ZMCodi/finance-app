@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 import os
 import tempfile
-from app.core.portfolio import Portfolio
+from app.core.portfolio import Portfolio, transaction
 from app.core.portfolio_optimizer import PortfolioOptimizer
 from app.core.asset import Asset
 from functools import lru_cache
@@ -306,7 +306,7 @@ def parse_transactions(portfolio_id: str, transactions: PortfolioTransactions):
     portfolio: Portfolio = get_cached_portfolio(decoded_id)
     asset_mapping = {a.ticker: a for a in portfolio.cost_bases}  # use cost bases bcs the method is only for rebalancing
     t_list = [
-        Portfolio.transaction(
+        transaction(
             t.type,
             asset_mapping.get(t.asset, 'Cash'),
             t.shares,
