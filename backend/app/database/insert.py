@@ -14,11 +14,11 @@ load_dotenv()
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_SERVICE_ROLE')
 
-logging.basicConfig(
-    filename=f'/Users/ZMCodi/git/personal/finance-app/backend/app/database/logs/stock_insertion_{datetime.now().strftime("%Y%m%d")}.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+# logging.basicConfig(
+#     filename=f'/Users/ZMCodi/git/personal/finance-app/backend/app/database/logs/stock_insertion_{datetime.now().strftime("%Y%m%d")}.log',
+#     level=logging.INFO,
+#     format='%(asctime)s - %(levelname)s - %(message)s'
+# )
 
 class YFEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -31,12 +31,12 @@ gbp = ['HIWS.L', 'V3AB.L', 'VFEG.L', 'VUSA.L', '0P0000TKZO.L']
 mutual_fund = ['0P0000TKZO.L']
 
 def insert_data(table):
-    logging.info(f"Starting {table} data insertion")
+    # logging.info(f"Starting {table} data insertion")
     try:
         sb = Client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
         tickers = get_tickers(sb, table)
             
-        logging.info(f"Found {len(tickers)} tickers to process")
+        # logging.info(f"Found {len(tickers)} tickers to process")
 
         if not tickers:
             return
@@ -51,7 +51,7 @@ def insert_data(table):
             
             if data.empty:
                 failed_downloads.append(ticker)
-                logging.error(f"Failed to download {ticker} for {table} table")
+                # logging.error(f"Failed to download {ticker} for {table} table")
                 continue
 
             data = data.droplevel(1, axis=1)
@@ -67,14 +67,14 @@ def insert_data(table):
                 except Exception as e:
                     pass
             df_list.append(data)
-            logging.info(f"Successfully downloaded data for {ticker}")
+            # logging.info(f"Successfully downloaded data for {ticker}")
 
         if not df_list:
-            logging.info("No new data to insert")
+            # logging.info("No new data to insert")
             return
         
         df = pd.concat(df_list)
-        logging.info(f"Total rows before cleaning: {len(df)}")
+        # logging.info(f"Total rows before cleaning: {len(df)}")
         clean = clean_data(df)
 
         if table == 'daily_forex':
@@ -83,24 +83,24 @@ def insert_data(table):
         elif table == 'five_minute':
             clean = clean.rename(columns={'Datetime': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
             if 'Adj Close' not in clean.columns:
-                logging.warning("Adj Close column not found in data, using Close price")
+                # logging.warning("Adj Close column not found in data, using Close price")
                 clean['adj_close'] = clean['close']
             else:
                 clean = clean.rename(columns={'Adj Close': 'adj_close'})
         else:
             clean = clean.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
             if 'Adj Close' not in clean.columns:
-                logging.warning("Adj Close column not found in data, using Close price")
+                # logging.warning("Adj Close column not found in data, using Close price")
                 clean['adj_close'] = clean['close']
             else:
                 clean = clean.rename(columns={'Adj Close': 'adj_close'})
 
         json_data = json.loads(json.dumps(clean.to_dict(orient='records'), cls=YFEncoder))
         sb.table(table).insert(json_data).execute()
-        logging.info(f"Successfully inserted {len(clean)} rows")
+        # logging.info(f"Successfully inserted {len(clean)} rows")
     
     except Exception as e:
-        logging.critical(f"Critical error in insert_{table}_data: {str(e)}")
+        # logging.critical(f"Critical error in insert_{table}_data: {str(e)}")
         raise
 
 def clean_data(df):
@@ -112,7 +112,7 @@ def clean_data(df):
     temp['Low'] = temp[['Open', 'Close', 'Low']].min(axis=1)
     clean = pd.concat([clean, temp], axis=0)
     clean = clean.reset_index()
-    logging.info(f"Total rows after cleaning: {len(clean)}")
+    # logging.info(f"Total rows after cleaning: {len(clean)}")
     return clean
 
 def get_tickers(sb, table):
@@ -129,7 +129,7 @@ def get_tickers(sb, table):
         return tickers
     
     except Exception as e:
-        logging.error(f"Fetching tickers error: {str(e)}")
+        # logging.error(f"Fetching tickers error: {str(e)}")
         raise
 
 def get_open_exchange(sb):
@@ -139,7 +139,7 @@ def get_open_exchange(sb):
                 column_name='exchange', table_name='tickers'))
                 .execute()).data
         exchanges.remove('CCC')
-        logging.info(f"Found exchanges: {exchanges}")
+        # logging.info(f"Found exchanges: {exchanges}")
 
         closed_exchanges = []
         for exchange in exchanges:
@@ -148,7 +148,7 @@ def get_open_exchange(sb):
                 closed_exchanges.append(exchange)
 
         if closed_exchanges:
-            logging.info(f"Closed exchanges: {closed_exchanges}")
+            # logging.info(f"Closed exchanges: {closed_exchanges}")
 
             tickers = (
                 sb.table('tickers')
@@ -169,7 +169,7 @@ def get_open_exchange(sb):
         return tickers
     
     except Exception as e:
-        logging.error(f"Error fetching market calendar: {str(e)}")
+        # logging.error(f"Error fetching market calendar: {str(e)}")
         raise
 
 def get_data(sb, table, ticker):
@@ -200,7 +200,7 @@ def get_data(sb, table, ticker):
         if table == 'five_minute':
             last_ts = pd.to_datetime(last_ts)
             if last_ts is None:
-                logging.info("No existing data found, using default start date")
+                # logging.info("No existing data found, using default start date")
                 last_date = datetime.now().date() - pd.Timedelta(days=61)
             else:
                 last_date = last_ts.date()
@@ -211,27 +211,27 @@ def get_data(sb, table, ticker):
         else:
             last_date = pd.to_datetime(last_date)
             if last_date is None:
-                logging.info("No existing data found, using default start date")
+                # logging.info("No existing data found, using default start date")
                 last_date = pd.to_datetime('2019-12-31')
 
             data = yf.download(ticker, start=last_date + pd.Timedelta(days=1), auto_adjust=False)
             data = data[data.index > pd.to_datetime(last_date)]
 
 
-        logging.info(f"Last date for {ticker}: {last_date}")
+        # logging.info(f"Last date for {ticker}: {last_date}")
         return data
     
     except Exception as e:
-        logging.error(f"yfinance API error: {str(e)}")
+        # logging.error(f"yfinance API error: {str(e)}")
         raise
 
 def cleanup_old_data():
     try:
         sb = Client(SUPABASE_URL, SUPABASE_KEY)
         result = sb.rpc('delete_old_data').execute()
-        logging.info(f"Successfully executed cleanup of old data")
+        # logging.info(f"Successfully executed cleanup of old data")
     except Exception as e:
-        logging.error(f"Failed to execute cleanup: {str(e)}")
+        # logging.error(f"Failed to execute cleanup: {str(e)}")
 
 def insert_new_ticker(ticker):
     yfticker = yf.Ticker(ticker)
@@ -364,12 +364,12 @@ def add_new_currency(sb, currencies, currency):
     sb.table('daily_forex').insert(forex_json).execute()
 
 if __name__ == '__main__':
-    logging.info("Starting insertion process")
+    # logging.info("Starting insertion process")
     try:
         insert_data('daily')
         insert_data('five_minute')
         insert_data('daily_forex')
         cleanup_old_data()
-        logging.info("Finished insertion process successfully")
+        # logging.info("Finished insertion process successfully")
     except Exception as e:
-        logging.critical(f"Script failed: {str(e)}")
+        # logging.critical(f"Script failed: {str(e)}")
