@@ -96,7 +96,7 @@ export function Sidebar() {
       );
       
       // After successful loading, navigate to the portfolio page
-      router.push(`/portfolio/${portfolioId}`);
+      router.push(`/portfolio/details?id=${portfolioId}`);
     } catch (error) {
       console.error('Error loading portfolio:', error);
       // You might want to show an error notification here
@@ -142,7 +142,7 @@ export function Sidebar() {
                   <SidebarItem
                     key={ticker}
                     title={ticker}
-                    href={`/assets/${ticker}`}
+                    href={`/assets/details?ticker=${ticker}`}
                     isExpanded={isExpanded}
                   />
                 ))
@@ -315,7 +315,7 @@ function PortfolioItem({
   onClick: () => void;
 }) {
   const pathname = usePathname();
-  const isActive = pathname === `/portfolio/${title}`;
+  const isActive = pathname === `/portfolio/details?id=${title}`;
 
   if (!isExpanded) return null;
 

@@ -35,7 +35,7 @@ const PortfolioContainer = () => {
     setHasPortfolio(true);
     
     // Redirect to the portfolio page
-    router.push(`/portfolio/${encodeURIComponent(newPortfolioId)}`);
+    router.push(`/portfolio/details?id=${encodeURIComponent(newPortfolioId)}`);
   };
 
   const handlePortfolioClick = async (portfolioName: string) => {
@@ -92,7 +92,7 @@ const PortfolioContainer = () => {
       localStorage.setItem('currentPortfolioId', portfolioName);
       
       // After successful loading, navigate to the portfolio page
-      router.push(`/portfolio/${portfolioName}`);
+      router.push(`/portfolio/details?id=${portfolioName}`);
     } catch (error) {
       console.error('Error loading portfolio:', error);
       // You might want to show an error notification here
@@ -104,7 +104,7 @@ const PortfolioContainer = () => {
   const handleViewPortfolio = () => {
     if (portfolioId) {
       // Use encodeURIComponent to ensure the URL is properly formatted
-      router.push(`/portfolio/${encodeURIComponent(portfolioId)}`);
+      router.push(`/portfolio/details?id=${encodeURIComponent(portfolioId)}`);
     }
   };
 
