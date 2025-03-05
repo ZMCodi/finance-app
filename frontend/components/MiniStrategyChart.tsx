@@ -38,7 +38,7 @@ export default function MiniStrategyChart({ ticker, queryString, strategy, heigh
         } else {
           // Fetch from API if not in cache
           console.log('Fetching candlestick data:', cacheKey);
-          const response = await fetch(`http://localhost:8000/api/assets/${ticker}/candlestick?${queryString}`);
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assets/${ticker}/candlestick?${queryString}`);
           const data = await response.json();
           
           // Store in cache
@@ -58,7 +58,7 @@ export default function MiniStrategyChart({ ticker, queryString, strategy, heigh
     const createStrategy = async () => {
       try {
         // Create a BB strategy
-        const response = await fetch(`http://localhost:8000/api/strategies/${ticker}/${strategy}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/${ticker}/${strategy}`, {
           method: 'POST'
         });
         
@@ -101,7 +101,7 @@ export default function MiniStrategyChart({ ticker, queryString, strategy, heigh
         
         // Fetch indicator plot
         console.log(`Fetching indicator for ${strategyId}`);
-        const indicatorResponse = await fetch(`http://localhost:8000/api/strategies/${strategyId}/indicator?${paramsString}`);
+        const indicatorResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/${strategyId}/indicator?${paramsString}`);
         const indicatorData = await indicatorResponse.json();
         
         setIndicatorPlots(prev => ({
@@ -111,7 +111,7 @@ export default function MiniStrategyChart({ ticker, queryString, strategy, heigh
         
         // Fetch signal
         console.log(`Fetching signals for ${strategyId}`);
-        const signalResponse = await fetch(`http://localhost:8000/api/strategies/${strategyId}/signals?${paramsString}`);
+        const signalResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/${strategyId}/signals?${paramsString}`);
         const signalData = await signalResponse.json();
         
         setSignalData(prev => ({

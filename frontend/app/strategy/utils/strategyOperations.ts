@@ -456,5 +456,5 @@ export class StrategyOperations {
 
 // Create and export a singleton instance with default configuration
 export const strategyOperations = new StrategyOperations({
-  baseUrl: 'http://localhost:8000'
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'https://flapp-uffh.onrender.com'
 });

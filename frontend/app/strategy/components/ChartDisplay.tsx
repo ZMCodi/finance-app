@@ -69,7 +69,7 @@ export default function ChartDisplay({
         
         // Fetch from API if not in cache
         console.log('Fetching candlestick data:', cacheKey);
-        const response = await fetch(`http://localhost:8000/api/assets/${ticker}/candlestick?${queryString}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assets/${ticker}/candlestick?${queryString}`);
         const data = await response.json();
         
         // Store in cache

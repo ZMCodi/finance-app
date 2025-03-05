@@ -10,7 +10,7 @@ export default function AssetTitle({ ticker }: { ticker: string }) {
     useEffect(() => {
         const fetchAsset = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/assets/${ticker}`);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assets/${ticker}`);
                 const data: AssetResponse = await response.json();
                 setAsset(data);
             } catch (error) {

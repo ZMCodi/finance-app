@@ -13,7 +13,7 @@ export default function AssetInfo({ ticker }: AssetInfoProps) {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/assets/${ticker}/stats`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assets/${ticker}/stats`);
         const data: AssetStats = await response.json();
         setStats(data);
       } catch (error) {

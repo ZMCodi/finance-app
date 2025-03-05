@@ -64,7 +64,7 @@ export default function AssetChart({
                 }
                 
                 // Otherwise fetch new data
-                const response = await fetch(`http://localhost:8000/api/assets/${ticker}/${plot_type}?${queryString}`);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/assets/${ticker}/${plot_type}?${queryString}`);
                 const data: AssetPlot = await response.json();
                 
                 // Save to cache

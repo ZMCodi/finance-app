@@ -103,7 +103,7 @@ export default function StrategyConfigDialog({
     setSuccess(null);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/strategies/${strategyId}/params`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/strategies/${strategyId}/params`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch parameters: ${response.statusText}`);
