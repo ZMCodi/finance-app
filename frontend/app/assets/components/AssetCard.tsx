@@ -7,13 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { X, LineChart, ChartNoAxesColumn, CandlestickChart } from "lucide-react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import WatchlistButton from './WatchlistButton';
 
 interface AssetCardProps {
   ticker: string;
   onDelete: (ticker: string) => void;
+  onAddToWatchlist?: (ticker: string) => void;
+  onRemoveFromWatchlist?: (ticker: string) => void;
 }
 
-export default function AssetCard({ ticker, onDelete }: AssetCardProps) {
+export default function AssetCard({ 
+  ticker, 
+  onDelete, 
+  onAddToWatchlist, 
+  onRemoveFromWatchlist 
+}: AssetCardProps) {
   const router = useRouter();
   const [selectedPlot, setSelectedPlot] = useState<'price_history' | 'candlestick' | 'returns_distribution'>('price_history');
   
@@ -80,6 +88,11 @@ export default function AssetCard({ ticker, onDelete }: AssetCardProps) {
             </Button>
           </div>
           <div className="flex gap-2">
+            <WatchlistButton 
+              ticker={ticker} 
+              onAddToWatchlist={onAddToWatchlist}
+              onRemoveFromWatchlist={onRemoveFromWatchlist}
+            />
             {chartTypes.map(({ type, label }) => (
               <Button 
                 key={type}

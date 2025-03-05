@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ import {
 import { DefaultService } from '@/src/api/services/DefaultService';
 import { PortfolioSave_Input } from '@/src/api/models/PortfolioSave_Input';
 import { supabase } from '@/lib/supabaseClient';
+import { watchlistEvents } from '@/lib/watchlistEvents';
 
 export function Sidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -31,7 +32,18 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { watchlist, portfolios, isLoading: dataIsLoading } = useUserData();
+  const { watchlist, portfolios, isLoading: dataIsLoading, refreshData } = useUserData();
+
+  useEffect(() => {
+    // Subscribe to watchlist changes
+    const unsubscribe = watchlistEvents.subscribe(() => {
+      // Refresh the user data when watchlist changes
+      refreshData();
+    });
+    
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, [refreshData]);
 
   const handlePortfolioClick = async (portfolioId: string) => {
     try {
