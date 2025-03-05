@@ -232,6 +232,7 @@ def cleanup_old_data():
         # logging.info(f"Successfully executed cleanup of old data")
     except Exception as e:
         # logging.error(f"Failed to execute cleanup: {str(e)}")
+        pass
 
 def insert_new_ticker(ticker):
     yfticker = yf.Ticker(ticker)
@@ -373,3 +374,4 @@ if __name__ == '__main__':
         # logging.info("Finished insertion process successfully")
     except Exception as e:
         # logging.critical(f"Script failed: {str(e)}")
+        pass
