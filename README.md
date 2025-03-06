@@ -1,4 +1,4 @@
-# FLApp
+# [FLApp](https://flapp.vercel.app)
 
 A financial analysis web application that allows users to look at asset charts, test trading strategies, and analyze their portfolios.
 
