@@ -266,6 +266,7 @@ def insert_new_ticker(ticker):
         'PCX': 'NYSE',
         'PNK': 'stock',
         'FGI': 'LSE',
+        'NAS': 'NASDAQ',
     }
     exchange = exchange_mapping.get(exchange, exchange)
 
