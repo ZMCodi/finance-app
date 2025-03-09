@@ -28,7 +28,7 @@ class YFEncoder(json.JSONEncoder):
         return super().default(obj)
 
 gbp = ['HIWS.L', 'V3AB.L', 'VFEG.L', 'VUSA.L', '0P0000TKZO.L']
-mutual_fund = ['0P0000TKZO.L']
+mutual_fund = ['0P0000TKZO.L', 'SWTSX']
 
 def insert_data(table):
     # logging.info(f"Starting {table} data insertion")
@@ -286,7 +286,7 @@ def insert_new_ticker(ticker):
     clean_daily = clean_daily.rename(columns={'Date': 'date', 'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
 
     # adj_close column might not be available, especially for crypto
-    if 'Adj Close' not in clean_daily.columns or asset_type == 'Mutual Fund':
+    if 'Adj Close' not in clean_daily.columns:
         clean_daily['adj_close'] = clean_daily['close']
     else:
         clean_daily = clean_daily.rename(columns={'Adj Close': 'adj_close'})
