@@ -376,7 +376,7 @@ def add_new_currency(sb, currencies, currency):
 if __name__ == '__main__':
     print("Starting insertion process")
     try:
-        # insert_data('daily')
+        insert_data('daily')
         insert_data('five_minute')
         insert_data('daily_forex')
         cleanup_old_data()
