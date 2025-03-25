@@ -82,4 +82,4 @@ uvloop==0.21.0
 watchfiles==1.0.4
 websockets==14.2
 yarl==1.18.3
-yfinance==0.2.54
+yfinance
